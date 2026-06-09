@@ -26,6 +26,7 @@ TestResults/
 logs/
 
 # Local configuration and secrets
+src/MassLab.Identity.Web/appsettings.Development.json
 appsettings.Local.json
 appsettings.*.Local.json
 *.Development.local.json
@@ -41,4 +42,3 @@ coverage.*
 node_modules/
 dist/
 .cache/
-

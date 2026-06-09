@@ -11,7 +11,7 @@ public sealed class TenantRole : TenantEntity
 public sealed class TenantPermission : TenantEntity
 {
     public string Name { get; set; } = string.Empty;
-    public string Description { get; set; } = string.Empty;
+    public string? Description { get; set; }
     public string Category { get; set; } = string.Empty;
 }
 
@@ -32,4 +32,3 @@ public sealed class RolePermissionAssignment
     public TenantPermission? Permission { get; set; }
     public Guid TenantId { get; set; }
 }
-

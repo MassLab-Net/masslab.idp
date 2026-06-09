@@ -1,5 +1,6 @@
 using MassLab.Identity.Web.Data;
 using Microsoft.EntityFrameworkCore;
+using System.Security.Claims;
 
 namespace MassLab.Identity.Web.Multitenancy;
 
@@ -24,6 +25,15 @@ public sealed class TenantResolutionMiddleware
         var tenant = !string.IsNullOrWhiteSpace(localhostTenant)
             ? await db.Tenants.IgnoreQueryFilters().FirstOrDefaultAsync(x => x.Slug == localhostTenant)
             : await ResolveByHostAsync(db, host, configuredRoot);
+
+        if (tenant is null)
+        {
+            var tenantIdClaim = context.User.FindFirstValue("tenant_id");
+            if (Guid.TryParse(tenantIdClaim, out var tenantId))
+            {
+                tenant = await db.Tenants.IgnoreQueryFilters().FirstOrDefaultAsync(x => x.Id == tenantId);
+            }
+        }
 
         if (tenant is not null)
         {
@@ -54,4 +64,3 @@ public sealed class TenantResolutionMiddleware
         return null;
     }
 }
-

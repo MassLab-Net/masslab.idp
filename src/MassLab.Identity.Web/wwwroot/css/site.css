@@ -45,3 +45,23 @@ html {
 code {
   color: #2f455c;
 }
+
+.permission-tree {
+  max-height: 60vh;
+  overflow: auto;
+}
+
+.permission-group {
+  border-left: 2px solid #d5dae1;
+  margin-bottom: 16px;
+  padding-left: 12px;
+}
+
+.permission-group-title {
+  font-weight: 600;
+  margin-bottom: 8px;
+}
+
+.permission-children {
+  padding-left: 20px;
+}

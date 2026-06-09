@@ -137,9 +137,8 @@ app.UseStaticFiles();
 app.UseRouting();
 app.UseRateLimiter();
 app.UseSession();
-app.UseMiddleware<TenantResolutionMiddleware>();
-
 app.UseAuthentication();
+app.UseMiddleware<TenantResolutionMiddleware>();
 app.UseAuthorization();
 
 app.MapHealthChecks("/health");

@@ -44,11 +44,37 @@ public sealed class TenantAdminController : Controller
     }
 
     [HttpGet("users")]
-    public async Task<IActionResult> Users()
+    public async Task<IActionResult> Users(string? q = null, string sort = "email", string dir = "asc")
     {
+        var usersQuery = _db.Users.AsQueryable();
+        if (!string.IsNullOrWhiteSpace(q))
+        {
+            usersQuery = usersQuery.Where(x =>
+                (x.Email != null && x.Email.Contains(q)) ||
+                x.DisplayName.Contains(q));
+        }
+
+        usersQuery = (sort, dir) switch
+        {
+            ("name", "desc") => usersQuery.OrderByDescending(x => x.DisplayName),
+            ("name", _) => usersQuery.OrderBy(x => x.DisplayName),
+            ("status", "desc") => usersQuery.OrderByDescending(x => x.IsEnabled),
+            ("status", _) => usersQuery.OrderBy(x => x.IsEnabled),
+            ("email", "desc") => usersQuery.OrderByDescending(x => x.Email),
+            _ => usersQuery.OrderBy(x => x.Email)
+        };
+
+        var assignments = await _db.UserRoleAssignments
+            .GroupBy(x => x.UserId)
+            .ToDictionaryAsync(x => x.Key, x => x.Select(a => a.RoleId).ToHashSet());
+
         var model = new TenantUsersPage(
-            await _db.Users.OrderBy(x => x.Email).ToListAsync(),
-            await _db.TenantRoles.OrderBy(x => x.Name).ToListAsync());
+            await usersQuery.ToListAsync(),
+            await _db.TenantRoles.OrderBy(x => x.Name).ToListAsync(),
+            assignments,
+            q,
+            sort,
+            dir);
         return View(model);
     }
 
@@ -96,12 +122,94 @@ public sealed class TenantAdminController : Controller
         return RedirectToAction(nameof(Users));
     }
 
-    [HttpGet("roles")]
-    public async Task<IActionResult> Roles()
+    [HttpPost("users/{id:guid}/edit")]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> EditUser(Guid id, string email, string displayName, bool isEnabled, bool isTenantAdmin)
     {
+        var user = await _db.Users.FirstOrDefaultAsync(x => x.Id == id);
+        if (user is null)
+        {
+            return NotFound();
+        }
+
+        user.Email = email;
+        user.NormalizedEmail = email.ToUpperInvariant();
+        user.UserName = email;
+        user.NormalizedUserName = email.ToUpperInvariant();
+        user.DisplayName = displayName;
+        user.IsEnabled = isEnabled;
+        user.IsTenantAdmin = isTenantAdmin;
+        await _db.SaveChangesAsync();
+        await _audit.WriteAsync("user.updated", AuditResult.Success, "user", id.ToString());
+        return RedirectToAction(nameof(Users));
+    }
+
+    [HttpPost("users/{id:guid}/delete")]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> DeleteUser(Guid id)
+    {
+        var user = await _db.Users.FirstOrDefaultAsync(x => x.Id == id);
+        if (user is null)
+        {
+            return NotFound();
+        }
+
+        _db.UserRoleAssignments.RemoveRange(_db.UserRoleAssignments.Where(x => x.UserId == id));
+        _db.UserSessions.RemoveRange(_db.UserSessions.Where(x => x.UserId == id));
+        await _userManager.DeleteAsync(user);
+        await _audit.WriteAsync("user.deleted", AuditResult.Success, "user", id.ToString());
+        return RedirectToAction(nameof(Users));
+    }
+
+    [HttpPost("users/{userId:guid}/roles")]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> SetUserRoles(Guid userId, Guid[]? roleIds)
+    {
+        if (!_tenant.Id.HasValue)
+        {
+            return BadRequest("Tenant is required.");
+        }
+
+        var existing = await _db.UserRoleAssignments.Where(x => x.UserId == userId).ToListAsync();
+        _db.UserRoleAssignments.RemoveRange(existing);
+        foreach (var roleId in (roleIds ?? Array.Empty<Guid>()).Distinct())
+        {
+            _db.UserRoleAssignments.Add(new UserRoleAssignment { TenantId = _tenant.Id.Value, UserId = userId, RoleId = roleId });
+        }
+
+        await _db.SaveChangesAsync();
+        await _audit.WriteAsync("user_roles.updated", AuditResult.Success, "user", userId.ToString());
+        return RedirectToAction(nameof(Users));
+    }
+
+    [HttpGet("roles")]
+    public async Task<IActionResult> Roles(string? q = null, string sort = "name", string dir = "asc")
+    {
+        var rolesQuery = _db.TenantRoles.AsQueryable();
+        if (!string.IsNullOrWhiteSpace(q))
+        {
+            rolesQuery = rolesQuery.Where(x => x.Name.Contains(q) || x.Description.Contains(q));
+        }
+
+        rolesQuery = (sort, dir) switch
+        {
+            ("description", "desc") => rolesQuery.OrderByDescending(x => x.Description),
+            ("description", _) => rolesQuery.OrderBy(x => x.Description),
+            ("name", "desc") => rolesQuery.OrderByDescending(x => x.Name),
+            _ => rolesQuery.OrderBy(x => x.Name)
+        };
+
+        var assignments = await _db.RolePermissionAssignments
+            .GroupBy(x => x.RoleId)
+            .ToDictionaryAsync(x => x.Key, x => x.Select(a => a.PermissionId).ToHashSet());
+
         var model = new TenantRolesPage(
-            await _db.TenantRoles.OrderBy(x => x.Name).ToListAsync(),
-            await _db.TenantPermissions.OrderBy(x => x.Name).ToListAsync());
+            await rolesQuery.ToListAsync(),
+            await _db.TenantPermissions.OrderBy(x => x.Category).ThenBy(x => x.Name).ToListAsync(),
+            assignments,
+            q,
+            sort,
+            dir);
         return View(model);
     }
 
@@ -118,6 +226,42 @@ public sealed class TenantAdminController : Controller
         _db.TenantRoles.Add(role);
         await _db.SaveChangesAsync();
         await _audit.WriteAsync("role.created", AuditResult.Success, "role", role.Id.ToString());
+        return RedirectToAction(nameof(Roles));
+    }
+
+    [HttpPost("roles/{id:guid}/edit")]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> EditRole(Guid id, string name, string description)
+    {
+        var role = await _db.TenantRoles.FirstOrDefaultAsync(x => x.Id == id);
+        if (role is null)
+        {
+            return NotFound();
+        }
+
+        role.Name = name;
+        role.Description = description;
+        role.UpdatedAt = DateTimeOffset.UtcNow;
+        await _db.SaveChangesAsync();
+        await _audit.WriteAsync("role.updated", AuditResult.Success, "role", id.ToString());
+        return RedirectToAction(nameof(Roles));
+    }
+
+    [HttpPost("roles/{id:guid}/delete")]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> DeleteRole(Guid id)
+    {
+        var role = await _db.TenantRoles.FirstOrDefaultAsync(x => x.Id == id);
+        if (role is null)
+        {
+            return NotFound();
+        }
+
+        _db.UserRoleAssignments.RemoveRange(_db.UserRoleAssignments.Where(x => x.RoleId == id));
+        _db.RolePermissionAssignments.RemoveRange(_db.RolePermissionAssignments.Where(x => x.RoleId == id));
+        _db.TenantRoles.Remove(role);
+        await _db.SaveChangesAsync();
+        await _audit.WriteAsync("role.deleted", AuditResult.Success, "role", id.ToString());
         return RedirectToAction(nameof(Roles));
     }
 
@@ -141,18 +285,45 @@ public sealed class TenantAdminController : Controller
     }
 
     [HttpGet("permissions")]
-    public async Task<IActionResult> Permissions() => View(await _db.TenantPermissions.OrderBy(x => x.Category).ThenBy(x => x.Name).ToListAsync());
+    public async Task<IActionResult> Permissions(string? q = null, string sort = "category", string dir = "asc")
+    {
+        var query = _db.TenantPermissions.AsQueryable();
+        if (!string.IsNullOrWhiteSpace(q))
+        {
+            query = query.Where(x =>
+                x.Name.Contains(q) ||
+                x.Category.Contains(q) ||
+                (x.Description != null && x.Description.Contains(q)));
+        }
+
+        query = (sort, dir) switch
+        {
+            ("name", "desc") => query.OrderByDescending(x => x.Name),
+            ("name", _) => query.OrderBy(x => x.Name),
+            ("description", "desc") => query.OrderByDescending(x => x.Description ?? string.Empty),
+            ("description", _) => query.OrderBy(x => x.Description ?? string.Empty),
+            ("category", "desc") => query.OrderByDescending(x => x.Category).ThenByDescending(x => x.Name),
+            _ => query.OrderBy(x => x.Category).ThenBy(x => x.Name)
+        };
+
+        return View(new TenantPermissionsPage(await query.ToListAsync(), q, sort, dir));
+    }
 
     [HttpPost("permissions")]
     [ValidateAntiForgeryToken]
-    public async Task<IActionResult> CreatePermission(string name, string category, string description)
+    public async Task<IActionResult> CreatePermission(string name, string category, string? description)
     {
         if (!_tenant.Id.HasValue)
         {
             return BadRequest("Tenant is required.");
         }
 
-        var permission = new TenantPermission { TenantId = _tenant.Id.Value, Name = name, Category = category, Description = description };
+        if (!ValidatePermission(name, category))
+        {
+            return View("Permissions", await BuildPermissionsPageAsync());
+        }
+
+        var permission = new TenantPermission { TenantId = _tenant.Id.Value, Name = name.Trim(), Category = category.Trim(), Description = NormalizeOptional(description) };
         _db.TenantPermissions.Add(permission);
         await _db.SaveChangesAsync();
         await _audit.WriteAsync("permission.created", AuditResult.Success, "permission", permission.Id.ToString());
@@ -176,6 +347,97 @@ public sealed class TenantAdminController : Controller
 
         await _audit.WriteAsync("role_permission.assigned", AuditResult.Success, "role", roleId.ToString());
         return RedirectToAction(nameof(Roles));
+    }
+
+    [HttpPost("roles/{roleId:guid}/permissions")]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> SetRolePermissions(Guid roleId, Guid[]? permissionIds)
+    {
+        if (!_tenant.Id.HasValue)
+        {
+            return BadRequest("Tenant is required.");
+        }
+
+        var existing = await _db.RolePermissionAssignments.Where(x => x.RoleId == roleId).ToListAsync();
+        _db.RolePermissionAssignments.RemoveRange(existing);
+        foreach (var permissionId in (permissionIds ?? Array.Empty<Guid>()).Distinct())
+        {
+            _db.RolePermissionAssignments.Add(new RolePermissionAssignment { TenantId = _tenant.Id.Value, RoleId = roleId, PermissionId = permissionId });
+        }
+
+        await _db.SaveChangesAsync();
+        await _audit.WriteAsync("role_permissions.updated", AuditResult.Success, "role", roleId.ToString());
+        return RedirectToAction(nameof(Roles));
+    }
+
+    [HttpPost("permissions/{id:guid}/edit")]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> EditPermission(Guid id, string name, string category, string? description)
+    {
+        var permission = await _db.TenantPermissions.FirstOrDefaultAsync(x => x.Id == id);
+        if (permission is null)
+        {
+            return NotFound();
+        }
+
+        if (!ValidatePermission(name, category))
+        {
+            return View("Permissions", await BuildPermissionsPageAsync());
+        }
+
+        permission.Name = name.Trim();
+        permission.Category = category.Trim();
+        permission.Description = NormalizeOptional(description);
+        permission.UpdatedAt = DateTimeOffset.UtcNow;
+        await _db.SaveChangesAsync();
+        await _audit.WriteAsync("permission.updated", AuditResult.Success, "permission", id.ToString());
+        return RedirectToAction(nameof(Permissions));
+    }
+
+    [HttpPost("permissions/{id:guid}/delete")]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> DeletePermission(Guid id)
+    {
+        var permission = await _db.TenantPermissions.FirstOrDefaultAsync(x => x.Id == id);
+        if (permission is null)
+        {
+            return NotFound();
+        }
+
+        _db.RolePermissionAssignments.RemoveRange(_db.RolePermissionAssignments.Where(x => x.PermissionId == id));
+        _db.TenantPermissions.Remove(permission);
+        await _db.SaveChangesAsync();
+        await _audit.WriteAsync("permission.deleted", AuditResult.Success, "permission", id.ToString());
+        return RedirectToAction(nameof(Permissions));
+    }
+
+    private static string? NormalizeOptional(string? value)
+    {
+        return string.IsNullOrWhiteSpace(value) ? null : value.Trim();
+    }
+
+    private bool ValidatePermission(string name, string category)
+    {
+        if (string.IsNullOrWhiteSpace(name))
+        {
+            ModelState.AddModelError("name", "Permission name is required.");
+        }
+
+        if (string.IsNullOrWhiteSpace(category))
+        {
+            ModelState.AddModelError("category", "Category is required.");
+        }
+
+        return ModelState.IsValid;
+    }
+
+    private async Task<TenantPermissionsPage> BuildPermissionsPageAsync()
+    {
+        return new TenantPermissionsPage(
+            await _db.TenantPermissions.OrderBy(x => x.Category).ThenBy(x => x.Name).ToListAsync(),
+            null,
+            "category",
+            "asc");
     }
 
     [HttpGet("clients")]
@@ -304,8 +566,22 @@ public sealed record TenantAdminDashboard(
 
 public sealed record TenantUsersPage(
     IReadOnlyCollection<ApplicationUser> Users,
-    IReadOnlyCollection<TenantRole> Roles);
+    IReadOnlyCollection<TenantRole> Roles,
+    IReadOnlyDictionary<Guid, HashSet<Guid>> AssignedRoleIds,
+    string? Query,
+    string Sort,
+    string Direction);
 
 public sealed record TenantRolesPage(
     IReadOnlyCollection<TenantRole> Roles,
-    IReadOnlyCollection<TenantPermission> Permissions);
+    IReadOnlyCollection<TenantPermission> Permissions,
+    IReadOnlyDictionary<Guid, HashSet<Guid>> AssignedPermissionIds,
+    string? Query,
+    string Sort,
+    string Direction);
+
+public sealed record TenantPermissionsPage(
+    IReadOnlyCollection<TenantPermission> Permissions,
+    string? Query,
+    string Sort,
+    string Direction);
