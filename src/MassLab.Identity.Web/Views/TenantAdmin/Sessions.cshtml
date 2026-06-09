@@ -1,0 +1,35 @@
+@model IReadOnlyCollection<MassLab.Identity.Web.Domain.UserSession>
+@{
+    ViewData["Title"] = "Sessions";
+}
+
+<div class="card">
+    <div class="card-header"><h3 class="card-title">User Sessions</h3></div>
+    <div class="card-body table-responsive p-0">
+        <table class="table table-hover text-nowrap">
+            <thead><tr><th>User</th><th>Session</th><th>IP</th><th>User Agent</th><th>Last Seen</th><th>Status</th><th class="text-right">Actions</th></tr></thead>
+            <tbody>
+            @foreach (var session in Model)
+            {
+                <tr>
+                    <td>@session.User?.Email</td>
+                    <td><code>@session.SessionId</code></td>
+                    <td>@session.IpAddress</td>
+                    <td class="text-truncate" style="max-width: 320px;">@session.UserAgent</td>
+                    <td>@session.LastSeenAt</td>
+                    <td><span class="badge @(session.RevokedAt is null ? "badge-success" : "badge-secondary")">@(session.RevokedAt is null ? "Active" : "Revoked")</span></td>
+                    <td class="text-right">
+                        @if (session.RevokedAt is null)
+                        {
+                            <form asp-action="RevokeSession" asp-route-id="@session.Id" method="post">
+                                <button class="btn btn-sm btn-outline-danger" type="submit"><i class="fa fa-ban"></i> Revoke</button>
+                            </form>
+                        }
+                    </td>
+                </tr>
+            }
+            </tbody>
+        </table>
+    </div>
+</div>
+

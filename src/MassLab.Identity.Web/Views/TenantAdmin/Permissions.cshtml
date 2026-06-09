@@ -1,0 +1,34 @@
+@model IReadOnlyCollection<MassLab.Identity.Web.Domain.TenantPermission>
+@{
+    ViewData["Title"] = "Permissions";
+}
+
+<div class="card card-primary">
+    <div class="card-header"><h3 class="card-title">Create Permission</h3></div>
+    <form asp-action="CreatePermission" method="post">
+        <div class="card-body">
+            <div class="form-row">
+                <div class="form-group col-md-4"><label>Name</label><input name="name" class="form-control" placeholder="users.manage" /></div>
+                <div class="form-group col-md-3"><label>Category</label><input name="category" class="form-control" placeholder="users" /></div>
+                <div class="form-group col-md-5"><label>Description</label><input name="description" class="form-control" /></div>
+            </div>
+        </div>
+        <div class="card-footer"><button class="btn btn-primary" type="submit"><i class="fa fa-plus"></i> Create permission</button></div>
+    </form>
+</div>
+
+<div class="card">
+    <div class="card-header"><h3 class="card-title">Permissions</h3></div>
+    <div class="card-body table-responsive p-0">
+        <table class="table table-hover text-nowrap">
+            <thead><tr><th>Name</th><th>Category</th><th>Description</th></tr></thead>
+            <tbody>
+            @foreach (var permission in Model)
+            {
+                <tr><td><code>@permission.Name</code></td><td>@permission.Category</td><td>@permission.Description</td></tr>
+            }
+            </tbody>
+        </table>
+    </div>
+</div>
+

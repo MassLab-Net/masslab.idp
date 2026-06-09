@@ -1,0 +1,48 @@
+@model MassLab.Identity.Web.Controllers.TenantUsersPage
+@{
+    ViewData["Title"] = "Users";
+}
+
+<div class="card card-primary">
+    <div class="card-header"><h3 class="card-title">Create User</h3></div>
+    <form asp-action="CreateUser" method="post">
+        <div class="card-body">
+            <div class="form-row">
+                <div class="form-group col-md-3"><label>Email</label><input name="email" class="form-control" /></div>
+                <div class="form-group col-md-3"><label>Display name</label><input name="displayName" class="form-control" /></div>
+                <div class="form-group col-md-3"><label>Password</label><input name="password" type="password" class="form-control" /></div>
+                <div class="form-group col-md-3">
+                    <label>Tenant admin</label>
+                    <select name="isTenantAdmin" class="form-control"><option value="false">No</option><option value="true">Yes</option></select>
+                </div>
+            </div>
+        </div>
+        <div class="card-footer"><button class="btn btn-primary" type="submit"><i class="fa fa-plus"></i> Create user</button></div>
+    </form>
+</div>
+
+<div class="card">
+    <div class="card-header"><h3 class="card-title">Users</h3></div>
+    <div class="card-body table-responsive p-0">
+        <table class="table table-hover text-nowrap">
+            <thead><tr><th>Email</th><th>Name</th><th>Status</th><th>Admin</th><th class="text-right">Actions</th></tr></thead>
+            <tbody>
+            @foreach (var user in Model.Users)
+            {
+                <tr>
+                    <td>@user.Email</td>
+                    <td>@user.DisplayName</td>
+                    <td><span class="badge @(user.IsEnabled ? "badge-success" : "badge-secondary")">@(user.IsEnabled ? "Enabled" : "Disabled")</span></td>
+                    <td>@(user.IsTenantAdmin ? "Tenant" : user.IsSystemAdmin ? "System" : "-")</td>
+                    <td class="text-right">
+                        <form asp-action="DisableUser" asp-route-id="@user.Id" method="post">
+                            <button class="btn btn-sm btn-outline-danger" type="submit"><i class="fa fa-ban"></i> Disable</button>
+                        </form>
+                    </td>
+                </tr>
+            }
+            </tbody>
+        </table>
+    </div>
+</div>
+

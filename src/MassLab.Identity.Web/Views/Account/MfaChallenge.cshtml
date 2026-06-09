@@ -1,0 +1,19 @@
+@{
+    Layout = "_AuthLayout";
+    ViewData["Title"] = "MFA Challenge";
+}
+
+<div class="login-box">
+    <div class="card">
+        <div class="card-body login-card-body">
+            <p class="login-box-msg">Enter your MFA code.</p>
+            <form asp-action="MfaChallenge" method="post">
+                <div class="input-group mb-3">
+                    <input name="code" class="form-control" placeholder="6-digit code" />
+                    <div class="input-group-append"><div class="input-group-text"><span class="fa fa-shield"></span></div></div>
+                </div>
+                <button type="submit" class="btn btn-primary btn-block">Verify</button>
+            </form>
+        </div>
+    </div>
+</div>

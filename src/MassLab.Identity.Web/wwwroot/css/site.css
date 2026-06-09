@@ -1,0 +1,47 @@
+html {
+  font-size: 14px;
+}
+
+@media (min-width: 768px) {
+  html {
+    font-size: 16px;
+  }
+}
+
+.masslab-auth-page {
+  background: #eef2f6;
+}
+
+.login-logo a,
+.brand-link {
+  letter-spacing: 0;
+}
+
+.login-box {
+  width: min(420px, calc(100vw - 32px));
+}
+
+.login-card-body,
+.register-card-body {
+  border-top: 3px solid #007bff;
+}
+
+.main-sidebar .brand-link {
+  min-height: 57px;
+}
+
+.content-wrapper {
+  background: #f4f6f9;
+}
+
+.card-title {
+  margin-bottom: 0;
+}
+
+.table form {
+  display: inline-block;
+}
+
+code {
+  color: #2f455c;
+}

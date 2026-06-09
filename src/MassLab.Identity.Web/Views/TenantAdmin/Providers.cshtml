@@ -1,0 +1,45 @@
+@model IReadOnlyCollection<MassLab.Identity.Web.Domain.ExternalLoginProvider>
+@{
+    ViewData["Title"] = "Login Providers";
+}
+
+<div class="card card-primary">
+    <div class="card-header"><h3 class="card-title">Create OIDC/OAuth Provider</h3></div>
+    <form asp-action="CreateProvider" method="post">
+        <div class="card-body">
+            <div class="form-row">
+                <div class="form-group col-md-3"><label>Display name</label><input name="displayName" class="form-control" /></div>
+                <div class="form-group col-md-5"><label>Authority</label><input name="authority" class="form-control" /></div>
+                <div class="form-group col-md-2"><label>Client ID</label><input name="clientId" class="form-control" /></div>
+                <div class="form-group col-md-2"><label>Client secret</label><input name="clientSecret" type="password" class="form-control" /></div>
+            </div>
+            <div class="form-row">
+                <div class="form-group col-md-9"><label>Scopes</label><input name="scopes" class="form-control" value="openid profile email" /></div>
+                <div class="form-group col-md-3"><label>Auto provision</label><select name="autoProvisionUsers" class="form-control"><option value="false">No</option><option value="true">Yes</option></select></div>
+            </div>
+        </div>
+        <div class="card-footer"><button class="btn btn-primary" type="submit"><i class="fa fa-plus"></i> Create provider</button></div>
+    </form>
+</div>
+
+<div class="card">
+    <div class="card-header"><h3 class="card-title">Providers</h3></div>
+    <div class="card-body table-responsive p-0">
+        <table class="table table-hover text-nowrap">
+            <thead><tr><th>Name</th><th>Authority</th><th>Client ID</th><th>Scopes</th><th>Status</th></tr></thead>
+            <tbody>
+            @foreach (var provider in Model)
+            {
+                <tr>
+                    <td>@provider.DisplayName</td>
+                    <td>@provider.Authority</td>
+                    <td><code>@provider.ClientId</code></td>
+                    <td>@provider.Scopes</td>
+                    <td><span class="badge @(provider.Enabled ? "badge-success" : "badge-secondary")">@(provider.Enabled ? "Enabled" : "Disabled")</span></td>
+                </tr>
+            }
+            </tbody>
+        </table>
+    </div>
+</div>
+

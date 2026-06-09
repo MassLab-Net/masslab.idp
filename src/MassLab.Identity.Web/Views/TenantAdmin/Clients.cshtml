@@ -1,0 +1,54 @@
+@model IReadOnlyCollection<MassLab.Identity.Web.Domain.ClientApplication>
+@using MassLab.Identity.Web.Domain
+@{
+    ViewData["Title"] = "Applications";
+}
+
+@if (TempData["ClientSecret"] is string secret)
+{
+    <div class="alert alert-warning">
+        Secret for <strong>@TempData["ClientId"]</strong>: <code>@secret</code>. Save it now; it will not be shown again.
+    </div>
+}
+
+<div class="card card-primary">
+    <div class="card-header"><h3 class="card-title">Create Application</h3></div>
+    <form asp-action="CreateClient" method="post">
+        <div class="card-body">
+            <div class="form-row">
+                <div class="form-group col-md-3"><label>Name</label><input name="name" class="form-control" /></div>
+                <div class="form-group col-md-3"><label>Client ID</label><input name="clientId" class="form-control" /></div>
+                <div class="form-group col-md-2"><label>Type</label><select name="type" class="form-control" asp-items="Html.GetEnumSelectList<ClientType>()"></select></div>
+                <div class="form-group col-md-4"><label>Redirect URI</label><input name="redirectUri" class="form-control" /></div>
+            </div>
+            <div class="form-row">
+                <div class="form-group col-md-6"><label>Scopes</label><input name="scopes" class="form-control" value="openid,profile,email" /></div>
+                <div class="form-group col-md-6"><label>Flows</label><input name="flows" class="form-control" value="authorization_code,refresh_token" /></div>
+            </div>
+        </div>
+        <div class="card-footer"><button class="btn btn-primary" type="submit"><i class="fa fa-plus"></i> Create application</button></div>
+    </form>
+</div>
+
+<div class="card">
+    <div class="card-header"><h3 class="card-title">Applications</h3></div>
+    <div class="card-body table-responsive p-0">
+        <table class="table table-hover text-nowrap">
+            <thead><tr><th>Name</th><th>Client ID</th><th>Type</th><th>Flows</th><th>Scopes</th><th>Redirect URIs</th></tr></thead>
+            <tbody>
+            @foreach (var client in Model)
+            {
+                <tr>
+                    <td>@client.Name</td>
+                    <td><code>@client.ClientId</code></td>
+                    <td>@client.Type</td>
+                    <td>@client.AllowedFlows</td>
+                    <td>@client.AllowedScopes</td>
+                    <td>@string.Join(", ", client.RedirectUris.Select(x => x.Uri))</td>
+                </tr>
+            }
+            </tbody>
+        </table>
+    </div>
+</div>
+

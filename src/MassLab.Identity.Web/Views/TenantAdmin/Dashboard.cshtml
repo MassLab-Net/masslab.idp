@@ -1,0 +1,35 @@
+@model MassLab.Identity.Web.Controllers.TenantAdminDashboard
+@{
+    ViewData["Title"] = "Tenant Admin";
+}
+
+<div class="row">
+    <div class="col-lg-2 col-6"><div class="small-box bg-info"><div class="inner"><h3>@Model.Users</h3><p>Users</p></div><div class="icon"><i class="fa fa-users"></i></div></div></div>
+    <div class="col-lg-2 col-6"><div class="small-box bg-success"><div class="inner"><h3>@Model.Roles</h3><p>Roles</p></div><div class="icon"><i class="fa fa-id-badge"></i></div></div></div>
+    <div class="col-lg-2 col-6"><div class="small-box bg-warning"><div class="inner"><h3>@Model.Permissions</h3><p>Permissions</p></div><div class="icon"><i class="fa fa-key"></i></div></div></div>
+    <div class="col-lg-2 col-6"><div class="small-box bg-primary"><div class="inner"><h3>@Model.Clients</h3><p>Clients</p></div><div class="icon"><i class="fa fa-window-restore"></i></div></div></div>
+    <div class="col-lg-2 col-6"><div class="small-box bg-secondary"><div class="inner"><h3>@Model.Providers</h3><p>Providers</p></div><div class="icon"><i class="fa fa-plug"></i></div></div></div>
+    <div class="col-lg-2 col-6"><div class="small-box bg-danger"><div class="inner"><h3>@Model.Sessions</h3><p>Sessions</p></div><div class="icon"><i class="fa fa-clock-o"></i></div></div></div>
+</div>
+
+<div class="card">
+    <div class="card-header">
+        <h3 class="card-title">Recent audit logs</h3>
+    </div>
+    <div class="card-body table-responsive p-0">
+        <table class="table table-hover text-nowrap">
+            <thead><tr><th>Time</th><th>Event</th><th>Result</th><th>Target</th></tr></thead>
+            <tbody>
+            @foreach (var log in Model.RecentAuditLogs)
+            {
+                <tr>
+                    <td>@log.CreatedAt</td>
+                    <td><code>@log.EventType</code></td>
+                    <td><span class="badge @(log.Result == MassLab.Identity.Web.Domain.AuditResult.Success ? "badge-success" : "badge-danger")">@log.Result</span></td>
+                    <td>@log.TargetType @log.TargetId</td>
+                </tr>
+            }
+            </tbody>
+        </table>
+    </div>
+</div>

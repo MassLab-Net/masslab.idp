@@ -1,0 +1,44 @@
+# OS files
+.DS_Store
+Thumbs.db
+
+# .NET build outputs
+bin/
+obj/
+artifacts/
+TestResults/
+*.user
+*.suo
+*.userosscache
+*.sln.docstates
+
+# Rider / Visual Studio / VS Code
+.idea/
+.vs/
+.vscode/*
+!.vscode/settings.json
+!.vscode/tasks.json
+!.vscode/launch.json
+!.vscode/extensions.json
+
+# Logs
+*.log
+logs/
+
+# Local configuration and secrets
+appsettings.Local.json
+appsettings.*.Local.json
+*.Development.local.json
+secrets.json
+
+# EF / coverage / test artifacts
+coverage/
+coverage.*
+*.coverage
+*.coveragexml
+
+# Node/static tooling if added later
+node_modules/
+dist/
+.cache/
+
