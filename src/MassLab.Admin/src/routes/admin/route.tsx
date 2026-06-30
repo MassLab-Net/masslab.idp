@@ -3,12 +3,12 @@ import { createFileRoute, Outlet, redirect } from "@tanstack/react-router";
 import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/app-sidebar";
 import { AppHeader } from "@/components/app-header";
-import { getStoredUser } from "@/lib/auth";
+import { getStoredSession } from "@/lib/auth";
 
 export const Route = createFileRoute("/admin")({
   beforeLoad: () => {
     if (typeof window === "undefined") return;
-    if (!getStoredUser()) throw redirect({ to: "/auth" });
+    if (!getStoredSession()) throw redirect({ to: "/auth" });
   },
   component: AdminLayout,
 });

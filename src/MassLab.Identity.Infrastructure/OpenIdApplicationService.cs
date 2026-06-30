@@ -28,6 +28,8 @@ internal sealed class OpenIdApplicationService : IOpenIdQueries
             principal.FindFirstValue("display_name") ?? principal.Identity?.Name,
             principal.FindFirstValue(ClaimTypes.Email),
             principal.FindFirstValue("tenant_id"),
+            string.Equals(principal.FindFirstValue("system_admin"), "true", StringComparison.OrdinalIgnoreCase),
+            string.Equals(principal.FindFirstValue("tenant_admin"), "true", StringComparison.OrdinalIgnoreCase),
             permissions);
     }
 }

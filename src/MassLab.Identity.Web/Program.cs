@@ -9,6 +9,7 @@ using Microsoft.AspNetCore.RateLimiting;
 using OpenIddict.Abstractions;
 
 var builder = WebApplication.CreateBuilder(args);
+var isDevelopment = builder.Environment.IsDevelopment();
 
 builder.Services.AddSerilogLogging(builder.Configuration);
 builder.Services.AddMassLabApi(builder.Configuration);
@@ -16,6 +17,22 @@ builder.Services.AddMassLabResponseCompression();
 builder.Services.AddMassLabObservability(builder.Configuration);
 builder.Services.AddMassLabIdentityApplication();
 builder.Services.AddMassLabIdentityInfrastructure(builder.Configuration);
+builder.Services.Configure<OpenIddictAdminSpaClientOptions>(builder.Configuration.GetSection("OpenIddict:AdminSpaClient"));
+builder.Services.AddCors(options =>
+{
+    options.AddPolicy("AdminSpa", policy =>
+    {
+        var origins = builder.Configuration.GetSection("Cors:AllowedOrigins").Get<string[]>() ?? Array.Empty<string>();
+        if (origins.Length == 0)
+        {
+            return;
+        }
+
+        policy.WithOrigins(origins)
+            .AllowAnyHeader()
+            .AllowAnyMethod();
+    });
+});
 
 builder.Services.ConfigureApplicationCookie(options =>
 {
@@ -51,10 +68,15 @@ builder.Services.AddOpenIddict()
         options.AddDevelopmentEncryptionCertificate();
         options.AddDevelopmentSigningCertificate();
 
-        options.UseAspNetCore()
+        var aspNetCore = options.UseAspNetCore()
             .EnableAuthorizationEndpointPassthrough()
             .EnableEndSessionEndpointPassthrough()
             .EnableUserInfoEndpointPassthrough();
+
+        if (isDevelopment)
+        {
+            aspNetCore.DisableTransportSecurityRequirement();
+        }
     })
     .AddValidation(options =>
     {
@@ -119,6 +141,7 @@ if (!app.Environment.IsDevelopment())
 
 app.UseStaticFiles();
 app.UseRouting();
+app.UseCors("AdminSpa");
 app.UseRateLimiter();
 app.UseMassLabPrometheus();
 app.UseSession();
@@ -137,6 +160,8 @@ if (app.Configuration.GetValue("Database:SeedOnStartup", false))
 {
     await DatabaseSeeder.SeedAsync(app.Services);
 }
+
+await OpenIddictAdminSpaClientSeeder.EnsureConfiguredAsync(app.Services);
 
 app.Run();
 

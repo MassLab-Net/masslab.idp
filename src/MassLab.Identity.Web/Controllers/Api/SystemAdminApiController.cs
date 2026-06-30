@@ -4,11 +4,12 @@ using MassLab.Identity.Web.ViewModels.SystemAdmin;
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using OpenIddict.Validation.AspNetCore;
 
 namespace MassLab.Identity.Web.Controllers.Api;
 
 [ApiController]
-[Authorize(Policy = "system-admin")]
+[Authorize(AuthenticationSchemes = OpenIddictValidationAspNetCoreDefaults.AuthenticationScheme, Policy = "system-admin")]
 [Route("api/admin/system")]
 public sealed class SystemAdminApiController : ControllerBase
 {

@@ -6,11 +6,12 @@ using MassLab.Identity.Web.ViewModels.TenantAdmin;
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using OpenIddict.Validation.AspNetCore;
 
 namespace MassLab.Identity.Web.Controllers.Api;
 
 [ApiController]
-[Authorize(Policy = "tenant-admin")]
+[Authorize(AuthenticationSchemes = OpenIddictValidationAspNetCoreDefaults.AuthenticationScheme, Policy = "tenant-admin")]
 [Route("api/admin/tenant")]
 public sealed class TenantAdminApiController : ControllerBase
 {

@@ -16,6 +16,7 @@ import {
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { useAuth } from "@/lib/auth";
 import { useI18n } from "@/lib/i18n";
+import { buildLogoutUrl } from "@/lib/oidc";
 import { initials } from "@/components/app-sidebar";
 import { Badge } from "@/components/ui/badge";
 import { Flag } from "@/components/flag";
@@ -76,7 +77,7 @@ const INITIAL_NOTIFS: Notif[] = [
 ];
 
 export function AppHeader() {
-  const { user, signOut } = useAuth();
+  const { session, user, signOut } = useAuth();
   const { lang, setLang, t } = useI18n();
   const navigate = useNavigate();
   const [notifs, setNotifs] = useState<Notif[]>(INITIAL_NOTIFS);
@@ -199,7 +200,13 @@ export function AppHeader() {
             <DropdownMenuItem
               className="text-destructive focus:text-destructive"
               onClick={() => {
+                const logoutUrl = session ? buildLogoutUrl(session) : null;
                 signOut();
+                if (logoutUrl) {
+                  window.location.assign(logoutUrl);
+                  return;
+                }
+
                 navigate({ to: "/auth" });
               }}
             >

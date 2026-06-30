@@ -1,4 +1,4 @@
-import { createFileRoute, useNavigate, Link } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import { useState } from "react";
 import { Building2, Eye, EyeOff, Loader2, User, Mail } from "lucide-react";
 
@@ -15,7 +15,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { useAuth } from "@/lib/auth";
+import { beginLogin } from "@/lib/oidc";
 import { useI18n } from "@/lib/i18n";
 import { Flag } from "@/components/flag";
 import { toast } from "sonner";
@@ -32,8 +32,6 @@ export const Route = createFileRoute("/register")({
 
 function RegisterPage() {
   const { t, lang, setLang } = useI18n();
-  const { signIn } = useAuth();
-  const navigate = useNavigate();
 
   const [fullName, setFullName] = useState("");
   const [email, setEmail] = useState("");
@@ -63,36 +61,15 @@ function RegisterPage() {
     if (Object.keys(errs).length > 0) return;
 
     setLoading(true);
-    await new Promise((r) => setTimeout(r, 800));
-
-    const username = fullName.trim().toLowerCase().replace(/\s+/g, ".");
-    signIn({
-      id: "me",
-      name: fullName.trim(),
-      username,
-      email: email.trim(),
-      organization: org.trim(),
-      title: "Member",
-    });
-    toast.success(t("reg.success"));
-    navigate({ to: "/admin/dashboard" });
+    toast.info("Redirecting to MassLab Identity...");
+    beginLogin({ organizationSlug: org.trim() || undefined, returnTo: "/admin/dashboard" });
   };
 
   const submitSocial = async (kind: "google" | "entra") => {
     if (!org.trim()) { setErrors({ org: t("reg.errOrg") }); return; }
     setLoading(true);
-    await new Promise((r) => setTimeout(r, 650));
-    const display = kind === "google" ? "Alex Morgan" : "Jamie Park";
-    signIn({
-      id: "me",
-      name: display,
-      username: display.toLowerCase().replace(/\s/g, "."),
-      email: `${display.toLowerCase().replace(/\s/g, ".")}@masslab.io`,
-      organization: org.trim(),
-      title: "Member",
-    });
-    toast.success(t("reg.success"));
-    navigate({ to: "/admin/dashboard" });
+    toast.info(kind === "google" ? "Continuing with Google in MassLab Identity..." : "Continuing with Microsoft Entra ID in MassLab Identity...");
+    beginLogin({ organizationSlug: org.trim() || undefined, returnTo: "/admin/dashboard" });
   };
 
   return (

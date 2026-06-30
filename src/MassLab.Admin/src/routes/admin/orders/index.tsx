@@ -15,7 +15,8 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { initials } from "@/components/app-sidebar";
 import { PageHeader } from "../tenant/organizations";
 import { StatusPill } from "@/components/status-pill";
-import { useOrders, type Order } from "@/lib/order-store";
+import { useOrders } from "@/lib/order-store";
+import type { Order } from "@/lib/mock-data";
 import { useI18n } from "@/lib/i18n";
 import { cn } from "@/lib/utils";
 

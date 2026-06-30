@@ -1,5 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Building2, MoreHorizontal, Plus, Search } from "lucide-react";
 
 import { Card, CardContent } from "@/components/ui/card";
@@ -9,7 +9,6 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -20,10 +19,11 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { ORGANIZATIONS, type Organization } from "@/lib/mock-data";
 import { StatusPill, statusVariant } from "@/components/status-pill";
 import { useI18n } from "@/lib/i18n";
 import { toast } from "sonner";
+import { useAuth } from "@/lib/auth";
+import { identityFetch, type CommandResult, type SystemTenantDto } from "@/lib/identity-api";
 
 export const Route = createFileRoute("/admin/tenant/organizations")({
   head: () => ({ meta: [{ title: "Organizations — MassLab IAM" }] }),
@@ -32,12 +32,28 @@ export const Route = createFileRoute("/admin/tenant/organizations")({
 
 function Organizations() {
   const { t } = useI18n();
-  const [orgs, setOrgs] = useState<Organization[]>(ORGANIZATIONS);
+  const { session } = useAuth();
+  const [orgs, setOrgs] = useState<SystemTenantDto[]>([]);
   const [q, setQ] = useState("");
   const [open, setOpen] = useState(false);
-  const [deleteTarget, setDeleteTarget] = useState<Organization | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<SystemTenantDto | null>(null);
+  const [name, setName] = useState("");
+  const [slug, setSlug] = useState("");
+  const [hostName, setHostName] = useState("");
 
-  const filtered = orgs.filter((o) => o.name.toLowerCase().includes(q.toLowerCase()));
+  useEffect(() => {
+    if (!session) return;
+    void loadOrganizations(session, setOrgs);
+  }, [session]);
+
+  const filtered = useMemo(
+    () => orgs.filter((o) => o.name.toLowerCase().includes(q.toLowerCase()) || o.slug.toLowerCase().includes(q.toLowerCase())),
+    [orgs, q],
+  );
+
+  if (!session) {
+    return null;
+  }
 
   return (
     <div className="space-y-6">
@@ -54,27 +70,33 @@ function Organizations() {
             <DialogContent>
               <DialogHeader><DialogTitle>{t("org.create")}</DialogTitle></DialogHeader>
               <div className="grid gap-4 py-2">
-                <div className="space-y-1.5"><Label>{t("org.name")}</Label><Input placeholder="Acme Corporation" /></div>
-                <div className="space-y-1.5"><Label>{t("org.subdomain")}</Label>
-                  <div className="flex items-center rounded-md border border-input bg-card overflow-hidden">
-                    <Input placeholder="acme" className="border-0 focus-visible:ring-0" />
-                    <span className="px-3 text-sm text-muted-foreground border-l border-input">.masslab.io</span>
-                  </div>
-                </div>
-                <div className="space-y-1.5"><Label>{t("org.plan")}</Label>
-                  <Select defaultValue="Business">
-                    <SelectTrigger><SelectValue /></SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="Starter">Starter</SelectItem>
-                      <SelectItem value="Business">Business</SelectItem>
-                      <SelectItem value="Enterprise">Enterprise</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
+                <div className="space-y-1.5"><Label>{t("org.name")}</Label><Input value={name} onChange={(event) => setName(event.target.value)} placeholder="Acme Corporation" /></div>
+                <div className="space-y-1.5"><Label>{t("org.subdomain")}</Label><Input value={slug} onChange={(event) => setSlug(event.target.value)} placeholder="acme" /></div>
+                <div className="space-y-1.5"><Label>Host name</Label><Input value={hostName} onChange={(event) => setHostName(event.target.value)} placeholder="acme.localhost" /></div>
               </div>
               <DialogFooter>
                 <Button variant="outline" onClick={() => setOpen(false)}>{t("common.cancel")}</Button>
-                <Button className="bg-gradient-brand text-primary-foreground" onClick={() => { setOpen(false); toast.success(t("org.created")); }}>{t("common.create")}</Button>
+                <Button
+                  className="bg-gradient-brand text-primary-foreground"
+                  onClick={async () => {
+                    try {
+                      await identityFetch<void>(session, "/api/admin/system/tenants", {
+                        method: "POST",
+                        body: JSON.stringify({ name, slug, hostName }),
+                      });
+                      setOpen(false);
+                      setName("");
+                      setSlug("");
+                      setHostName("");
+                      toast.success(t("org.created"));
+                      await loadOrganizations(session, setOrgs);
+                    } catch (reason: unknown) {
+                      toast.error(reason instanceof Error ? reason.message : "Unable to create the organization.");
+                    }
+                  }}
+                >
+                  {t("common.create")}
+                </Button>
               </DialogFooter>
             </DialogContent>
           </Dialog>
@@ -84,14 +106,14 @@ function Organizations() {
       <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
         {[
           { l: t("org.stat.total"), v: orgs.length },
-          { l: t("org.stat.ent"), v: orgs.filter((o) => o.plan === "Enterprise").length },
-          { l: t("org.stat.active"), v: orgs.reduce((n, o) => n + o.members, 0).toLocaleString() },
-          { l: t("org.stat.suspended"), v: orgs.filter((o) => o.status === "Suspended").length },
-        ].map((s) => (
-          <Card key={s.l} className="border-border shadow-card">
+          { l: t("org.stat.ent"), v: orgs.filter((o) => o.isActive).length },
+          { l: t("org.stat.active"), v: orgs.filter((o) => o.isActive).length.toLocaleString() },
+          { l: t("org.stat.suspended"), v: orgs.filter((o) => !o.isActive).length },
+        ].map((item) => (
+          <Card key={item.l} className="border-border shadow-card">
             <CardContent className="p-4">
-              <div className="text-xs text-muted-foreground">{s.l}</div>
-              <div className="mt-1 text-2xl font-bold tracking-tight">{s.v}</div>
+              <div className="text-xs text-muted-foreground">{item.l}</div>
+              <div className="mt-1 text-2xl font-bold tracking-tight">{item.v}</div>
             </CardContent>
           </Card>
         ))}
@@ -101,7 +123,7 @@ function Organizations() {
         <div className="flex items-center gap-2 border-b border-border p-3">
           <div className="relative flex-1 max-w-sm">
             <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-            <Input value={q} onChange={(e) => setQ(e.target.value)} placeholder={t("org.search")} className="h-9 pl-9" />
+            <Input value={q} onChange={(event) => setQ(event.target.value)} placeholder={t("org.search")} className="h-9 pl-9" />
           </div>
         </div>
         <Table>
@@ -116,25 +138,39 @@ function Organizations() {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {filtered.map((o) => (
-              <TableRow key={o.id}>
+            {filtered.map((org) => (
+              <TableRow key={org.id}>
                 <TableCell>
                   <div className="flex items-center gap-3">
                     <div className="grid h-9 w-9 place-items-center rounded-lg bg-gradient-brand-soft text-primary"><Building2 className="h-4 w-4" /></div>
-                    <div><div className="font-medium">{o.name}</div><code className="text-xs text-muted-foreground">{o.slug}.masslab.io</code></div>
+                    <div>
+                      <div className="font-medium">{org.name}</div>
+                      <code className="text-xs text-muted-foreground">{org.primaryHostName ?? `${org.slug}.localhost`}</code>
+                    </div>
                   </div>
                 </TableCell>
-                <TableCell><StatusPill variant={statusVariant(o.plan)}>{o.plan}</StatusPill></TableCell>
-                <TableCell className="font-medium">{o.members.toLocaleString()}</TableCell>
-                <TableCell><StatusPill variant={statusVariant(o.status)}>{o.status}</StatusPill></TableCell>
-                <TableCell className="text-sm text-muted-foreground">{o.createdAt}</TableCell>
+                <TableCell><StatusPill variant={statusVariant(org.isActive ? "Business" : "Suspended")}>{org.slug}</StatusPill></TableCell>
+                <TableCell className="font-medium">-</TableCell>
+                <TableCell><StatusPill variant={statusVariant(org.isActive ? "Active" : "Suspended")}>{org.status}</StatusPill></TableCell>
+                <TableCell className="text-sm text-muted-foreground">-</TableCell>
                 <TableCell className="text-right">
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild><Button variant="ghost" size="icon"><MoreHorizontal className="h-4 w-4" /></Button></DropdownMenuTrigger>
                     <DropdownMenuContent align="end">
-                      <DropdownMenuItem onClick={() => toast.info(t("org.settings"))}>{t("org.settings")}</DropdownMenuItem>
-                      <DropdownMenuItem onClick={() => toast.info(t("org.impersonate"))}>{t("org.impersonate")}</DropdownMenuItem>
-                      <DropdownMenuItem className="text-destructive" onClick={() => setDeleteTarget(o)}>{t("common.delete")}</DropdownMenuItem>
+                      <DropdownMenuItem
+                        onClick={async () => {
+                          try {
+                            await identityFetch<CommandResult>(session, `/api/admin/system/tenants/${org.id}/toggle`, { method: "POST" });
+                            toast.success("Organization status updated.");
+                            await loadOrganizations(session, setOrgs);
+                          } catch (reason: unknown) {
+                            toast.error(reason instanceof Error ? reason.message : "Unable to update the organization.");
+                          }
+                        }}
+                      >
+                        Toggle status
+                      </DropdownMenuItem>
+                      <DropdownMenuItem className="text-destructive" onClick={() => setDeleteTarget(org)}>{t("common.delete")}</DropdownMenuItem>
                     </DropdownMenuContent>
                   </DropdownMenu>
                 </TableCell>
@@ -144,7 +180,7 @@ function Organizations() {
         </Table>
       </Card>
 
-      <AlertDialog open={!!deleteTarget} onOpenChange={(open) => !open && setDeleteTarget(null)}>
+      <AlertDialog open={!!deleteTarget} onOpenChange={(nextOpen) => !nextOpen && setDeleteTarget(null)}>
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>{t("org.deleteTitle")}</AlertDialogTitle>
@@ -158,9 +194,7 @@ function Organizations() {
             <AlertDialogAction
               className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
               onClick={() => {
-                if (!deleteTarget) return;
-                setOrgs((s) => s.filter((x) => x.id !== deleteTarget.id));
-                toast.success(t("org.deleted"));
+                toast.info("Organization deletion is not exposed by the Identity API yet.");
                 setDeleteTarget(null);
               }}
             >
@@ -171,6 +205,11 @@ function Organizations() {
       </AlertDialog>
     </div>
   );
+}
+
+async function loadOrganizations(session: Parameters<typeof identityFetch<SystemTenantDto[]>>[0], setOrgs: (orgs: SystemTenantDto[]) => void) {
+  const organizations = await identityFetch<SystemTenantDto[]>(session, "/api/admin/system/tenants");
+  setOrgs(organizations);
 }
 
 export function PageHeader({ title, subtitle, action }: { title: string; subtitle?: string; action?: React.ReactNode }) {

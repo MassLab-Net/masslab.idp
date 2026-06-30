@@ -1,4 +1,5 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
+import { useEffect, useState } from "react";
 import {
   Activity,
   ArrowUpRight,
@@ -13,11 +14,11 @@ import { Badge } from "@/components/ui/badge";
 import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from "@/components/ui/table";
-import { USERS, ROLES, ORGANIZATIONS, PERMISSION_MODULES } from "@/lib/mock-data";
 import { useAuth } from "@/lib/auth";
 import { useI18n } from "@/lib/i18n";
 import { initials } from "@/components/app-sidebar";
 import { statusVariant, StatusPill } from "@/components/status-pill";
+import { identityFetch, type SystemTenantDto, type TenantAdminDashboardDto, type TenantUsersDto } from "@/lib/identity-api";
 
 export const Route = createFileRoute("/admin/dashboard")({
   head: () => ({ meta: [{ title: "Dashboard — MassLab IAM" }] }),
@@ -25,18 +26,56 @@ export const Route = createFileRoute("/admin/dashboard")({
 });
 
 function Dashboard() {
-  const { user } = useAuth();
+  const { user, session, signOut } = useAuth();
   const { t } = useI18n();
-  const totalPerms = PERMISSION_MODULES.reduce((n, m) => n + m.permissions.length, 0);
+  const [dashboard, setDashboard] = useState<TenantAdminDashboardDto | null>(null);
+  const [recentUsers, setRecentUsers] = useState<TenantUsersDto["users"]>([]);
+  const [organizationCount, setOrganizationCount] = useState(0);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!session) return;
+
+    let cancelled = false;
+
+    void (async () => {
+      try {
+        const [dashboardData, usersData] = await Promise.all([
+          identityFetch<TenantAdminDashboardDto>(session, "/api/admin/tenant/dashboard"),
+          identityFetch<TenantUsersDto>(session, "/api/admin/tenant/users?q=&sort=email&dir=asc"),
+        ]);
+
+        let organizations: SystemTenantDto[] = [];
+        try {
+          organizations = await identityFetch<SystemTenantDto[]>(session, "/api/admin/system/tenants");
+        } catch {
+          organizations = [];
+        }
+
+        if (cancelled) return;
+
+        setDashboard(dashboardData);
+        setRecentUsers(usersData.users.slice(0, 6));
+        setOrganizationCount(organizations.length);
+      } catch (reason: unknown) {
+        if (cancelled) return;
+
+        setError(reason instanceof Error ? reason.message : "Unable to load the admin dashboard.");
+        signOut();
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [session, signOut]);
 
   const stats = [
-    { label: t("dash.users"), value: USERS.length, change: t("dash.usersChange"), icon: Users, to: "/admin/access-control/users" },
-    { label: t("dash.roles"), value: ROLES.length, change: t("dash.rolesChange"), icon: ShieldCheck, to: "/admin/access-control/roles" },
-    { label: t("dash.perms"), value: totalPerms, change: `${PERMISSION_MODULES.length} ${t("dash.modules")}`, icon: KeyRound, to: "/admin/access-control/permissions" },
-    { label: t("dash.orgs"), value: ORGANIZATIONS.length, change: t("dash.orgsChange"), icon: Building2, to: "/admin/tenant/organizations" },
+    { label: t("dash.users"), value: dashboard?.users ?? 0, change: recentUsers.length ? `${recentUsers.length} ${t("dash.viewAll")}` : "-", icon: Users, to: "/admin/access-control/users" },
+    { label: t("dash.roles"), value: dashboard?.roles ?? 0, change: dashboard ? `${dashboard.permissions} ${t("dash.perms")}` : "-", icon: ShieldCheck, to: "/admin/access-control/roles" },
+    { label: t("dash.perms"), value: dashboard?.permissions ?? 0, change: dashboard ? `${dashboard.providers} providers` : "-", icon: KeyRound, to: "/admin/access-control/permissions" },
+    { label: t("dash.orgs"), value: organizationCount, change: dashboard ? `${dashboard.clients} apps` : "-", icon: Building2, to: "/admin/tenant/organizations" },
   ];
-
-  const recent = USERS.slice(0, 6);
 
   return (
     <div className="space-y-8">
@@ -48,9 +87,15 @@ function Dashboard() {
         </div>
         <Badge variant="outline" className="gap-1.5 border-success/40 text-success">
           <span className="h-1.5 w-1.5 rounded-full bg-success" />
-          {t("dash.ok")}
+          {user?.organization}
         </Badge>
       </header>
+
+      {error && (
+        <Card className="border-destructive/20 bg-destructive/5">
+          <CardContent className="p-4 text-sm text-destructive">{error}</CardContent>
+        </Card>
+      )}
 
       <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
         {stats.map((s) => (
@@ -98,38 +143,32 @@ function Dashboard() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {recent.map((u) => (
-                  <TableRow key={u.id}>
+                {recentUsers.map((account) => (
+                  <TableRow key={account.id}>
                     <TableCell>
                       <div className="flex items-center gap-3">
                         <div className="grid h-9 w-9 place-items-center rounded-full bg-gradient-brand text-xs font-semibold text-primary-foreground">
-                          {initials(u.name)}
+                          {initials(account.displayName)}
                         </div>
                         <div>
-                          <div className="font-medium">{u.name}</div>
-                          <div className="text-xs text-muted-foreground">{u.email}</div>
+                          <div className="font-medium">{account.displayName}</div>
+                          <div className="text-xs text-muted-foreground">{account.email}</div>
                         </div>
                       </div>
                     </TableCell>
                     <TableCell>
-                      <div className="flex flex-wrap gap-1">
-                        {u.roles.slice(0, 2).map((rid) => {
-                          const r = ROLES.find((x) => x.id === rid);
-                          return (
-                            <Badge key={rid} variant="secondary" className="font-normal">
-                              {r?.name}
-                            </Badge>
-                          );
-                        })}
-                        {u.roles.length > 2 && (
-                          <Badge variant="outline" className="font-normal">+{u.roles.length - 2}</Badge>
-                        )}
-                      </div>
+                      <Badge variant="secondary" className="font-normal">
+                        {account.isSystemAdmin ? "System Admin" : account.isTenantAdmin ? "Tenant Admin" : "User"}
+                      </Badge>
                     </TableCell>
                     <TableCell>
-                      <StatusPill variant={statusVariant(u.status)}>{u.status}</StatusPill>
+                      <StatusPill variant={statusVariant(account.isEnabled ? "Active" : "Disabled")}>
+                        {account.isEnabled ? "Active" : "Disabled"}
+                      </StatusPill>
                     </TableCell>
-                    <TableCell className="text-right text-sm text-muted-foreground">{u.lastActive}</TableCell>
+                    <TableCell className="text-right text-sm text-muted-foreground">
+                      {account.isEnabled ? "Current" : "Disabled"}
+                    </TableCell>
                   </TableRow>
                 ))}
               </TableBody>
@@ -144,19 +183,13 @@ function Dashboard() {
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
-            {[
-              { who: "Linh Nguyen", what: "assigned role Security Engineer to 3 users", when: "2m ago" },
-              { who: "Aiden Smith", what: "created role Billing Manager", when: "1h ago" },
-              { who: "System", what: "Microsoft Entra ID sync completed (248 users)", when: "3h ago" },
-              { who: "Sofia Garcia", what: "granted direct permission org.audit.read", when: "Yesterday" },
-              { who: "Hai Le", what: "suspended organization Globex Health", when: "Yesterday" },
-            ].map((a, i) => (
-              <div key={i} className="flex gap-3">
+            {(dashboard?.recentAuditLogs ?? []).map((item) => (
+              <div key={item.id} className="flex gap-3">
                 <div className="mt-1 h-2 w-2 shrink-0 rounded-full bg-gradient-brand" />
                 <div className="text-sm">
-                  <span className="font-medium">{a.who}</span>{" "}
-                  <span className="text-muted-foreground">{a.what}</span>
-                  <div className="text-xs text-muted-foreground">{a.when}</div>
+                  <span className="font-medium">{item.eventType}</span>{" "}
+                  <span className="text-muted-foreground">{item.targetType} {item.targetId}</span>
+                  <div className="text-xs text-muted-foreground">{new Date(item.createdAt).toLocaleString()}</div>
                 </div>
               </div>
             ))}

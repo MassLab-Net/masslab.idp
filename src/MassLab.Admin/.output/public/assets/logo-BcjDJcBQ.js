@@ -1,0 +1,1 @@
+import{r as e}from"./i18n-rI36gV6k.js";var t=`/assets/MassLab_Logo_2-BeGIoRfl.png`,n=`/assets/MassLab_Logo_3-B-bl3OSo.png`,r=e();function i({size:e=40,showWord:i=!0}){return(0,r.jsx)(`div`,{className:`flex items-center`,children:(0,r.jsx)(`img`,{src:i?t:n,alt:`MassLab`,style:{height:e,width:`auto`},className:`select-none`})})}export{i as t};

@@ -12,7 +12,6 @@
 
   <ItemGroup>
     <PackageReference Include="FluentValidation" Version="12.1.1" />
-    <PackageReference Include="MassLab.Common.Validation" Version="1.0.4" />
     <PackageReference Include="MediatR" Version="12.5.0" />
   </ItemGroup>
 

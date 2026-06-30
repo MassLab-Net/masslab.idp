@@ -1,5 +1,5 @@
-import { createFileRoute, useNavigate, Link } from "@tanstack/react-router";
-import { useState } from "react";
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
+import { useEffect, useState } from "react";
 import { Building2, Eye, EyeOff, Loader2 } from "lucide-react";
 
 import { Logo } from "@/components/logo";
@@ -15,7 +15,8 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { useAuth } from "@/lib/auth";
+import { getStoredSession, useAuth } from "@/lib/auth";
+import { beginLogin, completeLogin } from "@/lib/oidc";
 import { useI18n } from "@/lib/i18n";
 import { Flag } from "@/components/flag";
 import { toast } from "sonner";
@@ -32,38 +33,64 @@ export const Route = createFileRoute("/auth")({
 
 function AuthPage() {
   const { t, lang, setLang } = useI18n();
-  const { signIn } = useAuth();
   const navigate = useNavigate();
+  const { signIn } = useAuth();
 
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [showPw, setShowPw] = useState(false);
   const [org, setOrg] = useState("");
   const [loading, setLoading] = useState<null | "pw" | "google" | "entra">(null);
+  const [callbackError, setCallbackError] = useState<string | null>(null);
+
+  useEffect(() => {
+    const url = new URL(window.location.href);
+    const isCallback = url.searchParams.has("code") || url.searchParams.has("error");
+
+    if (!isCallback) {
+      if (getStoredSession()) {
+        void navigate({ to: "/admin/dashboard", replace: true });
+      }
+
+      return;
+    }
+
+    let cancelled = false;
+    setLoading("pw");
+    setCallbackError(null);
+
+    void completeLogin(window.location.href)
+      .then(({ session, returnTo }) => {
+        if (cancelled) {
+          return;
+        }
+
+        signIn(session);
+        const cleanUrl = new URL(window.location.href);
+        cleanUrl.search = "";
+        cleanUrl.hash = "";
+        window.history.replaceState({}, document.title, cleanUrl.pathname);
+        void navigate({ to: returnTo as "/admin/dashboard", replace: true });
+      })
+      .catch((reason: unknown) => {
+        if (cancelled) {
+          return;
+        }
+
+        setLoading(null);
+        setCallbackError(reason instanceof Error ? reason.message : "Unable to complete sign-in.");
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [navigate, signIn]);
 
   const submit = async (kind: "pw" | "google" | "entra") => {
-    if (!org.trim()) {
-      toast.error(t("login.errOrg"));
-      return;
-    }
-    if (kind === "pw" && (!username || !password)) {
-      toast.error(t("login.errMissing"));
-      return;
-    }
     setLoading(kind);
-    await new Promise((r) => setTimeout(r, 650));
-    const orgName = org.trim();
-    const display =
-      kind === "google" ? "Alex Morgan" : kind === "entra" ? "Jamie Park" : username || "Linh Nguyen";
-    signIn({
-      id: "me",
-      name: display,
-      username: display.toLowerCase().replace(/\s/g, "."),
-      email: `${display.toLowerCase().replace(/\s/g, ".")}@masslab.io`,
-      organization: orgName,
-      title: "Platform Administrator",
-    });
-    navigate({ to: "/admin/dashboard" });
+    setCallbackError(null);
+    toast.info(kind === "pw" ? "Redirecting to MassLab Identity..." : "Continuing with MassLab Identity...");
+    beginLogin({ organizationSlug: org.trim() || undefined, returnTo: "/admin/dashboard" });
   };
 
   return (
@@ -86,6 +113,12 @@ function AuthPage() {
             </div>
 
             <div className="space-y-4">
+              {callbackError ? (
+                <div className="rounded-xl border border-destructive/30 bg-destructive/5 px-4 py-3 text-sm text-destructive">
+                  {callbackError}
+                </div>
+              ) : null}
+
               <div className="space-y-1.5">
                 <Label htmlFor="org">{t("login.org")}</Label>
                 <div className="relative">

@@ -175,6 +175,8 @@ public sealed record OpenIdUserInfoDto(
     string? Name,
     string? Email,
     string? TenantId,
+    bool IsSystemAdmin,
+    bool IsTenantAdmin,
     IReadOnlyCollection<string> Permissions);
 
 public interface IOpenIdQueries

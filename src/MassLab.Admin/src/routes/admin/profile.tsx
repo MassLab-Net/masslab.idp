@@ -253,7 +253,7 @@ function RecoveryEmailDialog({ open, onClose, current, onSave }: { open: boolean
 
 // ── Main Profile Component ────────────────────────────────────────────────────
 function Profile() {
-  const { user, signIn } = useAuth();
+  const { session, user, signIn } = useAuth();
   const { t } = useI18n();
 
   const [avatarOpen, setAvatarOpen] = useState(false);
@@ -343,7 +343,24 @@ function Profile() {
         </CardContent>
       </Card>
 
-      <AvatarDialog open={avatarOpen} onClose={() => setAvatarOpen(false)} currentInitials={initials(user.name)} avatarSrc={avatarSrc} onSave={(src) => { setAvatarSrc(src); if (user) signIn({ ...user, avatar: src ?? undefined }); }} />
+      <AvatarDialog
+        open={avatarOpen}
+        onClose={() => setAvatarOpen(false)}
+        currentInitials={initials(user.name)}
+        avatarSrc={avatarSrc}
+        onSave={(src) => {
+          setAvatarSrc(src);
+          if (session) {
+            signIn({
+              ...session,
+              user: {
+                ...session.user,
+                avatar: src ?? undefined,
+              },
+            });
+          }
+        }}
+      />
       <ChangePasswordDialog open={passwordOpen} onClose={() => setPasswordOpen(false)} />
       <TwoFADialog open={tfaOpen} onClose={() => setTfaOpen(false)} enabled={tfaEnabled} onToggle={setTfaEnabled} />
       <RecoveryEmailDialog open={recoveryOpen} onClose={() => setRecoveryOpen(false)} current={recoveryEmail} onSave={setRecoveryEmail} />
