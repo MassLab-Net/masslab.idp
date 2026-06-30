@@ -1,6 +1,6 @@
 using System.Security.Claims;
 using MassLab.Identity.Application.Common;
-using MassLab.Identity.Web.Domain;
+using MassLab.Identity.Domain;
 
 namespace MassLab.Identity.Application.Abstractions;
 
@@ -29,6 +29,76 @@ public interface IAccountCommands
     Task<VerifyEmailResult> VerifyEmailAsync(string email, string token, CancellationToken cancellationToken = default);
 }
 
+public sealed record AdminAuditLogDto(
+    Guid Id,
+    DateTimeOffset CreatedAt,
+    string EventType,
+    string Result,
+    bool Succeeded,
+    string ActorType,
+    Guid? ActorUserId,
+    string? TargetType,
+    string? TargetId,
+    string? IpAddress,
+    string? TraceId);
+
+public sealed record TenantUserDto(
+    Guid Id,
+    string? Email,
+    string DisplayName,
+    bool IsEnabled,
+    bool IsSystemAdmin,
+    bool IsTenantAdmin);
+
+public sealed record TenantRoleDto(
+    Guid Id,
+    string Name,
+    string Description);
+
+public sealed record TenantPermissionDto(
+    Guid Id,
+    string Name,
+    string Category,
+    string? Description);
+
+public sealed record ClientApplicationDto(
+    Guid Id,
+    string Name,
+    string ClientId,
+    string Type,
+    bool Enabled,
+    string AllowedFlows,
+    string AllowedScopes,
+    IReadOnlyCollection<string> RedirectUris);
+
+public sealed record ExternalLoginProviderDto(
+    Guid Id,
+    string DisplayName,
+    string Authority,
+    string ClientId,
+    string Scopes,
+    bool Enabled,
+    bool AutoProvisionUsers);
+
+public sealed record UserSessionDto(
+    Guid Id,
+    Guid UserId,
+    string? UserEmail,
+    string SessionId,
+    string? IpAddress,
+    string? UserAgent,
+    DateTimeOffset LastSeenAt,
+    DateTimeOffset? RevokedAt,
+    bool IsActive);
+
+public sealed record SystemTenantDto(
+    Guid Id,
+    string Name,
+    string Slug,
+    string Status,
+    bool IsActive,
+    string? PrimaryHostName);
+
 public sealed record TenantAdminDashboardDto(
     int Users,
     int Roles,
@@ -36,16 +106,16 @@ public sealed record TenantAdminDashboardDto(
     int Clients,
     int Providers,
     int Sessions,
-    IReadOnlyCollection<AuditLog> RecentAuditLogs);
+    IReadOnlyCollection<AdminAuditLogDto> RecentAuditLogs);
 
 public sealed record TenantUsersDto(
-    IReadOnlyCollection<ApplicationUser> Users,
-    IReadOnlyCollection<TenantRole> Roles,
+    IReadOnlyCollection<TenantUserDto> Users,
+    IReadOnlyCollection<TenantRoleDto> Roles,
     IReadOnlyDictionary<Guid, HashSet<Guid>> AssignedRoleIds);
 
 public sealed record TenantRolesDto(
-    IReadOnlyCollection<TenantRole> Roles,
-    IReadOnlyCollection<TenantPermission> Permissions,
+    IReadOnlyCollection<TenantRoleDto> Roles,
+    IReadOnlyCollection<TenantPermissionDto> Permissions,
     IReadOnlyDictionary<Guid, HashSet<Guid>> AssignedPermissionIds);
 
 public interface ITenantAdminQueries
@@ -53,11 +123,11 @@ public interface ITenantAdminQueries
     Task<TenantAdminDashboardDto> GetDashboardAsync(CancellationToken cancellationToken = default);
     Task<TenantUsersDto> GetUsersAsync(string? query, string sort, string direction, CancellationToken cancellationToken = default);
     Task<TenantRolesDto> GetRolesAsync(string? query, string sort, string direction, CancellationToken cancellationToken = default);
-    Task<IReadOnlyCollection<TenantPermission>> GetPermissionsAsync(string? query, string sort, string direction, CancellationToken cancellationToken = default);
-    Task<IReadOnlyCollection<ClientApplication>> GetClientsAsync(CancellationToken cancellationToken = default);
-    Task<IReadOnlyCollection<ExternalLoginProvider>> GetProvidersAsync(CancellationToken cancellationToken = default);
-    Task<IReadOnlyCollection<UserSession>> GetSessionsAsync(CancellationToken cancellationToken = default);
-    Task<IReadOnlyCollection<AuditLog>> GetAuditLogsAsync(CancellationToken cancellationToken = default);
+    Task<IReadOnlyCollection<TenantPermissionDto>> GetPermissionsAsync(string? query, string sort, string direction, CancellationToken cancellationToken = default);
+    Task<IReadOnlyCollection<ClientApplicationDto>> GetClientsAsync(CancellationToken cancellationToken = default);
+    Task<IReadOnlyCollection<ExternalLoginProviderDto>> GetProvidersAsync(CancellationToken cancellationToken = default);
+    Task<IReadOnlyCollection<UserSessionDto>> GetSessionsAsync(CancellationToken cancellationToken = default);
+    Task<IReadOnlyCollection<AdminAuditLogDto>> GetAuditLogsAsync(CancellationToken cancellationToken = default);
 }
 
 public interface ITenantAdminCommands
@@ -91,7 +161,7 @@ public sealed record CreateClientResult(bool Succeeded, string? ClientId = null,
 
 public interface ISystemAdminQueries
 {
-    Task<IReadOnlyCollection<Tenant>> GetTenantsAsync(CancellationToken cancellationToken = default);
+    Task<IReadOnlyCollection<SystemTenantDto>> GetTenantsAsync(CancellationToken cancellationToken = default);
 }
 
 public interface ISystemAdminCommands

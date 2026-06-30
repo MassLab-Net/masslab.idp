@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.RateLimiting;
 using MassLab.Identity.Application.Common;
 using MassLab.Identity.Application.Features;
+using MassLab.Identity.Web.ViewModels.Account;
 using MediatR;
 
 namespace MassLab.Identity.Web.Controllers;
@@ -89,9 +90,9 @@ public sealed class AccountController : Controller
     [Authorize]
     [HttpPost("mfa/challenge")]
     [ValidateAntiForgeryToken]
-    public async Task<IActionResult> MfaChallenge(string code)
+    public async Task<IActionResult> MfaChallenge(MfaChallengeInput input)
     {
-        var result = await _sender.Send(new VerifyMfaChallengeCommand(User, code));
+        var result = await _sender.Send(new VerifyMfaChallengeCommand(User, input.Code));
         if (!result.Succeeded)
         {
             AddErrors(result);
@@ -127,25 +128,3 @@ public sealed class AccountController : Controller
         }
     }
 }
-
-public sealed record LoginInput
-{
-    public string Email { get; init; } = string.Empty;
-    public string Password { get; init; } = string.Empty;
-    public bool RememberMe { get; init; }
-    public string? ReturnUrl { get; init; }
-}
-
-public sealed record ForgotPasswordInput
-{
-    public string Email { get; init; } = string.Empty;
-}
-
-public sealed record ResetPasswordInput
-{
-    public string Email { get; init; } = string.Empty;
-    public string Token { get; init; } = string.Empty;
-    public string Password { get; init; } = string.Empty;
-}
-
-public sealed record MfaEnrollViewModel(string Secret, string AuthenticatorUri);

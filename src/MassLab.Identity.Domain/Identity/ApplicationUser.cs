@@ -1,6 +1,6 @@
 using Microsoft.AspNetCore.Identity;
 
-namespace MassLab.Identity.Web.Domain;
+namespace MassLab.Identity.Domain;
 
 public sealed class ApplicationUser : IdentityUser<Guid>
 {

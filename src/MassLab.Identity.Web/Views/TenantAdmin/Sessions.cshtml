@@ -1,4 +1,4 @@
-@model IReadOnlyCollection<MassLab.Identity.Web.Domain.UserSession>
+@model IReadOnlyCollection<UserSessionDto>
 @{
     ViewData["Title"] = "Sessions";
 }
@@ -12,14 +12,14 @@
             @foreach (var session in Model)
             {
                 <tr>
-                    <td>@session.User?.Email</td>
+                    <td>@session.UserEmail</td>
                     <td><code>@session.SessionId</code></td>
                     <td>@session.IpAddress</td>
                     <td class="text-truncate" style="max-width: 320px;">@session.UserAgent</td>
                     <td>@session.LastSeenAt</td>
-                    <td><span class="badge @(session.RevokedAt is null ? "badge-success" : "badge-secondary")">@(session.RevokedAt is null ? "Active" : "Revoked")</span></td>
+                    <td><span class="badge @(session.IsActive ? "badge-success" : "badge-secondary")">@(session.IsActive ? "Active" : "Revoked")</span></td>
                     <td class="text-right">
-                        @if (session.RevokedAt is null)
+                        @if (session.IsActive)
                         {
                             <form asp-action="RevokeSession" asp-route-id="@session.Id" method="post">
                                 <button class="btn btn-sm btn-outline-danger" type="submit"><i class="fa fa-ban"></i> Revoke</button>
@@ -32,4 +32,3 @@
         </table>
     </div>
 </div>
-

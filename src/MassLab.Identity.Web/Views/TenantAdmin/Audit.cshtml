@@ -1,4 +1,4 @@
-@model IReadOnlyCollection<MassLab.Identity.Web.Domain.AuditLog>
+@model IReadOnlyCollection<AdminAuditLogDto>
 @{
     ViewData["Title"] = "Audit Logs";
 }
@@ -14,7 +14,7 @@
                 <tr>
                     <td>@log.CreatedAt</td>
                     <td><code>@log.EventType</code></td>
-                    <td><span class="badge @(log.Result == MassLab.Identity.Web.Domain.AuditResult.Success ? "badge-success" : "badge-danger")">@log.Result</span></td>
+                    <td><span class="badge @(log.Succeeded ? "badge-success" : "badge-danger")">@log.Result</span></td>
                     <td>@log.ActorType @log.ActorUserId</td>
                     <td>@log.TargetType @log.TargetId</td>
                     <td>@log.IpAddress</td>
@@ -25,4 +25,3 @@
         </table>
     </div>
 </div>
-

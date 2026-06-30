@@ -4,7 +4,7 @@ using MassLab.Common.Logging.Serilog.Extensions;
 using MassLab.Common.Observability.Extensions;
 using MassLab.Identity.Application;
 using MassLab.Identity.Infrastructure;
-using MassLab.Identity.Web.Data;
+using MassLab.Identity.Infrastructure.Data;
 using Microsoft.AspNetCore.RateLimiting;
 using OpenIddict.Abstractions;
 
@@ -123,7 +123,7 @@ app.UseRateLimiter();
 app.UseMassLabPrometheus();
 app.UseSession();
 app.UseAuthentication();
-app.UseMiddleware<MassLab.Identity.Web.Multitenancy.TenantResolutionMiddleware>();
+app.UseMiddleware<MassLab.Identity.Infrastructure.Multitenancy.TenantResolutionMiddleware>();
 app.UseAuthorization();
 
 app.MapHealthChecks("/health");

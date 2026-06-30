@@ -1,4 +1,4 @@
-namespace MassLab.Identity.Web.Domain;
+namespace MassLab.Identity.Domain;
 
 public sealed class ClientApplication : TenantEntity
 {

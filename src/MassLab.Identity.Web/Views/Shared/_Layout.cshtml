@@ -16,7 +16,7 @@
                     <a class="nav-link" data-widget="pushmenu" href="#" role="button"><i class="fa fa-bars"></i></a>
                 </li>
                 <li class="nav-item d-none d-sm-inline-block">
-                    <a asp-controller="Home" asp-action="Index" class="nav-link">Dashboard</a>
+                    <a asp-route="@MassLab.Identity.Web.Routing.AdminRouteNames.Dashboard" class="nav-link">Admin</a>
                 </li>
             </ul>
             <ul class="navbar-nav ml-auto">
@@ -36,32 +36,33 @@
                 <nav class="mt-2">
                     <ul class="nav nav-pills nav-sidebar flex-column" data-widget="treeview" role="menu">
                         <li class="nav-item">
-                            <a asp-controller="Home" asp-action="Index" class="nav-link">
+                            <a asp-route="@MassLab.Identity.Web.Routing.AdminRouteNames.Dashboard" class="nav-link">
                                 <i class="nav-icon fa fa-dashboard"></i>
-                                <p>Dashboard</p>
-                            </a>
-                        </li>
-                        <li class="nav-header">SYSTEM</li>
-                        <li class="nav-item">
-                            <a asp-controller="SystemAdmin" asp-action="Index" class="nav-link">
-                                <i class="nav-icon fa fa-building"></i>
-                                <p>Tenants</p>
+                                <p>Overview</p>
                             </a>
                         </li>
                         <li class="nav-header">TENANT</li>
                         <li class="nav-item">
-                            <a asp-controller="TenantAdmin" asp-action="Dashboard" class="nav-link">
-                                <i class="nav-icon fa fa-line-chart"></i>
-                                <p>Overview</p>
+                            <a asp-route="@MassLab.Identity.Web.Routing.AdminRouteNames.Organizations" class="nav-link">
+                                <i class="nav-icon fa fa-building"></i>
+                                <p>Organizations</p>
                             </a>
                         </li>
-                        <li class="nav-item"><a asp-controller="TenantAdmin" asp-action="Users" class="nav-link"><i class="nav-icon fa fa-users"></i><p>Users</p></a></li>
-                        <li class="nav-item"><a asp-controller="TenantAdmin" asp-action="Roles" class="nav-link"><i class="nav-icon fa fa-id-badge"></i><p>Roles</p></a></li>
-                        <li class="nav-item"><a asp-controller="TenantAdmin" asp-action="Permissions" class="nav-link"><i class="nav-icon fa fa-key"></i><p>Permissions</p></a></li>
-                        <li class="nav-item"><a asp-controller="TenantAdmin" asp-action="Clients" class="nav-link"><i class="nav-icon fa fa-window-restore"></i><p>Applications</p></a></li>
-                        <li class="nav-item"><a asp-controller="TenantAdmin" asp-action="Providers" class="nav-link"><i class="nav-icon fa fa-plug"></i><p>Login Providers</p></a></li>
-                        <li class="nav-item"><a asp-controller="TenantAdmin" asp-action="Sessions" class="nav-link"><i class="nav-icon fa fa-clock-o"></i><p>Sessions</p></a></li>
-                        <li class="nav-item"><a asp-controller="TenantAdmin" asp-action="Audit" class="nav-link"><i class="nav-icon fa fa-list-alt"></i><p>Audit Logs</p></a></li>
+                        <li class="nav-header">ACCESS CONTROL</li>
+                        <li class="nav-item">
+                            <a asp-route="@MassLab.Identity.Web.Routing.AdminRouteNames.Dashboard" class="nav-link">
+                                <i class="nav-icon fa fa-line-chart"></i>
+                                <p>Dashboard</p>
+                            </a>
+                        </li>
+                        <li class="nav-item"><a asp-route="@MassLab.Identity.Web.Routing.AdminRouteNames.Users" class="nav-link"><i class="nav-icon fa fa-users"></i><p>Users</p></a></li>
+                        <li class="nav-item"><a asp-route="@MassLab.Identity.Web.Routing.AdminRouteNames.Roles" class="nav-link"><i class="nav-icon fa fa-id-badge"></i><p>Roles</p></a></li>
+                        <li class="nav-item"><a asp-route="@MassLab.Identity.Web.Routing.AdminRouteNames.Permissions" class="nav-link"><i class="nav-icon fa fa-key"></i><p>Permissions</p></a></li>
+                        <li class="nav-header">PLATFORM</li>
+                        <li class="nav-item"><a asp-route="@MassLab.Identity.Web.Routing.AdminRouteNames.Applications" class="nav-link"><i class="nav-icon fa fa-window-restore"></i><p>Applications</p></a></li>
+                        <li class="nav-item"><a asp-route="@MassLab.Identity.Web.Routing.AdminRouteNames.Providers" class="nav-link"><i class="nav-icon fa fa-plug"></i><p>Login Providers</p></a></li>
+                        <li class="nav-item"><a asp-route="@MassLab.Identity.Web.Routing.AdminRouteNames.Sessions" class="nav-link"><i class="nav-icon fa fa-clock-o"></i><p>Sessions</p></a></li>
+                        <li class="nav-item"><a asp-route="@MassLab.Identity.Web.Routing.AdminRouteNames.Audit" class="nav-link"><i class="nav-icon fa fa-list-alt"></i><p>Audit Logs</p></a></li>
                     </ul>
                 </nav>
             </div>

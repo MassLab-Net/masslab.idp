@@ -27,11 +27,4 @@
     <PackageReference Include="OpenIddict.EntityFrameworkCore" Version="7.5.0" />
   </ItemGroup>
 
-  <ItemGroup>
-    <Compile Remove="Class1.cs" />
-    <Compile Include="..\MassLab.Identity.Web\Data\**\*.cs" Link="Data\%(RecursiveDir)%(Filename)%(Extension)" />
-    <Compile Include="..\MassLab.Identity.Web\Multitenancy\**\*.cs" Link="Multitenancy\%(RecursiveDir)%(Filename)%(Extension)" />
-    <Compile Include="..\MassLab.Identity.Web\Services\**\*.cs" Link="Services\%(RecursiveDir)%(Filename)%(Extension)" />
-  </ItemGroup>
-
 </Project>

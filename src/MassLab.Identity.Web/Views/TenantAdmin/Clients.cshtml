@@ -1,5 +1,4 @@
-@model IReadOnlyCollection<MassLab.Identity.Web.Domain.ClientApplication>
-@using MassLab.Identity.Web.Domain
+@model IReadOnlyCollection<ClientApplicationDto>
 @{
     ViewData["Title"] = "Applications";
 }
@@ -18,7 +17,7 @@
             <div class="form-row">
                 <div class="form-group col-md-3"><label>Name</label><input name="name" class="form-control" /></div>
                 <div class="form-group col-md-3"><label>Client ID</label><input name="clientId" class="form-control" /></div>
-                <div class="form-group col-md-2"><label>Type</label><select name="type" class="form-control" asp-items="Html.GetEnumSelectList<ClientType>()"></select></div>
+                <div class="form-group col-md-2"><label>Type</label><select name="type" class="form-control" asp-items="Html.GetEnumSelectList<MassLab.Identity.Domain.ClientType>()"></select></div>
                 <div class="form-group col-md-4"><label>Redirect URI</label><input name="redirectUri" class="form-control" /></div>
             </div>
             <div class="form-row">
@@ -44,11 +43,10 @@
                     <td>@client.Type</td>
                     <td>@client.AllowedFlows</td>
                     <td>@client.AllowedScopes</td>
-                    <td>@string.Join(", ", client.RedirectUris.Select(x => x.Uri))</td>
+                    <td>@string.Join(", ", client.RedirectUris)</td>
                 </tr>
             }
             </tbody>
         </table>
     </div>
 </div>
-

@@ -1,6 +1,6 @@
 using System.Security.Claims;
 using MassLab.Identity.Application.Abstractions;
-using MassLab.Identity.Web.Services;
+using MassLab.Identity.Infrastructure.Services;
 
 namespace MassLab.Identity.Infrastructure;
 

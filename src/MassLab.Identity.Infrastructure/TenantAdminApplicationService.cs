@@ -1,9 +1,9 @@
 using MassLab.Identity.Application.Abstractions;
 using MassLab.Identity.Application.Common;
-using MassLab.Identity.Web.Data;
-using MassLab.Identity.Web.Domain;
-using MassLab.Identity.Web.Multitenancy;
-using MassLab.Identity.Web.Services;
+using MassLab.Identity.Infrastructure.Data;
+using MassLab.Identity.Domain;
+using MassLab.Identity.Infrastructure.Multitenancy;
+using MassLab.Identity.Infrastructure.Services;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 
@@ -40,7 +40,22 @@ internal sealed class TenantAdminApplicationService : ITenantAdminQueries, ITena
             await _db.ClientApplications.CountAsync(cancellationToken),
             await _db.ExternalLoginProviders.CountAsync(cancellationToken),
             await _db.UserSessions.CountAsync(cancellationToken),
-            await _db.AuditLogs.OrderByDescending(x => x.CreatedAt).Take(25).ToListAsync(cancellationToken));
+            await _db.AuditLogs
+                .OrderByDescending(x => x.CreatedAt)
+                .Take(25)
+                .Select(x => new AdminAuditLogDto(
+                    x.Id,
+                    x.CreatedAt,
+                    x.EventType,
+                    x.Result.ToString(),
+                    x.Result == AuditResult.Success,
+                    x.ActorType.ToString(),
+                    x.ActorUserId,
+                    x.TargetType,
+                    x.TargetId,
+                    x.IpAddress,
+                    x.TraceId))
+                .ToListAsync(cancellationToken));
     }
 
     public async Task<TenantUsersDto> GetUsersAsync(string? query, string sort, string direction, CancellationToken cancellationToken = default)
@@ -68,8 +83,19 @@ internal sealed class TenantAdminApplicationService : ITenantAdminQueries, ITena
             .ToDictionaryAsync(x => x.Key, x => x.Select(a => a.RoleId).ToHashSet(), cancellationToken);
 
         return new TenantUsersDto(
-            await usersQuery.ToListAsync(cancellationToken),
-            await _db.TenantRoles.OrderBy(x => x.Name).ToListAsync(cancellationToken),
+            await usersQuery
+                .Select(x => new TenantUserDto(
+                    x.Id,
+                    x.Email,
+                    x.DisplayName,
+                    x.IsEnabled,
+                    x.IsSystemAdmin,
+                    x.IsTenantAdmin))
+                .ToListAsync(cancellationToken),
+            await _db.TenantRoles
+                .OrderBy(x => x.Name)
+                .Select(x => new TenantRoleDto(x.Id, x.Name, x.Description))
+                .ToListAsync(cancellationToken),
             assignments);
     }
 
@@ -94,12 +120,18 @@ internal sealed class TenantAdminApplicationService : ITenantAdminQueries, ITena
             .ToDictionaryAsync(x => x.Key, x => x.Select(a => a.PermissionId).ToHashSet(), cancellationToken);
 
         return new TenantRolesDto(
-            await rolesQuery.ToListAsync(cancellationToken),
-            await _db.TenantPermissions.OrderBy(x => x.Category).ThenBy(x => x.Name).ToListAsync(cancellationToken),
+            await rolesQuery
+                .Select(x => new TenantRoleDto(x.Id, x.Name, x.Description))
+                .ToListAsync(cancellationToken),
+            await _db.TenantPermissions
+                .OrderBy(x => x.Category)
+                .ThenBy(x => x.Name)
+                .Select(x => new TenantPermissionDto(x.Id, x.Name, x.Category, x.Description))
+                .ToListAsync(cancellationToken),
             assignments);
     }
 
-    public async Task<IReadOnlyCollection<TenantPermission>> GetPermissionsAsync(string? query, string sort, string direction, CancellationToken cancellationToken = default)
+    public async Task<IReadOnlyCollection<TenantPermissionDto>> GetPermissionsAsync(string? query, string sort, string direction, CancellationToken cancellationToken = default)
     {
         var permissions = _db.TenantPermissions.AsQueryable();
         if (!string.IsNullOrWhiteSpace(query))
@@ -120,20 +152,75 @@ internal sealed class TenantAdminApplicationService : ITenantAdminQueries, ITena
             _ => permissions.OrderBy(x => x.Category).ThenBy(x => x.Name)
         };
 
-        return await permissions.ToListAsync(cancellationToken);
+        return await permissions
+            .Select(x => new TenantPermissionDto(x.Id, x.Name, x.Category, x.Description))
+            .ToListAsync(cancellationToken);
     }
 
-    public async Task<IReadOnlyCollection<ClientApplication>> GetClientsAsync(CancellationToken cancellationToken = default)
-        => await _db.ClientApplications.Include(x => x.RedirectUris).OrderBy(x => x.Name).ToListAsync(cancellationToken);
+    public async Task<IReadOnlyCollection<ClientApplicationDto>> GetClientsAsync(CancellationToken cancellationToken = default)
+        => await _db.ClientApplications
+            .Include(x => x.RedirectUris)
+            .OrderBy(x => x.Name)
+            .Select(x => new ClientApplicationDto(
+                x.Id,
+                x.Name,
+                x.ClientId,
+                x.Type.ToString(),
+                x.Enabled,
+                x.AllowedFlows,
+                x.AllowedScopes,
+                x.RedirectUris
+                    .OrderBy(uri => uri.Uri)
+                    .Select(uri => uri.Uri)
+                    .ToArray()))
+            .ToListAsync(cancellationToken);
 
-    public async Task<IReadOnlyCollection<ExternalLoginProvider>> GetProvidersAsync(CancellationToken cancellationToken = default)
-        => await _db.ExternalLoginProviders.OrderBy(x => x.DisplayName).ToListAsync(cancellationToken);
+    public async Task<IReadOnlyCollection<ExternalLoginProviderDto>> GetProvidersAsync(CancellationToken cancellationToken = default)
+        => await _db.ExternalLoginProviders
+            .OrderBy(x => x.DisplayName)
+            .Select(x => new ExternalLoginProviderDto(
+                x.Id,
+                x.DisplayName,
+                x.Authority,
+                x.ClientId,
+                x.Scopes,
+                x.Enabled,
+                x.AutoProvisionUsers))
+            .ToListAsync(cancellationToken);
 
-    public async Task<IReadOnlyCollection<UserSession>> GetSessionsAsync(CancellationToken cancellationToken = default)
-        => await _db.UserSessions.Include(x => x.User).OrderByDescending(x => x.LastSeenAt).ToListAsync(cancellationToken);
+    public async Task<IReadOnlyCollection<UserSessionDto>> GetSessionsAsync(CancellationToken cancellationToken = default)
+        => await _db.UserSessions
+            .Include(x => x.User)
+            .OrderByDescending(x => x.LastSeenAt)
+            .Select(x => new UserSessionDto(
+                x.Id,
+                x.UserId,
+                x.User != null ? x.User.Email : null,
+                x.SessionId,
+                x.IpAddress,
+                x.UserAgent,
+                x.LastSeenAt,
+                x.RevokedAt,
+                x.RevokedAt == null))
+            .ToListAsync(cancellationToken);
 
-    public async Task<IReadOnlyCollection<AuditLog>> GetAuditLogsAsync(CancellationToken cancellationToken = default)
-        => await _db.AuditLogs.OrderByDescending(x => x.CreatedAt).Take(200).ToListAsync(cancellationToken);
+    public async Task<IReadOnlyCollection<AdminAuditLogDto>> GetAuditLogsAsync(CancellationToken cancellationToken = default)
+        => await _db.AuditLogs
+            .OrderByDescending(x => x.CreatedAt)
+            .Take(200)
+            .Select(x => new AdminAuditLogDto(
+                x.Id,
+                x.CreatedAt,
+                x.EventType,
+                x.Result.ToString(),
+                x.Result == AuditResult.Success,
+                x.ActorType.ToString(),
+                x.ActorUserId,
+                x.TargetType,
+                x.TargetId,
+                x.IpAddress,
+                x.TraceId))
+            .ToListAsync(cancellationToken);
 
     public async Task<CommandResult> CreateUserAsync(string email, string displayName, string password, bool isTenantAdmin, CancellationToken cancellationToken = default)
     {

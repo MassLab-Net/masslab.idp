@@ -1,5 +1,5 @@
 using MassLab.Identity.Application.Abstractions;
-using MassLab.Identity.Web.Multitenancy;
+using MassLab.Identity.Infrastructure.Multitenancy;
 
 namespace MassLab.Identity.Infrastructure;
 
@@ -16,7 +16,7 @@ internal sealed class CurrentTenantAccessor : ICurrentTenantAccessor
 
     public string? Slug => _currentTenant.Slug;
 
-    public MassLab.Identity.Web.Domain.TenantStatus? Status => _currentTenant.Status;
+    public MassLab.Identity.Domain.TenantStatus? Status => _currentTenant.Status;
 
     public bool IsAvailable => _currentTenant.IsAvailable;
 }

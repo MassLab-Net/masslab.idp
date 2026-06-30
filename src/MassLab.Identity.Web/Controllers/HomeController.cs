@@ -1,6 +1,7 @@
 using System.Diagnostics;
 using Microsoft.AspNetCore.Mvc;
 using MassLab.Identity.Web.Models;
+using MassLab.Identity.Web.Routing;
 
 namespace MassLab.Identity.Web.Controllers;
 
@@ -21,6 +22,12 @@ public class HomeController : Controller
     public IActionResult Privacy()
     {
         return View();
+    }
+
+    [HttpGet("/admin")]
+    public IActionResult Admin()
+    {
+        return RedirectToRoute(AdminRouteNames.Dashboard);
     }
 
     [ResponseCache(Duration = 0, Location = ResponseCacheLocation.None, NoStore = true)]

@@ -1,7 +1,7 @@
 using MassLab.Identity.Application.Abstractions;
 using MassLab.Identity.Application.Common;
-using MassLab.Identity.Web.Data;
-using MassLab.Identity.Web.Domain;
+using MassLab.Identity.Infrastructure.Data;
+using MassLab.Identity.Domain;
 using Microsoft.EntityFrameworkCore;
 
 namespace MassLab.Identity.Infrastructure;
@@ -15,8 +15,21 @@ internal sealed class SystemAdminApplicationService : ISystemAdminQueries, ISyst
         _db = db;
     }
 
-    public async Task<IReadOnlyCollection<Tenant>> GetTenantsAsync(CancellationToken cancellationToken = default)
-        => await _db.Tenants.IgnoreQueryFilters().OrderBy(x => x.Name).ToListAsync(cancellationToken);
+    public async Task<IReadOnlyCollection<SystemTenantDto>> GetTenantsAsync(CancellationToken cancellationToken = default)
+        => await _db.Tenants
+            .IgnoreQueryFilters()
+            .OrderBy(x => x.Name)
+            .Select(x => new SystemTenantDto(
+                x.Id,
+                x.Name,
+                x.Slug,
+                x.Status.ToString(),
+                x.Status == TenantStatus.Active,
+                x.Domains
+                    .Where(domain => domain.IsPrimary)
+                    .Select(domain => domain.HostName)
+                    .FirstOrDefault()))
+            .ToListAsync(cancellationToken);
 
     public async Task CreateTenantAsync(string name, string slug, string hostName, CancellationToken cancellationToken = default)
     {

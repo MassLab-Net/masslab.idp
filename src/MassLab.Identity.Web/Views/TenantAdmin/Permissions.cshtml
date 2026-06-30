@@ -1,4 +1,4 @@
-@model MassLab.Identity.Web.Controllers.TenantPermissionsPage
+@model TenantPermissionsPage
 @{
     ViewData["Title"] = "Permissions";
     string NextDir(string column) => Model.Sort == column && Model.Direction == "asc" ? "desc" : "asc";

@@ -1,10 +1,10 @@
 using System.Security.Claims;
 using MassLab.Identity.Application.Abstractions;
 using MassLab.Identity.Application.Common;
-using MassLab.Identity.Web.Data;
-using MassLab.Identity.Web.Domain;
-using MassLab.Identity.Web.Multitenancy;
-using MassLab.Identity.Web.Services;
+using MassLab.Identity.Infrastructure.Data;
+using MassLab.Identity.Domain;
+using MassLab.Identity.Infrastructure.Multitenancy;
+using MassLab.Identity.Infrastructure.Services;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Routing;

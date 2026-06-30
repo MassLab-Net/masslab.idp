@@ -1,4 +1,4 @@
-@model MassLab.Identity.Web.Controllers.TenantUsersPage
+@model TenantUsersPage
 @{
     ViewData["Title"] = "Users";
     string NextDir(string column) => Model.Sort == column && Model.Direction == "asc" ? "desc" : "asc";
@@ -130,4 +130,3 @@
         </div>
     </div>
 }
-

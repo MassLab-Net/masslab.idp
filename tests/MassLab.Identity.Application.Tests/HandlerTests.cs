@@ -2,7 +2,6 @@ using System.Security.Claims;
 using MassLab.Identity.Application.Abstractions;
 using MassLab.Identity.Application.Common;
 using MassLab.Identity.Application.Features;
-using MassLab.Identity.Web.Domain;
 
 namespace MassLab.Identity.Application.Tests;
 
@@ -28,7 +27,7 @@ public sealed class HandlerTests
     [Fact]
     public async Task Dashboard_query_handler_returns_service_payload()
     {
-        var expected = new TenantAdminDashboardDto(1, 2, 3, 4, 5, 6, Array.Empty<AuditLog>());
+        var expected = new TenantAdminDashboardDto(1, 2, 3, 4, 5, 6, Array.Empty<AdminAuditLogDto>());
         var queries = new FakeTenantAdminQueries
         {
             Dashboard = expected
@@ -74,29 +73,29 @@ public sealed class HandlerTests
 
     private sealed class FakeTenantAdminQueries : ITenantAdminQueries
     {
-        public TenantAdminDashboardDto Dashboard { get; set; } = new(0, 0, 0, 0, 0, 0, Array.Empty<AuditLog>());
+        public TenantAdminDashboardDto Dashboard { get; set; } = new(0, 0, 0, 0, 0, 0, Array.Empty<AdminAuditLogDto>());
 
         public Task<TenantAdminDashboardDto> GetDashboardAsync(CancellationToken cancellationToken = default) => Task.FromResult(Dashboard);
 
         public Task<TenantUsersDto> GetUsersAsync(string? query, string sort, string direction, CancellationToken cancellationToken = default)
-            => Task.FromResult(new TenantUsersDto(Array.Empty<ApplicationUser>(), Array.Empty<TenantRole>(), new Dictionary<Guid, HashSet<Guid>>()));
+            => Task.FromResult(new TenantUsersDto(Array.Empty<TenantUserDto>(), Array.Empty<TenantRoleDto>(), new Dictionary<Guid, HashSet<Guid>>()));
 
         public Task<TenantRolesDto> GetRolesAsync(string? query, string sort, string direction, CancellationToken cancellationToken = default)
-            => Task.FromResult(new TenantRolesDto(Array.Empty<TenantRole>(), Array.Empty<TenantPermission>(), new Dictionary<Guid, HashSet<Guid>>()));
+            => Task.FromResult(new TenantRolesDto(Array.Empty<TenantRoleDto>(), Array.Empty<TenantPermissionDto>(), new Dictionary<Guid, HashSet<Guid>>()));
 
-        public Task<IReadOnlyCollection<TenantPermission>> GetPermissionsAsync(string? query, string sort, string direction, CancellationToken cancellationToken = default)
-            => Task.FromResult<IReadOnlyCollection<TenantPermission>>(Array.Empty<TenantPermission>());
+        public Task<IReadOnlyCollection<TenantPermissionDto>> GetPermissionsAsync(string? query, string sort, string direction, CancellationToken cancellationToken = default)
+            => Task.FromResult<IReadOnlyCollection<TenantPermissionDto>>(Array.Empty<TenantPermissionDto>());
 
-        public Task<IReadOnlyCollection<ClientApplication>> GetClientsAsync(CancellationToken cancellationToken = default)
-            => Task.FromResult<IReadOnlyCollection<ClientApplication>>(Array.Empty<ClientApplication>());
+        public Task<IReadOnlyCollection<ClientApplicationDto>> GetClientsAsync(CancellationToken cancellationToken = default)
+            => Task.FromResult<IReadOnlyCollection<ClientApplicationDto>>(Array.Empty<ClientApplicationDto>());
 
-        public Task<IReadOnlyCollection<ExternalLoginProvider>> GetProvidersAsync(CancellationToken cancellationToken = default)
-            => Task.FromResult<IReadOnlyCollection<ExternalLoginProvider>>(Array.Empty<ExternalLoginProvider>());
+        public Task<IReadOnlyCollection<ExternalLoginProviderDto>> GetProvidersAsync(CancellationToken cancellationToken = default)
+            => Task.FromResult<IReadOnlyCollection<ExternalLoginProviderDto>>(Array.Empty<ExternalLoginProviderDto>());
 
-        public Task<IReadOnlyCollection<UserSession>> GetSessionsAsync(CancellationToken cancellationToken = default)
-            => Task.FromResult<IReadOnlyCollection<UserSession>>(Array.Empty<UserSession>());
+        public Task<IReadOnlyCollection<UserSessionDto>> GetSessionsAsync(CancellationToken cancellationToken = default)
+            => Task.FromResult<IReadOnlyCollection<UserSessionDto>>(Array.Empty<UserSessionDto>());
 
-        public Task<IReadOnlyCollection<AuditLog>> GetAuditLogsAsync(CancellationToken cancellationToken = default)
-            => Task.FromResult<IReadOnlyCollection<AuditLog>>(Array.Empty<AuditLog>());
+        public Task<IReadOnlyCollection<AdminAuditLogDto>> GetAuditLogsAsync(CancellationToken cancellationToken = default)
+            => Task.FromResult<IReadOnlyCollection<AdminAuditLogDto>>(Array.Empty<AdminAuditLogDto>());
     }
 }

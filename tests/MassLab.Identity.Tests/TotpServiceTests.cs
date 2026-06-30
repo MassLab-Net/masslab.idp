@@ -1,4 +1,4 @@
-using MassLab.Identity.Web.Services;
+using MassLab.Identity.Infrastructure.Services;
 
 namespace MassLab.Identity.Tests;
 

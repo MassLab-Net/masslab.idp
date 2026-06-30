@@ -2,7 +2,9 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using MassLab.Identity.Application.Common;
 using MassLab.Identity.Application.Features;
-using MassLab.Identity.Web.Domain;
+using MassLab.Identity.Domain;
+using MassLab.Identity.Web.Routing;
+using MassLab.Identity.Web.ViewModels.TenantAdmin;
 using MediatR;
 
 namespace MassLab.Identity.Web.Controllers;
@@ -19,6 +21,7 @@ public sealed class TenantAdminController : Controller
     }
 
     [HttpGet("")]
+    [HttpGet("/admin/dashboard", Name = AdminRouteNames.Dashboard)]
     public async Task<IActionResult> Dashboard()
     {
         var result = await _sender.Send(new GetTenantDashboardQuery());
@@ -28,6 +31,7 @@ public sealed class TenantAdminController : Controller
     }
 
     [HttpGet("users")]
+    [HttpGet("/admin/access-control/users", Name = AdminRouteNames.Users)]
     public async Task<IActionResult> Users(string? q = null, string sort = "email", string dir = "asc")
     {
         var result = await _sender.Send(new GetTenantUsersQuery(q, sort, dir));
@@ -36,14 +40,16 @@ public sealed class TenantAdminController : Controller
     }
 
     [HttpPost("users")]
+    [HttpPost("/admin/access-control/users")]
     [ValidateAntiForgeryToken]
-    public async Task<IActionResult> CreateUser(string email, string displayName, string password, bool isTenantAdmin = false)
+    public async Task<IActionResult> CreateUser(CreateTenantUserInput input)
     {
-        var result = await _sender.Send(new CreateTenantUserCommand(email, displayName, password, isTenantAdmin));
+        var result = await _sender.Send(new CreateTenantUserCommand(input.Email, input.DisplayName, input.Password, input.IsTenantAdmin));
         return result.Succeeded ? RedirectToAction(nameof(Users)) : BadRequest(result.Errors);
     }
 
     [HttpPost("users/{id:guid}/disable")]
+    [HttpPost("/admin/access-control/users/{id:guid}/disable")]
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> DisableUser(Guid id)
     {
@@ -57,10 +63,11 @@ public sealed class TenantAdminController : Controller
     }
 
     [HttpPost("users/{id:guid}/edit")]
+    [HttpPost("/admin/access-control/users/{id:guid}/edit")]
     [ValidateAntiForgeryToken]
-    public async Task<IActionResult> EditUser(Guid id, string email, string displayName, bool isEnabled, bool isTenantAdmin)
+    public async Task<IActionResult> EditUser(Guid id, EditTenantUserInput input)
     {
-        var result = await _sender.Send(new EditTenantUserCommand(id, email, displayName, isEnabled, isTenantAdmin));
+        var result = await _sender.Send(new EditTenantUserCommand(id, input.Email, input.DisplayName, input.IsEnabled, input.IsTenantAdmin));
         if (result.NotFound)
         {
             return NotFound();
@@ -70,6 +77,7 @@ public sealed class TenantAdminController : Controller
     }
 
     [HttpPost("users/{id:guid}/delete")]
+    [HttpPost("/admin/access-control/users/{id:guid}/delete")]
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> DeleteUser(Guid id)
     {
@@ -83,10 +91,11 @@ public sealed class TenantAdminController : Controller
     }
 
     [HttpPost("users/{userId:guid}/roles")]
+    [HttpPost("/admin/access-control/users/{userId:guid}/roles")]
     [ValidateAntiForgeryToken]
-    public async Task<IActionResult> SetUserRoles(Guid userId, Guid[]? roleIds)
+    public async Task<IActionResult> SetUserRoles(Guid userId, SetTenantUserRolesInput input)
     {
-        var result = await _sender.Send(new SetTenantUserRolesCommand(userId, (roleIds ?? Array.Empty<Guid>()).Distinct().ToArray()));
+        var result = await _sender.Send(new SetTenantUserRolesCommand(userId, input.RoleIds.Distinct().ToArray()));
         if (!result.Succeeded)
         {
             return BadRequest(result.Errors);
@@ -96,6 +105,7 @@ public sealed class TenantAdminController : Controller
     }
 
     [HttpGet("roles")]
+    [HttpGet("/admin/access-control/roles", Name = AdminRouteNames.Roles)]
     public async Task<IActionResult> Roles(string? q = null, string sort = "name", string dir = "asc")
     {
         var result = await _sender.Send(new GetTenantRolesQuery(q, sort, dir));
@@ -104,10 +114,11 @@ public sealed class TenantAdminController : Controller
     }
 
     [HttpPost("roles")]
+    [HttpPost("/admin/access-control/roles")]
     [ValidateAntiForgeryToken]
-    public async Task<IActionResult> CreateRole(string name, string description)
+    public async Task<IActionResult> CreateRole(CreateTenantRoleInput input)
     {
-        var result = await _sender.Send(new CreateTenantRoleCommand(name, description));
+        var result = await _sender.Send(new CreateTenantRoleCommand(input.Name, input.Description));
         if (!result.Succeeded)
         {
             return BadRequest(result.Errors);
@@ -117,10 +128,11 @@ public sealed class TenantAdminController : Controller
     }
 
     [HttpPost("roles/{id:guid}/edit")]
+    [HttpPost("/admin/access-control/roles/{id:guid}/edit")]
     [ValidateAntiForgeryToken]
-    public async Task<IActionResult> EditRole(Guid id, string name, string description)
+    public async Task<IActionResult> EditRole(Guid id, EditTenantRoleInput input)
     {
-        var result = await _sender.Send(new EditTenantRoleCommand(id, name, description));
+        var result = await _sender.Send(new EditTenantRoleCommand(id, input.Name, input.Description));
         if (result.NotFound)
         {
             return NotFound();
@@ -130,6 +142,7 @@ public sealed class TenantAdminController : Controller
     }
 
     [HttpPost("roles/{id:guid}/delete")]
+    [HttpPost("/admin/access-control/roles/{id:guid}/delete")]
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> DeleteRole(Guid id)
     {
@@ -143,6 +156,7 @@ public sealed class TenantAdminController : Controller
     }
 
     [HttpPost("users/{userId:guid}/roles/{roleId:guid}")]
+    [HttpPost("/admin/access-control/users/{userId:guid}/roles/{roleId:guid}")]
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> AssignRole(Guid userId, Guid roleId)
     {
@@ -151,6 +165,7 @@ public sealed class TenantAdminController : Controller
     }
 
     [HttpGet("permissions")]
+    [HttpGet("/admin/access-control/permissions", Name = AdminRouteNames.Permissions)]
     public async Task<IActionResult> Permissions(string? q = null, string sort = "category", string dir = "asc")
     {
         var result = await _sender.Send(new GetTenantPermissionsQuery(q, sort, dir));
@@ -158,10 +173,11 @@ public sealed class TenantAdminController : Controller
     }
 
     [HttpPost("permissions")]
+    [HttpPost("/admin/access-control/permissions")]
     [ValidateAntiForgeryToken]
-    public async Task<IActionResult> CreatePermission(string name, string category, string? description)
+    public async Task<IActionResult> CreatePermission(CreateTenantPermissionInput input)
     {
-        var result = await _sender.Send(new CreateTenantPermissionCommand(name, category, description));
+        var result = await _sender.Send(new CreateTenantPermissionCommand(input.Name, input.Category, input.Description));
         if (!result.Succeeded)
         {
             return View("Permissions", new TenantPermissionsPage(await _sender.Send(new GetTenantPermissionsQuery(null, "category", "asc")), null, "category", "asc"));
@@ -171,6 +187,7 @@ public sealed class TenantAdminController : Controller
     }
 
     [HttpPost("roles/{roleId:guid}/permissions/{permissionId:guid}")]
+    [HttpPost("/admin/access-control/roles/{roleId:guid}/permissions/{permissionId:guid}")]
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> AssignPermission(Guid roleId, Guid permissionId)
     {
@@ -179,18 +196,20 @@ public sealed class TenantAdminController : Controller
     }
 
     [HttpPost("roles/{roleId:guid}/permissions")]
+    [HttpPost("/admin/access-control/roles/{roleId:guid}/permissions")]
     [ValidateAntiForgeryToken]
-    public async Task<IActionResult> SetRolePermissions(Guid roleId, Guid[]? permissionIds)
+    public async Task<IActionResult> SetRolePermissions(Guid roleId, SetTenantRolePermissionsInput input)
     {
-        await _sender.Send(new SetTenantRolePermissionsCommand(roleId, (permissionIds ?? Array.Empty<Guid>()).Distinct().ToArray()));
+        await _sender.Send(new SetTenantRolePermissionsCommand(roleId, input.PermissionIds.Distinct().ToArray()));
         return RedirectToAction(nameof(Roles));
     }
 
     [HttpPost("permissions/{id:guid}/edit")]
+    [HttpPost("/admin/access-control/permissions/{id:guid}/edit")]
     [ValidateAntiForgeryToken]
-    public async Task<IActionResult> EditPermission(Guid id, string name, string category, string? description)
+    public async Task<IActionResult> EditPermission(Guid id, EditTenantPermissionInput input)
     {
-        var result = await _sender.Send(new EditTenantPermissionCommand(id, name, category, description));
+        var result = await _sender.Send(new EditTenantPermissionCommand(id, input.Name, input.Category, input.Description));
         if (result.NotFound)
         {
             return NotFound();
@@ -205,6 +224,7 @@ public sealed class TenantAdminController : Controller
     }
 
     [HttpPost("permissions/{id:guid}/delete")]
+    [HttpPost("/admin/access-control/permissions/{id:guid}/delete")]
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> DeletePermission(Guid id)
     {
@@ -218,13 +238,15 @@ public sealed class TenantAdminController : Controller
     }
 
     [HttpGet("clients")]
+    [HttpGet("/admin/applications", Name = AdminRouteNames.Applications)]
     public async Task<IActionResult> Clients() => View(await _sender.Send(new GetTenantClientsQuery()));
 
     [HttpPost("clients")]
+    [HttpPost("/admin/applications")]
     [ValidateAntiForgeryToken]
-    public async Task<IActionResult> CreateClient(string name, string clientId, ClientType type, string redirectUri, string scopes, string flows)
+    public async Task<IActionResult> CreateClient(CreateTenantClientInput input)
     {
-        var result = await _sender.Send(new CreateTenantClientCommand(name, clientId, type, redirectUri, scopes, flows));
+        var result = await _sender.Send(new CreateTenantClientCommand(input.Name, input.ClientId, input.Type, input.RedirectUri, input.Scopes, input.Flows));
         if (!result.Succeeded)
         {
             return BadRequest(result.Errors);
@@ -236,13 +258,15 @@ public sealed class TenantAdminController : Controller
     }
 
     [HttpGet("providers")]
+    [HttpGet("/admin/security/providers", Name = AdminRouteNames.Providers)]
     public async Task<IActionResult> Providers() => View(await _sender.Send(new GetTenantProvidersQuery()));
 
     [HttpPost("providers")]
+    [HttpPost("/admin/security/providers")]
     [ValidateAntiForgeryToken]
-    public async Task<IActionResult> CreateProvider(string displayName, string authority, string clientId, string clientSecret, string scopes, bool autoProvisionUsers)
+    public async Task<IActionResult> CreateProvider(CreateTenantProviderInput input)
     {
-        var result = await _sender.Send(new CreateTenantProviderCommand(displayName, authority, clientId, clientSecret, scopes, autoProvisionUsers));
+        var result = await _sender.Send(new CreateTenantProviderCommand(input.DisplayName, input.Authority, input.ClientId, input.ClientSecret, input.Scopes, input.AutoProvisionUsers));
         if (!result.Succeeded)
         {
             return BadRequest(result.Errors);
@@ -252,10 +276,11 @@ public sealed class TenantAdminController : Controller
     }
 
     [HttpPost("smtp")]
+    [HttpPost("/admin/security/smtp")]
     [ValidateAntiForgeryToken]
-    public async Task<IActionResult> UpsertSmtp(string host, int port, string? username, string? password, bool useTls, string fromEmail, string fromDisplayName)
+    public async Task<IActionResult> UpsertSmtp(UpsertTenantSmtpInput input)
     {
-        var result = await _sender.Send(new UpsertTenantSmtpCommand(host, port, username, password, useTls, fromEmail, fromDisplayName));
+        var result = await _sender.Send(new UpsertTenantSmtpCommand(input.Host, input.Port, input.Username, input.Password, input.UseTls, input.FromEmail, input.FromDisplayName));
         if (!result.Succeeded)
         {
             return BadRequest(result.Errors);
@@ -265,9 +290,11 @@ public sealed class TenantAdminController : Controller
     }
 
     [HttpGet("sessions")]
+    [HttpGet("/admin/security/sessions", Name = AdminRouteNames.Sessions)]
     public async Task<IActionResult> Sessions() => View(await _sender.Send(new GetTenantSessionsQuery()));
 
     [HttpPost("sessions/{id:guid}/revoke")]
+    [HttpPost("/admin/security/sessions/{id:guid}/revoke")]
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> RevokeSession(Guid id)
     {
@@ -281,36 +308,6 @@ public sealed class TenantAdminController : Controller
     }
 
     [HttpGet("audit")]
+    [HttpGet("/admin/security/audit", Name = AdminRouteNames.Audit)]
     public async Task<IActionResult> Audit() => View(await _sender.Send(new GetTenantAuditLogsQuery()));
 }
-
-public sealed record TenantAdminDashboard(
-    int Users,
-    int Roles,
-    int Permissions,
-    int Clients,
-    int Providers,
-    int Sessions,
-    IReadOnlyCollection<Domain.AuditLog> RecentAuditLogs);
-
-public sealed record TenantUsersPage(
-    IReadOnlyCollection<ApplicationUser> Users,
-    IReadOnlyCollection<TenantRole> Roles,
-    IReadOnlyDictionary<Guid, HashSet<Guid>> AssignedRoleIds,
-    string? Query,
-    string Sort,
-    string Direction);
-
-public sealed record TenantRolesPage(
-    IReadOnlyCollection<TenantRole> Roles,
-    IReadOnlyCollection<TenantPermission> Permissions,
-    IReadOnlyDictionary<Guid, HashSet<Guid>> AssignedPermissionIds,
-    string? Query,
-    string Sort,
-    string Direction);
-
-public sealed record TenantPermissionsPage(
-    IReadOnlyCollection<TenantPermission> Permissions,
-    string? Query,
-    string Sort,
-    string Direction);

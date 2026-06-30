@@ -1,5 +1,5 @@
-using MassLab.Identity.Web.Domain;
-using MassLab.Identity.Web.Multitenancy;
+using MassLab.Identity.Domain;
+using MassLab.Identity.Infrastructure.Multitenancy;
 
 namespace MassLab.Identity.Tests;
 
