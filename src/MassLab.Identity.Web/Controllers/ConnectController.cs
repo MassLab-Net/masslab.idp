@@ -1,10 +1,11 @@
 using System.Security.Claims;
-using MassLab.Identity.Web.Services;
 using Microsoft.AspNetCore;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
+using MassLab.Identity.Application.Features;
+using MediatR;
 using OpenIddict.Abstractions;
 using OpenIddict.Server.AspNetCore;
 using static OpenIddict.Abstractions.OpenIddictConstants;
@@ -13,11 +14,11 @@ namespace MassLab.Identity.Web.Controllers;
 
 public sealed class ConnectController : Controller
 {
-    private readonly IRbacService _rbacService;
+    private readonly ISender _sender;
 
-    public ConnectController(IRbacService rbacService)
+    public ConnectController(ISender sender)
     {
-        _rbacService = rbacService;
+        _sender = sender;
     }
 
     [HttpGet("~/connect/authorize")]
@@ -47,18 +48,15 @@ public sealed class ConnectController : Controller
     [Authorize(AuthenticationSchemes = OpenIddictServerAspNetCoreDefaults.AuthenticationScheme)]
     public async Task<IActionResult> UserInfo()
     {
-        var userId = User.FindFirstValue(Claims.Subject) ?? User.FindFirstValue(ClaimTypes.NameIdentifier);
-        var permissions = Guid.TryParse(userId, out var parsedUserId)
-            ? await _rbacService.GetEffectivePermissionsAsync(parsedUserId)
-            : Array.Empty<string>();
+        var result = await _sender.Send(new GetUserInfoQuery(User));
 
         return Ok(new
         {
-            sub = userId,
-            name = User.FindFirstValue("display_name") ?? User.Identity?.Name,
-            email = User.FindFirstValue(ClaimTypes.Email),
-            tenant_id = User.FindFirstValue("tenant_id"),
-            permissions
+            sub = result.Subject,
+            name = result.Name,
+            email = result.Email,
+            tenant_id = result.TenantId,
+            permissions = result.Permissions
         });
     }
 

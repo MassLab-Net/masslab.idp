@@ -8,24 +8,23 @@
 
   <ItemGroup>
     <PackageReference Include="MassLab.Common.Api" Version="1.0.4" />
-    <PackageReference Include="MassLab.Common.Authentication" Version="1.0.4" />
     <PackageReference Include="MassLab.Common.Authorization" Version="1.0.4" />
-    <PackageReference Include="MassLab.Common.BackgroundJobs.Hosted" Version="1.0.4" />
-    <PackageReference Include="MassLab.Common.Caching.Memory" Version="1.0.4" />
-    <PackageReference Include="MassLab.Common.Database" Version="1.0.4" />
-    <PackageReference Include="MassLab.Common.Database.EFCore" Version="1.0.4" />
-    <PackageReference Include="MassLab.Common.Database.EFCore.PostgreSQL" Version="1.0.4" />
     <PackageReference Include="MassLab.Common.Logging.Serilog" Version="1.0.4" />
-    <PackageReference Include="MassLab.Common.Multitenancy" Version="1.0.4" />
     <PackageReference Include="MassLab.Common.Observability" Version="1.0.4" />
-    <PackageReference Include="Microsoft.AspNetCore.Identity.EntityFrameworkCore" Version="10.0.8" />
-    <PackageReference Include="Microsoft.EntityFrameworkCore.Design" Version="10.0.8">
-      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
-      <PrivateAssets>all</PrivateAssets>
-    </PackageReference>
-    <PackageReference Include="Npgsql.EntityFrameworkCore.PostgreSQL" Version="10.0.0" />
     <PackageReference Include="OpenIddict.AspNetCore" Version="7.5.0" />
-    <PackageReference Include="OpenIddict.EntityFrameworkCore" Version="7.5.0" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\MassLab.Identity.Application\MassLab.Identity.Application.csproj" />
+    <ProjectReference Include="..\MassLab.Identity.Infrastructure\MassLab.Identity.Infrastructure.csproj" />
+    <ProjectReference Include="..\MassLab.Identity.Domain\MassLab.Identity.Domain.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Compile Remove="Data\**\*.cs" />
+    <Compile Remove="Domain\**\*.cs" />
+    <Compile Remove="Multitenancy\**\*.cs" />
+    <Compile Remove="Services\**\*.cs" />
   </ItemGroup>
 
 </Project>

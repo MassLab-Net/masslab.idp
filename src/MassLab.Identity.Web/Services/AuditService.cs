@@ -1,6 +1,7 @@
 using MassLab.Identity.Web.Data;
 using MassLab.Identity.Web.Domain;
 using MassLab.Identity.Web.Multitenancy;
+using Microsoft.AspNetCore.Http;
 
 namespace MassLab.Identity.Web.Services;
 
@@ -45,4 +46,3 @@ public sealed class AuditService : IAuditService
         await _db.SaveChangesAsync(cancellationToken);
     }
 }
-

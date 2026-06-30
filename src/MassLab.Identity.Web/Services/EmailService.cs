@@ -1,6 +1,7 @@
 using MassLab.Identity.Web.Data;
 using MassLab.Identity.Web.Multitenancy;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
 
 namespace MassLab.Identity.Web.Services;
 
@@ -35,4 +36,3 @@ public sealed class EmailService : IEmailService
         _logger.LogInformation("Queued {Kind} email for {Email} using tenant SMTP {SmtpHost}. Url: {Url}", kind, email, smtp?.Host ?? "not-configured", url);
     }
 }
-

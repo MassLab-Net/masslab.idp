@@ -1,8 +1,7 @@
-using MassLab.Identity.Web.Data;
-using MassLab.Identity.Web.Domain;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
+using MassLab.Identity.Application.Features;
+using MediatR;
 
 namespace MassLab.Identity.Web.Controllers;
 
@@ -10,29 +9,21 @@ namespace MassLab.Identity.Web.Controllers;
 [Route("system-admin")]
 public sealed class SystemAdminController : Controller
 {
-    private readonly ApplicationDbContext _db;
+    private readonly ISender _sender;
 
-    public SystemAdminController(ApplicationDbContext db)
+    public SystemAdminController(ISender sender)
     {
-        _db = db;
+        _sender = sender;
     }
 
     [HttpGet("")]
-    public async Task<IActionResult> Index()
-    {
-        var tenants = await _db.Tenants.IgnoreQueryFilters().OrderBy(x => x.Name).ToListAsync();
-        return View(tenants);
-    }
+    public async Task<IActionResult> Index() => View(await _sender.Send(new GetSystemTenantsQuery()));
 
     [HttpPost("tenants")]
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> CreateTenant(string name, string slug, string hostName)
     {
-        var tenant = new Tenant { Name = name, Slug = slug, Status = TenantStatus.Active };
-        _db.Tenants.Add(tenant);
-        _db.TenantDomains.Add(new TenantDomain { TenantId = tenant.Id, HostName = hostName, IsPrimary = true });
-        _db.TenantDefaultPolicies.Add(new TenantDefaultPolicy { TenantId = tenant.Id });
-        await _db.SaveChangesAsync();
+        await _sender.Send(new CreateTenantCommand(name, slug, hostName));
         return RedirectToAction(nameof(Index));
     }
 
@@ -40,16 +31,12 @@ public sealed class SystemAdminController : Controller
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> ToggleTenant(Guid id)
     {
-        var tenant = await _db.Tenants.IgnoreQueryFilters().FirstOrDefaultAsync(x => x.Id == id);
-        if (tenant is null)
+        var result = await _sender.Send(new ToggleTenantCommand(id));
+        if (result.NotFound)
         {
             return NotFound();
         }
 
-        tenant.Status = tenant.Status == TenantStatus.Active ? TenantStatus.Disabled : TenantStatus.Active;
-        tenant.UpdatedAt = DateTimeOffset.UtcNow;
-        await _db.SaveChangesAsync();
         return RedirectToAction(nameof(Index));
     }
 }
-

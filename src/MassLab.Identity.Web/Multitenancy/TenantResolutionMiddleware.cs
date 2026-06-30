@@ -1,6 +1,9 @@
 using MassLab.Identity.Web.Data;
 using Microsoft.EntityFrameworkCore;
 using System.Security.Claims;
+using Microsoft.AspNetCore.Http;
+using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace MassLab.Identity.Web.Multitenancy;
 

@@ -2,6 +2,7 @@ using MassLab.Identity.Web.Domain;
 using MassLab.Identity.Web.Services;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.DependencyInjection;
 using OpenIddict.Abstractions;
 using static OpenIddict.Abstractions.OpenIddictConstants;
 
@@ -136,4 +137,3 @@ public static class DatabaseSeeder
         return user;
     }
 }
-

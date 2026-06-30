@@ -1,43 +1,21 @@
+using MassLab.Common.Api.Extensions;
+using MassLab.Common.Authorization.Extensions;
+using MassLab.Common.Logging.Serilog.Extensions;
+using MassLab.Common.Observability.Extensions;
+using MassLab.Identity.Application;
+using MassLab.Identity.Infrastructure;
 using MassLab.Identity.Web.Data;
-using MassLab.Identity.Web.Domain;
-using MassLab.Identity.Web.Multitenancy;
-using MassLab.Identity.Web.Services;
-using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.RateLimiting;
-using Microsoft.EntityFrameworkCore;
 using OpenIddict.Abstractions;
 
 var builder = WebApplication.CreateBuilder(args);
 
-builder.Services.AddHttpContextAccessor();
-builder.Services.AddScoped<ICurrentTenant, CurrentTenant>();
-builder.Services.AddScoped<ISecretService, SecretService>();
-builder.Services.AddScoped<IAuditService, AuditService>();
-builder.Services.AddScoped<IRbacService, RbacService>();
-builder.Services.AddScoped<IEmailService, EmailService>();
-builder.Services.AddScoped<ITotpService, TotpService>();
-
-builder.Services.AddDbContext<ApplicationDbContext>(options =>
-{
-    var connectionString = Environment.GetEnvironmentVariable("MASSLAB_IDP_CONNECTION")
-        ?? builder.Configuration.GetConnectionString("DefaultConnection");
-    options.UseNpgsql(connectionString);
-    options.UseOpenIddict();
-});
-
-builder.Services
-    .AddIdentity<ApplicationUser, IdentityRole<Guid>>(options =>
-    {
-        options.SignIn.RequireConfirmedEmail = true;
-        options.Password.RequireDigit = true;
-        options.Password.RequireUppercase = true;
-        options.Password.RequiredLength = 10;
-        options.Lockout.MaxFailedAccessAttempts = 5;
-    })
-    .AddEntityFrameworkStores<ApplicationDbContext>()
-    .AddDefaultTokenProviders();
-
-builder.Services.AddScoped<IUserClaimsPrincipalFactory<ApplicationUser>, ApplicationClaimsPrincipalFactory>();
+builder.Services.AddSerilogLogging(builder.Configuration);
+builder.Services.AddMassLabApi(builder.Configuration);
+builder.Services.AddMassLabResponseCompression();
+builder.Services.AddMassLabObservability(builder.Configuration);
+builder.Services.AddMassLabIdentityApplication();
+builder.Services.AddMassLabIdentityInfrastructure(builder.Configuration);
 
 builder.Services.ConfigureApplicationCookie(options =>
 {
@@ -85,6 +63,7 @@ builder.Services.AddOpenIddict()
     });
 
 builder.Services.AddAuthentication();
+builder.Services.AddMassLabAuthorization();
 builder.Services.AddAuthorization(options =>
 {
     options.AddPolicy("system-admin", policy => policy.RequireClaim("system_admin", "true"));
@@ -126,19 +105,25 @@ builder.Services.AddControllersWithViews();
 
 var app = builder.Build();
 
+app.UseTraceId();
+app.UseRequestLogging();
+app.UseSecurityHeaders();
+app.UseResponseCompression();
+
 if (!app.Environment.IsDevelopment())
 {
     app.UseExceptionHandler("/Home/Error");
     app.UseHsts();
+    app.UseHttpsRedirection();
 }
 
-app.UseHttpsRedirection();
 app.UseStaticFiles();
 app.UseRouting();
 app.UseRateLimiter();
+app.UseMassLabPrometheus();
 app.UseSession();
 app.UseAuthentication();
-app.UseMiddleware<TenantResolutionMiddleware>();
+app.UseMiddleware<MassLab.Identity.Web.Multitenancy.TenantResolutionMiddleware>();
 app.UseAuthorization();
 
 app.MapHealthChecks("/health");
