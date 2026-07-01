@@ -74,6 +74,7 @@ public sealed class ConnectController : Controller
             name = result.Name,
             email = result.Email,
             tenant_id = result.TenantId,
+            tenant_name = result.TenantName,
             system_admin = result.IsSystemAdmin,
             tenant_admin = result.IsTenantAdmin,
             permissions = result.Permissions

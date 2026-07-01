@@ -24,6 +24,7 @@ type UserInfoResponse = {
   name?: string;
   email?: string;
   tenant_id?: string;
+  tenant_name?: string;
   system_admin?: boolean;
   tenant_admin?: boolean;
   permissions?: string[];
@@ -216,13 +217,14 @@ async function safeReadJson(response: Response) {
 function mapUser(userInfo: UserInfoResponse, organizationSlug?: string): AuthUser {
   const email = userInfo.email ?? "";
   const name = userInfo.name ?? email ?? "MassLab User";
+  const organization = userInfo.tenant_name ?? organizationSlug ?? userInfo.tenant_id ?? "root";
 
   return {
     id: userInfo.sub ?? email ?? "me",
     name,
     email,
     username: email ? email.split("@")[0] : name.toLowerCase().replace(/\s+/g, "."),
-    organization: organizationSlug ?? userInfo.tenant_id ?? "root",
+    organization,
     tenantId: userInfo.tenant_id,
     isSystemAdmin: !!userInfo.system_admin,
     isTenantAdmin: !!userInfo.tenant_admin,
