@@ -1,6 +1,6 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useState } from "react";
-import { Building2, Eye, EyeOff, Loader2, User, Mail } from "lucide-react";
+import { Building2, Eye, EyeOff, Loader2 } from "lucide-react";
 
 import { Logo } from "@/components/logo";
 import { Button } from "@/components/ui/button";
@@ -20,71 +20,50 @@ import { useI18n } from "@/lib/i18n";
 import { Flag } from "@/components/flag";
 import { toast } from "sonner";
 
-export const Route = createFileRoute("/register")({
+export const Route = createFileRoute("/login")({
   head: () => ({
     meta: [
-      { title: "Create account — MassLab IAM" },
-      { name: "description", content: "Create a new MassLab IAM account for your organization." },
+      { title: "Sign in — MassLab IAM" },
+      { name: "description", content: "Backup sign-in screen for MassLab IAM." },
     ],
   }),
-  component: RegisterPage,
+  component: LoginPage,
 });
 
-function RegisterPage() {
+function LoginPage() {
   const { t, lang, setLang } = useI18n();
-
-  const [fullName, setFullName] = useState("");
-  const [email, setEmail] = useState("");
-  const [org, setOrg] = useState("");
+  const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
-  const [confirmPassword, setConfirmPassword] = useState("");
   const [showPw, setShowPw] = useState(false);
-  const [showConfirm, setShowConfirm] = useState(false);
-  const [agreed, setAgreed] = useState(false);
-  const [loading, setLoading] = useState(false);
-  const [errors, setErrors] = useState<Record<string, string>>({});
+  const [org, setOrg] = useState("");
+  const [loading, setLoading] = useState<null | "pw" | "google" | "entra">(null);
+  const [callbackError, setCallbackError] = useState<string | null>(null);
 
-  const validate = () => {
-    const errs: Record<string, string> = {};
-    if (!fullName.trim()) errs.fullName = t("reg.errName");
-    if (!email.trim() || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) errs.email = t("reg.errEmail");
-    if (!org.trim()) errs.org = t("reg.errOrg");
-    if (password.length < 8) errs.password = t("reg.errPassword");
-    if (password !== confirmPassword) errs.confirmPassword = t("reg.errConfirm");
-    if (!agreed) errs.agreed = t("reg.errTerms");
-    return errs;
-  };
+  const submit = async (kind: "pw" | "google" | "entra") => {
+    setLoading(kind);
+    setCallbackError(null);
+    toast.info(kind === "pw" ? "Redirecting to MassLab Identity..." : "Continuing with MassLab Identity...");
 
-  const submit = async () => {
-    const errs = validate();
-    setErrors(errs);
-    if (Object.keys(errs).length > 0) return;
-
-    setLoading(true);
-    toast.info("Redirecting to MassLab Identity...");
-    beginLogin({ organizationSlug: org.trim() || undefined, returnTo: "/admin/dashboard" });
-  };
-
-  const submitSocial = async (kind: "google" | "entra") => {
-    if (!org.trim()) { setErrors({ org: t("reg.errOrg") }); return; }
-    setLoading(true);
-    toast.info(kind === "google" ? "Continuing with Google in MassLab Identity..." : "Continuing with Microsoft Entra ID in MassLab Identity...");
-    beginLogin({ organizationSlug: org.trim() || undefined, returnTo: "/admin/dashboard" });
+    try {
+      await beginLogin({ organizationSlug: org.trim() || undefined, returnTo: "/admin/dashboard" });
+    } catch (reason: unknown) {
+      const message = reason instanceof Error ? reason.message : "Unable to start sign-in.";
+      setLoading(null);
+      setCallbackError(message);
+      toast.error(message);
+    }
   };
 
   return (
     <div className="relative min-h-screen overflow-hidden bg-background">
-      {/* Decorative gradients */}
       <div className="pointer-events-none absolute inset-0 -z-10">
         <div className="absolute -top-40 -right-40 h-[520px] w-[520px] rounded-full bg-gradient-brand opacity-[0.10] blur-3xl" />
         <div className="absolute -bottom-40 -left-40 h-[420px] w-[420px] rounded-full bg-gradient-brand opacity-[0.08] blur-3xl" />
       </div>
 
       <main className="grid min-h-screen grid-cols-1 lg:grid-cols-2">
-        {/* Form */}
         <div className="flex items-center justify-center px-6 py-10">
           <div className="w-full max-w-md">
-            {/* Logo */}
             <div className="mb-8 flex flex-col items-center">
               <Link to="/">
                 <Logo size={48} showWord={true} />
@@ -92,48 +71,18 @@ function RegisterPage() {
             </div>
 
             <div className="space-y-4">
-              {/* Full name */}
-              <div className="space-y-1.5">
-                <Label htmlFor="fullName">{t("reg.fullName")}</Label>
-                <div className="relative">
-                  <User className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-                  <Input
-                    id="fullName"
-                    autoComplete="name"
-                    placeholder={t("reg.fullNamePlaceholder")}
-                    value={fullName}
-                    onChange={(e) => setFullName(e.target.value)}
-                    className="h-11 pl-9"
-                  />
+              {callbackError ? (
+                <div className="rounded-xl border border-destructive/30 bg-destructive/5 px-4 py-3 text-sm text-destructive">
+                  {callbackError}
                 </div>
-                {errors.fullName && <p className="text-xs text-destructive">{errors.fullName}</p>}
-              </div>
+              ) : null}
 
-              {/* Email */}
               <div className="space-y-1.5">
-                <Label htmlFor="reg-email">{t("reg.email")}</Label>
-                <div className="relative">
-                  <Mail className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-                  <Input
-                    id="reg-email"
-                    type="email"
-                    autoComplete="email"
-                    placeholder="you@company.com"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    className="h-11 pl-9"
-                  />
-                </div>
-                {errors.email && <p className="text-xs text-destructive">{errors.email}</p>}
-              </div>
-
-              {/* Organization */}
-              <div className="space-y-1.5">
-                <Label htmlFor="reg-org">{t("login.org")}</Label>
+                <Label htmlFor="org">{t("login.org")}</Label>
                 <div className="relative">
                   <Building2 className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
                   <Input
-                    id="reg-org"
+                    id="org"
                     value={org}
                     onChange={(e) => setOrg(e.target.value)}
                     placeholder={t("login.orgPlaceholder")}
@@ -144,17 +93,36 @@ function RegisterPage() {
                     .masslab.io
                   </span>
                 </div>
-                {errors.org && <p className="text-xs text-destructive">{errors.org}</p>}
               </div>
 
-              {/* Password */}
               <div className="space-y-1.5">
-                <Label htmlFor="reg-password">{t("login.password")}</Label>
+                <Label htmlFor="username">{t("login.username")}</Label>
+                <Input
+                  id="username"
+                  autoComplete="username"
+                  placeholder="you@company.com"
+                  value={username}
+                  onChange={(e) => setUsername(e.target.value)}
+                  className="h-11"
+                />
+              </div>
+
+              <div className="space-y-1.5">
+                <div className="flex items-center justify-between">
+                  <Label htmlFor="password">{t("login.password")}</Label>
+                  <button
+                    type="button"
+                    className="text-xs font-medium text-primary hover:underline"
+                    onClick={() => toast.info(t("login.recovery"))}
+                  >
+                    {t("login.forgot")}
+                  </button>
+                </div>
                 <div className="relative">
                   <Input
-                    id="reg-password"
+                    id="password"
                     type={showPw ? "text" : "password"}
-                    autoComplete="new-password"
+                    autoComplete="current-password"
                     placeholder="••••••••••"
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
@@ -169,106 +137,58 @@ function RegisterPage() {
                     {showPw ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                   </button>
                 </div>
-                {errors.password
-                  ? <p className="text-xs text-destructive">{errors.password}</p>
-                  : <p className="text-xs text-muted-foreground">{t("reg.passwordHint")}</p>
-                }
               </div>
 
-              {/* Confirm password */}
-              <div className="space-y-1.5">
-                <Label htmlFor="reg-confirm">{t("reg.confirmPassword")}</Label>
-                <div className="relative">
-                  <Input
-                    id="reg-confirm"
-                    type={showConfirm ? "text" : "password"}
-                    autoComplete="new-password"
-                    placeholder="••••••••••"
-                    value={confirmPassword}
-                    onChange={(e) => setConfirmPassword(e.target.value)}
-                    className="h-11 pr-10"
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setShowConfirm((s) => !s)}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
-                    aria-label="toggle confirm password"
-                  >
-                    {showConfirm ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                  </button>
-                </div>
-                {errors.confirmPassword && <p className="text-xs text-destructive">{errors.confirmPassword}</p>}
+              <div className="flex items-center gap-2">
+                <Checkbox id="remember" />
+                <Label htmlFor="remember" className="text-sm font-normal text-muted-foreground">
+                  {t("login.remember")}
+                </Label>
               </div>
 
-              {/* Terms agreement */}
-              <div className="space-y-1">
-                <div className="flex items-start gap-2">
-                  <Checkbox
-                    id="agree"
-                    checked={agreed}
-                    onCheckedChange={(v) => setAgreed(!!v)}
-                    className="mt-0.5"
-                  />
-                  <Label htmlFor="agree" className="text-sm text-muted-foreground font-normal leading-snug">
-                    {t("reg.agreePrefix")}{" "}
-                    <Link to="/terms" className="text-primary hover:underline">{t("home.footerTerms")}</Link>
-                    {" "}{t("reg.agreeAnd")}{" "}
-                    <Link to="/privacy" className="text-primary hover:underline">{t("home.footerPrivacy")}</Link>
-                  </Label>
-                </div>
-                {errors.agreed && <p className="text-xs text-destructive">{errors.agreed}</p>}
-              </div>
-
-              {/* Submit */}
               <Button
-                onClick={submit}
-                disabled={loading}
+                onClick={() => submit("pw")}
+                disabled={!!loading}
                 className="h-11 w-full bg-gradient-brand text-primary-foreground shadow-elegant hover:opacity-95"
               >
-                {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : t("reg.submit")}
+                {loading === "pw" ? <Loader2 className="h-4 w-4 animate-spin" /> : t("login.signin")}
               </Button>
 
-              {/* Divider */}
               <div className="relative py-2">
-                <div className="absolute inset-0 flex items-center">
-                  <div className="w-full border-t border-border" />
-                </div>
+                <div className="absolute inset-0 flex items-center"><div className="w-full border-t border-border" /></div>
                 <div className="relative flex justify-center text-xs uppercase tracking-wider">
                   <span className="bg-background px-3 text-muted-foreground">{t("login.or")}</span>
                 </div>
               </div>
 
-              {/* Social sign-up */}
               <div className="grid gap-2.5">
                 <Button
                   variant="outline"
                   className="h-11 w-full justify-center gap-3"
-                  onClick={() => submitSocial("google")}
-                  disabled={loading}
+                  onClick={() => submit("google")}
+                  disabled={!!loading}
                 >
                   <GoogleIcon />
-                  {t("reg.google")}
+                  {loading === "google" ? <Loader2 className="h-4 w-4 animate-spin" /> : t("login.google")}
                 </Button>
                 <Button
                   variant="outline"
                   className="h-11 w-full justify-center gap-3"
-                  onClick={() => submitSocial("entra")}
-                  disabled={loading}
+                  onClick={() => submit("entra")}
+                  disabled={!!loading}
                 >
                   <EntraIcon />
-                  {t("reg.entra")}
+                  {loading === "entra" ? <Loader2 className="h-4 w-4 animate-spin" /> : t("login.entra")}
                 </Button>
               </div>
 
-              {/* Back to login */}
               <p className="pt-2 text-center text-sm text-muted-foreground">
-                {t("reg.hasAccount")}{" "}
-                <Link to="/login" className="font-semibold text-primary hover:underline">
-                  {t("reg.signIn")}
+                {t("login.new")}{" "}
+                <Link to="/register" className="font-semibold text-primary hover:underline">
+                  {t("login.register")}
                 </Link>
               </p>
 
-              {/* Language switcher */}
               <div className="flex justify-center pt-2">
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
@@ -295,7 +215,6 @@ function RegisterPage() {
           </div>
         </div>
 
-        {/* Side panel — same as login */}
         <aside className="relative hidden items-center justify-center overflow-hidden lg:flex">
           <div className="absolute inset-6 rounded-3xl bg-gradient-brand-soft" />
           <div className="absolute inset-6 rounded-3xl border border-border/70" />
@@ -308,6 +227,7 @@ function RegisterPage() {
               {t("login.headline1")} <span className="text-gradient-brand">{t("login.headline2")}</span>.
             </h2>
             <p className="mt-4 text-sm text-muted-foreground">{t("login.body")}</p>
+
             <div className="mt-8 grid grid-cols-3 gap-3">
               {[
                 { k: "12K+", v: t("login.stat.tenants") },

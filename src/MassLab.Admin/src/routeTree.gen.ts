@@ -12,6 +12,8 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as TermsRouteImport } from './routes/terms'
 import { Route as RegisterRouteImport } from './routes/register'
 import { Route as PrivacyRouteImport } from './routes/privacy'
+import { Route as LogoutCompleteRouteImport } from './routes/logout-complete'
+import { Route as LoginRouteImport } from './routes/login'
 import { Route as DocsRouteImport } from './routes/docs'
 import { Route as AuthRouteImport } from './routes/auth'
 import { Route as AdminRouteRouteImport } from './routes/admin/route'
@@ -41,6 +43,16 @@ const RegisterRoute = RegisterRouteImport.update({
 const PrivacyRoute = PrivacyRouteImport.update({
   id: '/privacy',
   path: '/privacy',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const LogoutCompleteRoute = LogoutCompleteRouteImport.update({
+  id: '/logout-complete',
+  path: '/logout-complete',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const LoginRoute = LoginRouteImport.update({
+  id: '/login',
+  path: '/login',
   getParentRoute: () => rootRouteImport,
 } as any)
 const DocsRoute = DocsRouteImport.update({
@@ -126,6 +138,8 @@ export interface FileRoutesByFullPath {
   '/admin': typeof AdminRouteRouteWithChildren
   '/auth': typeof AuthRoute
   '/docs': typeof DocsRoute
+  '/login': typeof LoginRoute
+  '/logout-complete': typeof LogoutCompleteRoute
   '/privacy': typeof PrivacyRoute
   '/register': typeof RegisterRoute
   '/terms': typeof TermsRoute
@@ -146,6 +160,8 @@ export interface FileRoutesByTo {
   '/admin': typeof AdminRouteRouteWithChildren
   '/auth': typeof AuthRoute
   '/docs': typeof DocsRoute
+  '/login': typeof LoginRoute
+  '/logout-complete': typeof LogoutCompleteRoute
   '/privacy': typeof PrivacyRoute
   '/register': typeof RegisterRoute
   '/terms': typeof TermsRoute
@@ -167,6 +183,8 @@ export interface FileRoutesById {
   '/admin': typeof AdminRouteRouteWithChildren
   '/auth': typeof AuthRoute
   '/docs': typeof DocsRoute
+  '/login': typeof LoginRoute
+  '/logout-complete': typeof LogoutCompleteRoute
   '/privacy': typeof PrivacyRoute
   '/register': typeof RegisterRoute
   '/terms': typeof TermsRoute
@@ -189,6 +207,8 @@ export interface FileRouteTypes {
     | '/admin'
     | '/auth'
     | '/docs'
+    | '/login'
+    | '/logout-complete'
     | '/privacy'
     | '/register'
     | '/terms'
@@ -209,6 +229,8 @@ export interface FileRouteTypes {
     | '/admin'
     | '/auth'
     | '/docs'
+    | '/login'
+    | '/logout-complete'
     | '/privacy'
     | '/register'
     | '/terms'
@@ -229,6 +251,8 @@ export interface FileRouteTypes {
     | '/admin'
     | '/auth'
     | '/docs'
+    | '/login'
+    | '/logout-complete'
     | '/privacy'
     | '/register'
     | '/terms'
@@ -250,6 +274,8 @@ export interface RootRouteChildren {
   AdminRouteRoute: typeof AdminRouteRouteWithChildren
   AuthRoute: typeof AuthRoute
   DocsRoute: typeof DocsRoute
+  LoginRoute: typeof LoginRoute
+  LogoutCompleteRoute: typeof LogoutCompleteRoute
   PrivacyRoute: typeof PrivacyRoute
   RegisterRoute: typeof RegisterRoute
   TermsRoute: typeof TermsRoute
@@ -276,6 +302,20 @@ declare module '@tanstack/react-router' {
       path: '/privacy'
       fullPath: '/privacy'
       preLoaderRoute: typeof PrivacyRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/logout-complete': {
+      id: '/logout-complete'
+      path: '/logout-complete'
+      fullPath: '/logout-complete'
+      preLoaderRoute: typeof LogoutCompleteRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/login': {
+      id: '/login'
+      path: '/login'
+      fullPath: '/login'
+      preLoaderRoute: typeof LoginRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/docs': {
@@ -423,6 +463,8 @@ const rootRouteChildren: RootRouteChildren = {
   AdminRouteRoute: AdminRouteRouteWithChildren,
   AuthRoute: AuthRoute,
   DocsRoute: DocsRoute,
+  LoginRoute: LoginRoute,
+  LogoutCompleteRoute: LogoutCompleteRoute,
   PrivacyRoute: PrivacyRoute,
   RegisterRoute: RegisterRoute,
   TermsRoute: TermsRoute,

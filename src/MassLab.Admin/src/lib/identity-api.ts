@@ -1,4 +1,4 @@
-import type { AuthSession } from "@/lib/auth";
+import type { AuthSession } from "@/lib/auth-types";
 
 export type AdminAuditLogDto = {
   id: string;

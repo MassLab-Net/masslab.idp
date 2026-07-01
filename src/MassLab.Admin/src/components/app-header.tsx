@@ -15,6 +15,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { useAuth } from "@/lib/auth";
+import { clearLogoutInProgress, clearStoredSession, markLogoutInProgress } from "@/lib/auth-storage";
 import { useI18n } from "@/lib/i18n";
 import { buildLogoutUrl } from "@/lib/oidc";
 import { initials } from "@/components/app-sidebar";
@@ -201,13 +202,16 @@ export function AppHeader() {
               className="text-destructive focus:text-destructive"
               onClick={() => {
                 const logoutUrl = session ? buildLogoutUrl(session) : null;
-                signOut();
+                markLogoutInProgress();
                 if (logoutUrl) {
-                  window.location.assign(logoutUrl);
+                  window.location.replace(logoutUrl);
                   return;
                 }
 
-                navigate({ to: "/auth" });
+                clearStoredSession();
+                clearLogoutInProgress();
+                signOut();
+                window.location.replace("/");
               }}
             >
               <LogOut className="mr-2 h-4 w-4" /> {t("nav.signout")}

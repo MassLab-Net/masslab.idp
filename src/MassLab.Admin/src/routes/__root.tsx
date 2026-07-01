@@ -110,6 +110,22 @@ function RootShell({ children }: { children: ReactNode }) {
     <html lang="en">
       <head>
         <HeadContent />
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `
+              try {
+                const raw = window.localStorage.getItem("masslab.iam.session.v2");
+                if (raw) {
+                  const session = JSON.parse(raw);
+                  if (session && session.accessToken && session.user && session.identityBaseUrl && session.expiresAt > Date.now()) {
+                    document.documentElement.setAttribute("data-has-auth-session", "true");
+                  }
+                }
+              } catch {}
+            `,
+          }}
+        />
+        <style>{`html[data-has-auth-session="true"] [data-auth-loading="true"] { display: none !important; }`}</style>
       </head>
       <body>
         {children}

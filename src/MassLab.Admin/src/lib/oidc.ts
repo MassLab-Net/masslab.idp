@@ -1,4 +1,4 @@
-import type { AuthSession, AuthUser } from "@/lib/auth";
+import type { AuthSession, AuthUser } from "@/lib/auth-types";
 
 type PendingLogin = {
   state: string;
@@ -6,6 +6,8 @@ type PendingLogin = {
   identityBaseUrl: string;
   organizationSlug?: string;
   returnTo: string;
+  mode: LoginMode;
+  silentAttempted: boolean;
 };
 
 type TokenResponse = {
@@ -27,17 +29,22 @@ type UserInfoResponse = {
   permissions?: string[];
 };
 
+type LoginMode = "redirect" | "silent-first";
+
 const LOGIN_KEY = "masslab.iam.oidc.pending";
+const REDIRECTING_TO_INTERACTIVE_LOGIN = "__redirecting_to_interactive_login__";
 
 const defaultIdentityRootUrl = import.meta.env.VITE_IDENTITY_ROOT_URL ?? "http://localhost:5000";
 const clientId = import.meta.env.VITE_IDENTITY_CLIENT_ID ?? "masslab-admin-spa";
 const requestedScope = import.meta.env.VITE_IDENTITY_SCOPE ?? "openid profile email permissions";
+const configuredLoginMode = normalizeLoginMode(import.meta.env.VITE_IDENTITY_LOGIN_MODE);
 
 export async function beginLogin(input: { organizationSlug?: string; returnTo?: string }) {
   if (typeof window === "undefined") {
     throw new Error("OIDC login can only start in the browser.");
   }
 
+  const mode = configuredLoginMode;
   const identityBaseUrl = resolveIdentityBaseUrl(input.organizationSlug);
   const state = randomString(32);
   const codeVerifier = randomString(64);
@@ -50,21 +57,13 @@ export async function beginLogin(input: { organizationSlug?: string; returnTo?: 
     identityBaseUrl,
     organizationSlug: normalizeSlug(input.organizationSlug),
     returnTo,
+    mode,
+    silentAttempted: mode === "silent-first",
   };
 
   sessionStorage.setItem(LOGIN_KEY, JSON.stringify(login));
 
-  const redirectUri = getRedirectUri();
-  const authorizeUrl = new URL("/connect/authorize", identityBaseUrl);
-  authorizeUrl.searchParams.set("client_id", clientId);
-  authorizeUrl.searchParams.set("redirect_uri", redirectUri);
-  authorizeUrl.searchParams.set("response_type", "code");
-  authorizeUrl.searchParams.set("scope", requestedScope);
-  authorizeUrl.searchParams.set("code_challenge", codeChallenge);
-  authorizeUrl.searchParams.set("code_challenge_method", "S256");
-  authorizeUrl.searchParams.set("state", state);
-
-  window.location.assign(authorizeUrl.toString());
+  window.location.assign(buildAuthorizeUrl(login, codeChallenge, mode === "silent-first"));
 }
 
 export async function completeLogin(callbackUrl: string): Promise<{ session: AuthSession; returnTo: string }> {
@@ -80,6 +79,13 @@ export async function completeLogin(callbackUrl: string): Promise<{ session: Aut
   const url = new URL(callbackUrl);
   const error = url.searchParams.get("error");
   if (error) {
+    if (error === "login_required" && pending.mode === "silent-first" && pending.silentAttempted) {
+      const retry = { ...pending, silentAttempted: false };
+      sessionStorage.setItem(LOGIN_KEY, JSON.stringify(retry));
+      window.location.assign(buildAuthorizeUrl(retry, await createCodeChallenge(pending.codeVerifier), false));
+      throw new Error(REDIRECTING_TO_INTERACTIVE_LOGIN);
+    }
+
     throw new Error(url.searchParams.get("error_description") ?? error);
   }
 
@@ -110,12 +116,16 @@ export async function completeLogin(callbackUrl: string): Promise<{ session: Aut
 
 export function buildLogoutUrl(session: AuthSession) {
   const url = new URL("/connect/logout", session.identityBaseUrl);
-  url.searchParams.set("post_logout_redirect_uri", new URL("/", window.location.origin).toString());
+  url.searchParams.set("post_logout_redirect_uri", new URL("/logout-complete", window.location.origin).toString());
   if (session.idToken) {
     url.searchParams.set("id_token_hint", session.idToken);
   }
 
   return url.toString();
+}
+
+export function isRedirectingToInteractiveLoginError(reason: unknown) {
+  return reason instanceof Error && reason.message === REDIRECTING_TO_INTERACTIVE_LOGIN;
 }
 
 export function resolveIdentityBaseUrl(organizationSlug?: string) {
@@ -137,6 +147,23 @@ export function resolveIdentityBaseUrl(organizationSlug?: string) {
 
 function getRedirectUri() {
   return `${window.location.origin}/auth`;
+}
+
+function buildAuthorizeUrl(login: PendingLogin, codeChallenge: string, promptNone: boolean) {
+  const authorizeUrl = new URL("/connect/authorize", login.identityBaseUrl);
+  authorizeUrl.searchParams.set("client_id", clientId);
+  authorizeUrl.searchParams.set("redirect_uri", getRedirectUri());
+  authorizeUrl.searchParams.set("response_type", "code");
+  authorizeUrl.searchParams.set("scope", requestedScope);
+  authorizeUrl.searchParams.set("code_challenge_method", "S256");
+  authorizeUrl.searchParams.set("state", login.state);
+  authorizeUrl.searchParams.set("code_challenge", codeChallenge);
+
+  if (promptNone) {
+    authorizeUrl.searchParams.set("prompt", "none");
+  }
+
+  return authorizeUrl.toString();
 }
 
 async function exchangeCodeForToken(identityBaseUrl: string, code: string, codeVerifier: string) {
@@ -236,4 +263,8 @@ async function createCodeChallenge(codeVerifier: string) {
 function toBase64Url(bytes: Uint8Array) {
   const base64 = btoa(String.fromCharCode(...bytes));
   return base64.replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/g, "");
+}
+
+function normalizeLoginMode(value: string | undefined): LoginMode {
+  return value === "redirect" ? "redirect" : "silent-first";
 }
