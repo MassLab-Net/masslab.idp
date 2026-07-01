@@ -9,7 +9,18 @@ html {
 }
 
 .masslab-auth-page {
-  background: #eef2f6;
+  background:
+    radial-gradient(circle at top right, rgba(116, 73, 255, 0.12), transparent 32%),
+    radial-gradient(circle at bottom left, rgba(116, 73, 255, 0.1), transparent 28%),
+    #fbfbfe;
+  min-height: 100vh;
+}
+
+body.masslab-auth-page.login-page {
+  display: block;
+  min-height: 100vh;
+  height: auto;
+  margin: 0;
 }
 
 .login-logo a,
@@ -64,4 +75,487 @@ code {
 
 .permission-children {
   padding-left: 20px;
+}
+
+.masslab-login {
+  position: relative;
+  min-height: 100vh;
+  overflow: hidden;
+}
+
+.masslab-login__glow {
+  pointer-events: none;
+  position: absolute;
+  border-radius: 999px;
+  background: linear-gradient(135deg, rgba(94, 58, 238, 0.18), rgba(40, 124, 255, 0.08));
+  filter: blur(72px);
+}
+
+.masslab-login__glow--top {
+  top: -180px;
+  right: -120px;
+  width: 520px;
+  height: 520px;
+}
+
+.masslab-login__glow--bottom {
+  bottom: -180px;
+  left: -120px;
+  width: 420px;
+  height: 420px;
+}
+
+.masslab-login__main {
+  position: relative;
+  z-index: 1;
+  min-height: 100vh;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+}
+
+.masslab-login__form-panel {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 40px 24px;
+}
+
+.masslab-login__form-shell {
+  width: 100%;
+  max-width: 460px;
+}
+
+.masslab-login__brand {
+  display: inline-flex;
+  align-items: center;
+  margin-bottom: 32px;
+  color: #111827;
+  text-decoration: none;
+}
+
+.masslab-login__brand:hover {
+  color: #111827;
+  text-decoration: none;
+}
+
+.masslab-login__brand-image {
+  display: block;
+  height: 56px;
+  width: auto;
+}
+
+.masslab-login__brand--compact {
+  margin-bottom: 24px;
+}
+
+.masslab-login__brand-image--compact {
+  height: 46px;
+}
+
+.masslab-login__form {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.masslab-login__heading h1 {
+  margin: 0;
+  color: #111827;
+  font-size: 34px;
+  line-height: 1.15;
+  font-weight: 700;
+  letter-spacing: -0.03em;
+}
+
+.masslab-login__heading p {
+  margin: 12px 0 0;
+  color: #6b7280;
+  font-size: 15px;
+  line-height: 1.6;
+}
+
+.masslab-login__validation {
+  margin: 0;
+  padding: 12px 14px;
+  border: 1px solid rgba(220, 38, 38, 0.18);
+  border-radius: 14px;
+  background: rgba(220, 38, 38, 0.05);
+  color: #b91c1c;
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+.masslab-login__validation.validation-summary-valid,
+.masslab-login__validation:empty {
+  display: none;
+}
+
+.masslab-login__validation ul {
+  margin: 0;
+  padding-left: 18px;
+}
+
+.masslab-login__validation li {
+  margin: 0;
+}
+
+.masslab-login__field {
+  margin-bottom: 0;
+}
+
+.masslab-login__field label {
+  display: block;
+  margin-bottom: 8px;
+  color: #111827;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.masslab-login__field-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.masslab-login__link {
+  color: #4f46e5;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.masslab-login__link:hover {
+  color: #3730a3;
+  text-decoration: underline;
+}
+
+.masslab-login__input-wrap {
+  position: relative;
+}
+
+.masslab-login__input-icon {
+  position: absolute;
+  left: 14px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: #9ca3af;
+  font-size: 14px;
+}
+
+.masslab-login__input {
+  height: 46px;
+  border: 1px solid #d7deea;
+  border-radius: 14px;
+  padding-left: 42px;
+  padding-right: 14px;
+  background: rgba(255, 255, 255, 0.88);
+  color: #111827;
+  box-shadow: none;
+  font-size: 15px;
+  line-height: 1.5;
+}
+
+.masslab-login__input--password {
+  padding-right: 46px;
+}
+
+.masslab-login__toggle-password {
+  position: absolute;
+  right: 10px;
+  top: 50%;
+  transform: translateY(-50%);
+  border: 0;
+  background: transparent;
+  color: #9ca3af;
+  width: 28px;
+  height: 28px;
+  border-radius: 999px;
+}
+
+.masslab-login__toggle-password:hover,
+.masslab-login__toggle-password:focus {
+  color: #4b5563;
+  outline: none;
+}
+
+.masslab-login__input:focus {
+  border-color: rgba(90, 58, 240, 0.42);
+  box-shadow: 0 0 0 0.18rem rgba(90, 58, 240, 0.12);
+  font-size: 15px;
+}
+
+.masslab-login__input::placeholder {
+  font-size: 15px;
+}
+
+.masslab-login__input:-webkit-autofill,
+.masslab-login__input:-webkit-autofill:hover,
+.masslab-login__input:-webkit-autofill:focus,
+.masslab-login__input:-webkit-autofill:active {
+  -webkit-text-fill-color: #111827;
+  font-size: 15px;
+  caret-color: #111827;
+  box-shadow: 0 0 0 1000px rgba(255, 255, 255, 0.96) inset;
+  transition: background-color 9999s ease-out 0s;
+}
+
+.masslab-login__meta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.masslab-login__remember {
+  color: #6b7280;
+  font-size: 14px;
+}
+
+.masslab-login__remember label {
+  font-weight: 400;
+}
+
+.masslab-login__submit {
+  height: 46px;
+  border: 0;
+  border-radius: 14px;
+  background: linear-gradient(135deg, #5a3af0, #3e8dff);
+  color: #fff;
+  font-size: 15px;
+  font-weight: 700;
+  box-shadow: 0 18px 38px -20px rgba(90, 58, 240, 0.7);
+}
+
+.masslab-login__submit:hover,
+.masslab-login__submit:focus {
+  color: #fff;
+  opacity: 0.95;
+}
+
+.masslab-login__locale-switcher {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.masslab-login__locale-btn {
+  border: 1px solid #d7deea;
+  background: rgba(255, 255, 255, 0.82);
+  color: #6b7280;
+  border-radius: 999px;
+  padding: 6px 12px;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.masslab-login__locale-btn.is-active {
+  border-color: rgba(90, 58, 240, 0.24);
+  background: rgba(90, 58, 240, 0.08);
+  color: #4338ca;
+}
+
+.masslab-login__hero {
+  display: none;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+}
+
+.masslab-login__hero-card {
+  position: relative;
+  width: 100%;
+  max-width: 560px;
+  min-height: 680px;
+  padding: 48px 44px;
+  border: 1px solid rgba(215, 222, 234, 0.92);
+  border-radius: 32px;
+  background:
+    linear-gradient(135deg, rgba(117, 87, 255, 0.12), rgba(111, 214, 255, 0.08)),
+    rgba(255, 255, 255, 0.72);
+  box-shadow: 0 18px 48px -28px rgba(31, 41, 55, 0.28);
+}
+
+.masslab-login__hero-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 14px;
+  border: 1px solid rgba(215, 222, 234, 0.96);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.82);
+  color: #6b7280;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+}
+
+.masslab-login__hero-pill-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 999px;
+  background: linear-gradient(135deg, #5a3af0, #3e8dff);
+}
+
+.masslab-login__hero h2 {
+  margin: 28px 0 0;
+  color: #111827;
+  font-size: 42px;
+  line-height: 1.08;
+  font-weight: 700;
+  letter-spacing: -0.04em;
+}
+
+.masslab-login__hero h2 span {
+  display: block;
+  background: linear-gradient(135deg, #5a3af0, #3e8dff);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  color: transparent;
+}
+
+.masslab-login__hero p {
+  max-width: 420px;
+  margin: 18px 0 0;
+  color: #6b7280;
+  font-size: 15px;
+  line-height: 1.7;
+}
+
+.masslab-login__stats {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 14px;
+  margin-top: 42px;
+}
+
+.masslab-login__stat {
+  padding: 18px 16px;
+  border: 1px solid rgba(215, 222, 234, 0.96);
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.88);
+}
+
+.masslab-login__stat strong {
+  display: block;
+  font-size: 24px;
+  line-height: 1.1;
+  font-weight: 700;
+  background: linear-gradient(135deg, #5a3af0, #3e8dff);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  color: transparent;
+}
+
+.masslab-login__stat span {
+  display: block;
+  margin-top: 6px;
+  color: #6b7280;
+  font-size: 12px;
+}
+
+.masslab-auth-card-page {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 32px 20px;
+}
+
+.masslab-auth-card {
+  width: 100%;
+  max-width: 460px;
+  padding: 32px;
+  border: 1px solid rgba(215, 222, 234, 0.92);
+  border-radius: 28px;
+  background: rgba(255, 255, 255, 0.9);
+  box-shadow: 0 18px 48px -28px rgba(31, 41, 55, 0.2);
+}
+
+.masslab-auth-card--center {
+  text-align: center;
+}
+
+.masslab-auth-card__header h1 {
+  margin: 0;
+  color: #111827;
+  font-size: 30px;
+  line-height: 1.15;
+  font-weight: 700;
+  letter-spacing: -0.03em;
+}
+
+.masslab-auth-card__header p {
+  margin: 12px 0 0;
+  color: #6b7280;
+  font-size: 15px;
+  line-height: 1.6;
+}
+
+.masslab-auth-card__form {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  margin-top: 24px;
+}
+
+.masslab-auth-card__footer {
+  margin-top: 18px;
+}
+
+.masslab-auth-card__icon {
+  width: 68px;
+  height: 68px;
+  display: inline-grid;
+  place-items: center;
+  margin: 0 auto 20px;
+  border-radius: 20px;
+  background: linear-gradient(135deg, rgba(90, 58, 240, 0.12), rgba(62, 141, 255, 0.12));
+  color: #4f46e5;
+  font-size: 28px;
+}
+
+.masslab-auth-card__icon--success {
+  background: linear-gradient(135deg, rgba(16, 185, 129, 0.12), rgba(34, 197, 94, 0.12));
+  color: #16a34a;
+}
+
+.masslab-auth-card__icon--danger {
+  background: linear-gradient(135deg, rgba(239, 68, 68, 0.12), rgba(248, 113, 113, 0.12));
+  color: #dc2626;
+}
+
+.masslab-auth-card__note {
+  margin-top: 22px;
+  padding: 18px;
+  border: 1px solid #d7deea;
+  border-radius: 18px;
+  background: rgba(248, 250, 252, 0.9);
+  color: #374151;
+  font-size: 13px;
+  line-height: 1.6;
+}
+
+.masslab-auth-card__note code {
+  display: block;
+  white-space: normal;
+  word-break: break-word;
+}
+
+@media (min-width: 992px) {
+  .masslab-login__main {
+    grid-template-columns: minmax(0, 1fr) minmax(440px, 48%);
+  }
+
+  .masslab-login__form-panel {
+    padding: 40px 48px;
+  }
+
+  .masslab-login__hero {
+    display: flex;
+  }
 }

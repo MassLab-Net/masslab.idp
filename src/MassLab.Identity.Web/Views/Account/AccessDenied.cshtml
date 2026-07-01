@@ -3,12 +3,15 @@
     ViewData["Title"] = "Access Denied";
 }
 
-<div class="login-box">
-    <div class="card card-outline card-danger">
-        <div class="card-body text-center">
-            <i class="fa fa-ban fa-3x text-danger mb-3"></i>
-            <p>Access denied.</p>
-            <a asp-action="Login" class="btn btn-danger btn-block">Back to sign in</a>
+<div class="masslab-auth-card-page">
+    <div class="masslab-auth-card masslab-auth-card--center">
+        <div class="masslab-auth-card__icon masslab-auth-card__icon--danger">
+            <i class="fa fa-ban"></i>
         </div>
+        <div class="masslab-auth-card__header">
+            <h1>Access denied</h1>
+            <p>You do not have permission to access this page with the current account.</p>
+        </div>
+        <a asp-action="Login" class="btn masslab-login__submit">Back to sign in</a>
     </div>
 </div>

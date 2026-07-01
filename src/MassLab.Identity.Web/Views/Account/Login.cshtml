@@ -4,43 +4,176 @@
     ViewData["Title"] = "SSO Login";
 }
 
-<div class="login-box">
-    <div class="login-logo">
-        <a asp-controller="Home" asp-action="Index"><b>MassLab</b> Identity</a>
-    </div>
-    <div class="card">
-        <div class="card-body login-card-body">
-            <p class="login-box-msg">Sign in with SSO</p>
-            <form asp-action="Login" method="post">
-                <input type="hidden" asp-for="ReturnUrl" />
-                <div asp-validation-summary="All" class="text-danger"></div>
-                <div class="input-group mb-3">
-                    <input asp-for="Email" class="form-control" placeholder="Email" autocomplete="username" />
-                    <div class="input-group-append">
-                        <div class="input-group-text"><span class="fa fa-envelope"></span></div>
+<div class="masslab-login">
+    <div class="masslab-login__glow masslab-login__glow--top"></div>
+    <div class="masslab-login__glow masslab-login__glow--bottom"></div>
+
+    <main class="masslab-login__main">
+        <section class="masslab-login__form-panel">
+            <div class="masslab-login__form-shell">
+                <a asp-controller="Home" asp-action="Index" class="masslab-login__brand" aria-label="MassLab Identity home">
+                    <img src="~/images/masslab-logo-full.png" asp-append-version="true" alt="MassLab" class="masslab-login__brand-image" />
+                </a>
+
+                <form asp-action="Login" method="post" class="masslab-login__form">
+                    <input type="hidden" asp-for="ReturnUrl" />
+
+                    <div class="masslab-login__heading">
+                        <h1 data-i18n="title">Sign in to MassLab IAM</h1>
+                        <p data-i18n="subtitle">Use your MassLab Identity account to continue to the admin workspace.</p>
                     </div>
-                </div>
-                <div class="input-group mb-3">
-                    <input asp-for="Password" type="password" class="form-control" placeholder="Password" autocomplete="current-password" />
-                    <div class="input-group-append">
-                        <div class="input-group-text"><span class="fa fa-lock"></span></div>
-                    </div>
-                </div>
-                <div class="row">
-                    <div class="col-8">
-                        <div class="icheck-primary">
-                            <input asp-for="RememberMe" />
-                            <label asp-for="RememberMe">Remember me</label>
+
+                    <div asp-validation-summary="All" class="masslab-login__validation @(ViewData.ModelState.IsValid ? "validation-summary-valid" : "validation-summary-errors")"></div>
+
+                    <div class="form-group masslab-login__field">
+                        <label asp-for="Email" data-i18n="usernameLabel">Username</label>
+                        <div class="masslab-login__input-wrap">
+                            <span class="fa fa-envelope masslab-login__input-icon" aria-hidden="true"></span>
+                            <input asp-for="Email" class="form-control masslab-login__input" placeholder="you@company.com" autocomplete="username" data-i18n-placeholder="usernamePlaceholder" />
                         </div>
                     </div>
-                    <div class="col-4">
-                        <button type="submit" class="btn btn-primary btn-block">Sign In</button>
+
+                    <div class="form-group masslab-login__field">
+                        <div class="masslab-login__field-header">
+                            <label asp-for="Password" data-i18n="passwordLabel">Password</label>
+                            <a asp-action="ForgotPassword" class="masslab-login__link" data-i18n="forgotPassword">Forgot password?</a>
+                        </div>
+                        <div class="masslab-login__input-wrap">
+                            <span class="fa fa-lock masslab-login__input-icon" aria-hidden="true"></span>
+                            <input asp-for="Password" type="password" class="form-control masslab-login__input masslab-login__input--password" placeholder="••••••••••" autocomplete="current-password" data-i18n-placeholder="passwordPlaceholder" />
+                            <button type="button" class="masslab-login__toggle-password" data-password-toggle aria-label="Toggle password visibility">
+                                <span class="fa fa-eye"></span>
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="masslab-login__meta">
+                        <div class="icheck-primary masslab-login__remember">
+                            <input asp-for="RememberMe" />
+                            <label asp-for="RememberMe" data-i18n="rememberMe">Remember me</label>
+                        </div>
+                    </div>
+
+                    <button type="submit" class="btn masslab-login__submit" data-i18n="signIn">Sign In</button>
+
+                    <div class="masslab-login__locale-switcher">
+                        <button type="button" class="masslab-login__locale-btn is-active" data-locale="en">English</button>
+                        <button type="button" class="masslab-login__locale-btn" data-locale="vi">Tiếng Việt</button>
+                    </div>
+                </form>
+            </div>
+        </section>
+
+        <aside class="masslab-login__hero">
+            <div class="masslab-login__hero-card">
+                <div class="masslab-login__hero-pill">
+                    <span class="masslab-login__hero-pill-dot"></span>
+                    <span data-i18n="heroTag">Enterprise identity for modern teams</span>
+                </div>
+                <h2>
+                    <span data-i18n="heroTitle1">Secure access.</span>
+                    <span data-i18n="heroTitle2">Audit-ready control.</span>
+                </h2>
+                <p data-i18n="heroBody">
+                    Granular RBAC, direct permissions, organization-scoped roles, and a clean sign-in flow between admin and identity.
+                </p>
+
+                <div class="masslab-login__stats">
+                    <div class="masslab-login__stat">
+                        <strong>12K+</strong>
+                        <span data-i18n="statTenants">Tenants</span>
+                    </div>
+                    <div class="masslab-login__stat">
+                        <strong>4.8M</strong>
+                        <span data-i18n="statIdentities">Identities</span>
+                    </div>
+                    <div class="masslab-login__stat">
+                        <strong>99.99%</strong>
+                        <span data-i18n="statUptime">Uptime</span>
                     </div>
                 </div>
-            </form>
-            <p class="mb-1 mt-3">
-                <a asp-action="ForgotPassword">Forgot password</a>
-            </p>
-        </div>
-    </div>
+            </div>
+        </aside>
+    </main>
 </div>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+    <script>
+        (() => {
+            const passwordInput = document.querySelector("[data-password-toggle]")?.closest(".masslab-login__input-wrap")?.querySelector(".masslab-login__input--password");
+            const passwordToggle = document.querySelector("[data-password-toggle]");
+            if (passwordInput && passwordToggle) {
+                passwordToggle.addEventListener("click", () => {
+                    const nextType = passwordInput.getAttribute("type") === "password" ? "text" : "password";
+                    passwordInput.setAttribute("type", nextType);
+                    passwordToggle.innerHTML = nextType === "password"
+                        ? '<span class="fa fa-eye"></span>'
+                        : '<span class="fa fa-eye-slash"></span>';
+                });
+            }
+
+            const translations = {
+                en: {
+                    title: "Sign in to MassLab IAM",
+                    subtitle: "Use your MassLab Identity account to continue to the admin workspace.",
+                    usernameLabel: "Username",
+                    usernamePlaceholder: "you@company.com",
+                    passwordLabel: "Password",
+                    passwordPlaceholder: "••••••••••",
+                    forgotPassword: "Forgot password?",
+                    rememberMe: "Remember me",
+                    signIn: "Sign In",
+                    heroTag: "Enterprise identity for modern teams",
+                    heroTitle1: "Secure access.",
+                    heroTitle2: "Audit-ready control.",
+                    heroBody: "Granular RBAC, direct permissions, organization-scoped roles, and a clean sign-in flow between admin and identity.",
+                    statTenants: "Tenants",
+                    statIdentities: "Identities",
+                    statUptime: "Uptime"
+                },
+                vi: {
+                    title: "Đăng nhập vào MassLab IAM",
+                    subtitle: "Dùng tài khoản MassLab Identity để tiếp tục vào khu vực quản trị.",
+                    usernameLabel: "Tên đăng nhập",
+                    usernamePlaceholder: "ban@congty.com",
+                    passwordLabel: "Mật khẩu",
+                    passwordPlaceholder: "••••••••••",
+                    forgotPassword: "Quên mật khẩu?",
+                    rememberMe: "Ghi nhớ đăng nhập",
+                    signIn: "Đăng nhập",
+                    heroTag: "Nền tảng identity cho đội ngũ hiện đại",
+                    heroTitle1: "Truy cập an toàn.",
+                    heroTitle2: "Kiểm soát sẵn sàng kiểm toán.",
+                    heroBody: "RBAC chi tiết, quyền trực tiếp, vai trò theo tổ chức và luồng đăng nhập sạch giữa admin và identity.",
+                    statTenants: "Tổ chức",
+                    statIdentities: "Danh tính",
+                    statUptime: "Uptime"
+                }
+            };
+
+            const applyLocale = (locale) => {
+                const values = translations[locale] ?? translations.en;
+                document.querySelectorAll("[data-i18n]").forEach((node) => {
+                    const key = node.getAttribute("data-i18n");
+                    if (key && values[key]) {
+                        node.textContent = values[key];
+                    }
+                });
+                document.querySelectorAll("[data-i18n-placeholder]").forEach((node) => {
+                    const key = node.getAttribute("data-i18n-placeholder");
+                    if (key && values[key]) {
+                        node.setAttribute("placeholder", values[key]);
+                    }
+                });
+                document.querySelectorAll("[data-locale]").forEach((button) => {
+                    button.classList.toggle("is-active", button.getAttribute("data-locale") === locale);
+                });
+            };
+
+            document.querySelectorAll("[data-locale]").forEach((button) => {
+                button.addEventListener("click", () => applyLocale(button.getAttribute("data-locale")));
+            });
+        })();
+    </script>
+}

@@ -1,4 +1,4 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute } from "@tanstack/react-router";
 import {
   Shield,
   Users,
@@ -10,6 +10,7 @@ import {
   CheckCircle2,
   Globe,
 } from "lucide-react";
+import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -17,6 +18,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { useI18n } from "@/lib/i18n";
 import { SiteHeader } from "@/components/site-header";
 import { SiteFooter } from "@/components/site-footer";
+import { beginLogin } from "@/lib/oidc";
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -30,6 +32,14 @@ export const Route = createFileRoute("/")({
 
 function HomePage() {
   const { t } = useI18n();
+
+  const startLogin = async () => {
+    try {
+      await beginLogin({ returnTo: "/admin/dashboard" });
+    } catch (reason: unknown) {
+      toast.error(reason instanceof Error ? reason.message : "Unable to start sign-in.");
+    }
+  };
 
   return (
     <div className="relative min-h-screen overflow-hidden bg-background">
@@ -56,13 +66,11 @@ function HomePage() {
             {t("home.heroSub")}
           </p>
           <div className="mt-10 flex flex-col items-center justify-center gap-4 sm:flex-row">
-            <Button size="lg" className="h-12 gap-2 bg-gradient-brand text-primary-foreground shadow-elegant hover:opacity-95" asChild>
-              <Link to="/auth">
-                {t("home.startFree")} <ArrowRight className="h-4 w-4" />
-              </Link>
+            <Button size="lg" className="h-12 gap-2 bg-gradient-brand text-primary-foreground shadow-elegant hover:opacity-95" onClick={() => void startLogin()}>
+              {t("home.startFree")} <ArrowRight className="h-4 w-4" />
             </Button>
-            <Button variant="outline" size="lg" className="h-12" asChild>
-              <Link to="/auth">{t("home.seeDemo")}</Link>
+            <Button variant="outline" size="lg" className="h-12" onClick={() => void startLogin()}>
+              {t("home.seeDemo")}
             </Button>
           </div>
           <p className="mt-6 text-sm text-muted-foreground">
@@ -207,15 +215,11 @@ function HomePage() {
             <h2 className="text-3xl font-bold tracking-tight md:text-4xl">{t("home.ctaTitle")}</h2>
             <p className="mt-4 text-lg text-muted-foreground">{t("home.ctaSub")}</p>
             <div className="mt-8 flex flex-col items-center justify-center gap-4 sm:flex-row">
-              <Button size="lg" className="h-12 gap-2 bg-gradient-brand text-primary-foreground shadow-elegant hover:opacity-95" asChild>
-                <Link to="/auth">
-                  {t("home.getStarted")} <ArrowRight className="h-4 w-4" />
-                </Link>
+              <Button size="lg" className="h-12 gap-2 bg-gradient-brand text-primary-foreground shadow-elegant hover:opacity-95" onClick={() => void startLogin()}>
+                {t("home.getStarted")} <ArrowRight className="h-4 w-4" />
               </Button>
-              <Button variant="outline" size="lg" className="h-12 gap-2" asChild>
-                <Link to="/auth">
-                  <Globe className="h-4 w-4" /> {t("home.seeDemo")}
-                </Link>
+              <Button variant="outline" size="lg" className="h-12 gap-2" onClick={() => void startLogin()}>
+                <Globe className="h-4 w-4" /> {t("home.seeDemo")}
               </Button>
             </div>
           </div>

@@ -1,19 +1,32 @@
+@model MassLab.Identity.Web.ViewModels.Account.MfaChallengeInput
 @{
     Layout = "_AuthLayout";
     ViewData["Title"] = "MFA Challenge";
 }
 
-<div class="login-box">
-    <div class="card">
-        <div class="card-body login-card-body">
-            <p class="login-box-msg">Enter your MFA code.</p>
-            <form asp-action="MfaChallenge" method="post">
-                <div class="input-group mb-3">
-                    <input name="code" class="form-control" placeholder="6-digit code" />
-                    <div class="input-group-append"><div class="input-group-text"><span class="fa fa-shield"></span></div></div>
-                </div>
-                <button type="submit" class="btn btn-primary btn-block">Verify</button>
-            </form>
+<div class="masslab-auth-card-page">
+    <div class="masslab-auth-card">
+        <a asp-action="Login" class="masslab-login__brand masslab-login__brand--compact">
+            <img src="~/images/masslab-logo-full.png" asp-append-version="true" alt="MassLab" class="masslab-login__brand-image masslab-login__brand-image--compact" />
+        </a>
+        <div class="masslab-auth-card__header">
+            <h1>MFA challenge</h1>
+            <p>Enter the verification code from your authenticator app.</p>
         </div>
+        <form asp-action="MfaChallenge" method="post" class="masslab-auth-card__form">
+            <div asp-validation-summary="All" class="masslab-login__validation @(ViewData.ModelState.IsValid ? "validation-summary-valid" : "validation-summary-errors")"></div>
+            <div class="form-group masslab-login__field">
+                <label asp-for="Code">Verification code</label>
+                <div class="masslab-login__input-wrap">
+                    <span class="fa fa-shield masslab-login__input-icon" aria-hidden="true"></span>
+                    <input asp-for="Code" class="form-control masslab-login__input" placeholder="6-digit code" autocomplete="one-time-code" />
+                </div>
+            </div>
+            <button type="submit" class="btn masslab-login__submit">Verify</button>
+        </form>
     </div>
 </div>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+}

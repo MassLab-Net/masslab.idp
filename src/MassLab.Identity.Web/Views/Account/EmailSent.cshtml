@@ -3,12 +3,15 @@
     ViewData["Title"] = "Email Sent";
 }
 
-<div class="login-box">
-    <div class="card card-outline card-primary">
-        <div class="card-body text-center">
-            <i class="fa fa-envelope-o fa-3x text-primary mb-3"></i>
-            <p>If the account exists, an email has been queued.</p>
-            <a asp-action="Login" class="btn btn-primary btn-block">Back to sign in</a>
+<div class="masslab-auth-card-page">
+    <div class="masslab-auth-card masslab-auth-card--center">
+        <div class="masslab-auth-card__icon">
+            <i class="fa fa-envelope-o"></i>
         </div>
+        <div class="masslab-auth-card__header">
+            <h1>Email queued</h1>
+            <p>If the account exists, a password reset email has been queued.</p>
+        </div>
+        <a asp-action="Login" class="btn masslab-login__submit">Back to sign in</a>
     </div>
 </div>

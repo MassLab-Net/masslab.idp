@@ -90,7 +90,15 @@ function AuthPage() {
     setLoading(kind);
     setCallbackError(null);
     toast.info(kind === "pw" ? "Redirecting to MassLab Identity..." : "Continuing with MassLab Identity...");
-    beginLogin({ organizationSlug: org.trim() || undefined, returnTo: "/admin/dashboard" });
+
+    try {
+      await beginLogin({ organizationSlug: org.trim() || undefined, returnTo: "/admin/dashboard" });
+    } catch (reason: unknown) {
+      const message = reason instanceof Error ? reason.message : "Unable to start sign-in.";
+      setLoading(null);
+      setCallbackError(message);
+      toast.error(message);
+    }
   };
 
   return (

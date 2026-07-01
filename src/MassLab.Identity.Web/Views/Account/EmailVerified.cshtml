@@ -3,12 +3,15 @@
     ViewData["Title"] = "Email Verified";
 }
 
-<div class="login-box">
-    <div class="card card-outline card-success">
-        <div class="card-body text-center">
-            <i class="fa fa-check-circle fa-3x text-success mb-3"></i>
-            <p>Email verified.</p>
-            <a asp-action="Login" class="btn btn-success btn-block">Sign in</a>
+<div class="masslab-auth-card-page">
+    <div class="masslab-auth-card masslab-auth-card--center">
+        <div class="masslab-auth-card__icon masslab-auth-card__icon--success">
+            <i class="fa fa-check-circle"></i>
         </div>
+        <div class="masslab-auth-card__header">
+            <h1>Email verified</h1>
+            <p>Your email address has been confirmed successfully.</p>
+        </div>
+        <a asp-action="Login" class="btn masslab-login__submit">Sign in</a>
     </div>
 </div>

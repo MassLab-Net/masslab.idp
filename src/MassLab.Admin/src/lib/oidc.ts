@@ -33,37 +33,38 @@ const defaultIdentityRootUrl = import.meta.env.VITE_IDENTITY_ROOT_URL ?? "http:/
 const clientId = import.meta.env.VITE_IDENTITY_CLIENT_ID ?? "masslab-admin-spa";
 const requestedScope = import.meta.env.VITE_IDENTITY_SCOPE ?? "openid profile email permissions";
 
-export function beginLogin(input: { organizationSlug?: string; returnTo?: string }) {
-  if (typeof window === "undefined") return;
+export async function beginLogin(input: { organizationSlug?: string; returnTo?: string }) {
+  if (typeof window === "undefined") {
+    throw new Error("OIDC login can only start in the browser.");
+  }
 
   const identityBaseUrl = resolveIdentityBaseUrl(input.organizationSlug);
   const state = randomString(32);
   const codeVerifier = randomString(64);
   const returnTo = input.returnTo ?? "/admin/dashboard";
+  const codeChallenge = await createCodeChallenge(codeVerifier);
 
-  void createCodeChallenge(codeVerifier).then((codeChallenge) => {
-    const login: PendingLogin = {
-      state,
-      codeVerifier,
-      identityBaseUrl,
-      organizationSlug: normalizeSlug(input.organizationSlug),
-      returnTo,
-    };
+  const login: PendingLogin = {
+    state,
+    codeVerifier,
+    identityBaseUrl,
+    organizationSlug: normalizeSlug(input.organizationSlug),
+    returnTo,
+  };
 
-    sessionStorage.setItem(LOGIN_KEY, JSON.stringify(login));
+  sessionStorage.setItem(LOGIN_KEY, JSON.stringify(login));
 
-    const redirectUri = getRedirectUri();
-    const authorizeUrl = new URL("/connect/authorize", identityBaseUrl);
-    authorizeUrl.searchParams.set("client_id", clientId);
-    authorizeUrl.searchParams.set("redirect_uri", redirectUri);
-    authorizeUrl.searchParams.set("response_type", "code");
-    authorizeUrl.searchParams.set("scope", requestedScope);
-    authorizeUrl.searchParams.set("code_challenge", codeChallenge);
-    authorizeUrl.searchParams.set("code_challenge_method", "S256");
-    authorizeUrl.searchParams.set("state", state);
+  const redirectUri = getRedirectUri();
+  const authorizeUrl = new URL("/connect/authorize", identityBaseUrl);
+  authorizeUrl.searchParams.set("client_id", clientId);
+  authorizeUrl.searchParams.set("redirect_uri", redirectUri);
+  authorizeUrl.searchParams.set("response_type", "code");
+  authorizeUrl.searchParams.set("scope", requestedScope);
+  authorizeUrl.searchParams.set("code_challenge", codeChallenge);
+  authorizeUrl.searchParams.set("code_challenge_method", "S256");
+  authorizeUrl.searchParams.set("state", state);
 
-    window.location.assign(authorizeUrl.toString());
-  });
+  window.location.assign(authorizeUrl.toString());
 }
 
 export async function completeLogin(callbackUrl: string): Promise<{ session: AuthSession; returnTo: string }> {

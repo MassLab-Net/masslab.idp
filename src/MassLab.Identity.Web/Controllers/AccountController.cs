@@ -12,6 +12,11 @@ namespace MassLab.Identity.Web.Controllers;
 public sealed class AccountController : Controller
 {
     private readonly ISender _sender;
+    private static readonly string[] InvalidReturnUrlPrefixes =
+    [
+        "/account/logout",
+        "/connect/logout"
+    ];
 
     public AccountController(ISender sender)
     {
@@ -19,7 +24,7 @@ public sealed class AccountController : Controller
     }
 
     [HttpGet("login")]
-    public IActionResult Login(string? returnUrl = null) => View(new LoginInput { ReturnUrl = returnUrl });
+    public IActionResult Login(string? returnUrl = null) => View(new LoginInput { ReturnUrl = NormalizeReturnUrl(returnUrl) });
 
     [HttpPost("login")]
     [ValidateAntiForgeryToken]
@@ -33,7 +38,7 @@ public sealed class AccountController : Controller
             return View(input);
         }
 
-        return LocalRedirect(input.ReturnUrl ?? "/");
+        return LocalRedirect(NormalizeReturnUrl(input.ReturnUrl) ?? "/");
     }
 
     [Authorize]
@@ -96,7 +101,7 @@ public sealed class AccountController : Controller
         if (!result.Succeeded)
         {
             AddErrors(result);
-            return View("MfaChallenge");
+            return View("MfaChallenge", input);
         }
 
         return RedirectToAction("Index", "Home");
@@ -126,5 +131,28 @@ public sealed class AccountController : Controller
         {
             ModelState.AddModelError(string.Empty, error);
         }
+    }
+
+    private static string? NormalizeReturnUrl(string? returnUrl)
+    {
+        if (string.IsNullOrWhiteSpace(returnUrl))
+        {
+            return null;
+        }
+
+        if (!returnUrl.StartsWith('/'))
+        {
+            return null;
+        }
+
+        foreach (var prefix in InvalidReturnUrlPrefixes)
+        {
+            if (returnUrl.StartsWith(prefix, StringComparison.OrdinalIgnoreCase))
+            {
+                return null;
+            }
+        }
+
+        return returnUrl;
     }
 }
