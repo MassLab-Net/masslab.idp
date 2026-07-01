@@ -5,6 +5,7 @@ using MassLab.Common.Observability.Extensions;
 using MassLab.Identity.Application;
 using MassLab.Identity.Infrastructure;
 using MassLab.Identity.Infrastructure.Data;
+using MassLab.Identity.Web.Options;
 using Microsoft.AspNetCore.RateLimiting;
 using OpenIddict.Abstractions;
 
@@ -18,6 +19,7 @@ builder.Services.AddMassLabObservability(builder.Configuration);
 builder.Services.AddMassLabIdentityApplication();
 builder.Services.AddMassLabIdentityInfrastructure(builder.Configuration);
 builder.Services.Configure<OpenIddictAdminSpaClientOptions>(builder.Configuration.GetSection("OpenIddict:AdminSpaClient"));
+var tokenOptions = builder.Configuration.GetSection("OpenIddict:Tokens").Get<OpenIddictTokenOptions>() ?? new OpenIddictTokenOptions();
 builder.Services.AddCors(options =>
 {
     options.AddPolicy("AdminSpa", policy =>
@@ -67,6 +69,17 @@ builder.Services.AddOpenIddict()
 
         options.AddDevelopmentEncryptionCertificate();
         options.AddDevelopmentSigningCertificate();
+        switch (tokenOptions.AccessTokenFormat)
+        {
+            case OpenIddictTokenOptions.SignedJwt:
+                options.DisableAccessTokenEncryption();
+                break;
+            case OpenIddictTokenOptions.EncryptedJwt:
+                break;
+            default:
+                throw new InvalidOperationException(
+                    $"Unsupported OpenIddict access token format '{tokenOptions.AccessTokenFormat}'. Supported values: '{OpenIddictTokenOptions.SignedJwt}', '{OpenIddictTokenOptions.EncryptedJwt}'.");
+        }
 
         var aspNetCore = options.UseAspNetCore()
             .EnableAuthorizationEndpointPassthrough()

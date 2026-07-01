@@ -24,7 +24,16 @@ public sealed class AccountController : Controller
     }
 
     [HttpGet("login")]
-    public IActionResult Login(string? returnUrl = null) => View(new LoginInput { ReturnUrl = NormalizeReturnUrl(returnUrl) });
+    public IActionResult Login(string? returnUrl = null)
+    {
+        var normalizedReturnUrl = NormalizeReturnUrl(returnUrl);
+        if (User.Identity?.IsAuthenticated == true)
+        {
+            return LocalRedirect(normalizedReturnUrl ?? "/");
+        }
+
+        return View(new LoginInput { ReturnUrl = normalizedReturnUrl });
+    }
 
     [HttpPost("login")]
     [ValidateAntiForgeryToken]

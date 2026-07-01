@@ -110,7 +110,7 @@ export async function completeLogin(callbackUrl: string): Promise<{ session: Aut
 
 export function buildLogoutUrl(session: AuthSession) {
   const url = new URL("/connect/logout", session.identityBaseUrl);
-  url.searchParams.set("post_logout_redirect_uri", window.location.origin);
+  url.searchParams.set("post_logout_redirect_uri", new URL("/", window.location.origin).toString());
   if (session.idToken) {
     url.searchParams.set("id_token_hint", session.idToken);
   }
