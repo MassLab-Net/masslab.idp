@@ -7,10 +7,30 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import {
+  Dialog,
+  DialogContent,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { UserPermissionOverridesTree } from "@/components/user-permission-overrides-tree";
 
 import { initials } from "@/components/app-sidebar";
 import { StatusPill, statusVariant } from "@/components/status-pill";
@@ -18,7 +38,14 @@ import { PageHeader } from "../tenant/organizations";
 import { useI18n } from "@/lib/i18n";
 import { toast } from "sonner";
 import { useAuth } from "@/lib/auth";
-import { identityFetch, type CommandResult, type TenantRoleDto, type TenantUsersDto, type TenantUserDto } from "@/lib/identity-api";
+import {
+  identityFetch,
+  type CommandResult,
+  type TenantPermissionDto,
+  type TenantRoleDto,
+  type TenantUsersDto,
+  type TenantUserDto,
+} from "@/lib/identity-api";
 
 export const Route = createFileRoute("/admin/access-control/users")({
   head: () => ({ meta: [{ title: "Users — MassLab IAM" }] }),
@@ -40,23 +67,65 @@ function UsersPage() {
   const [q, setQ] = useState("");
   const [users, setUsers] = useState<TenantUserDto[]>([]);
   const [roles, setRoles] = useState<TenantRoleDto[]>([]);
-  const [assignedRoleIds, setAssignedRoleIds] = useState<Record<string, string[]>>({});
+  const [permissions, setPermissions] = useState<TenantPermissionDto[]>([]);
+  const [assignedRoleIds, setAssignedRoleIds] = useState<
+    Record<string, string[]>
+  >({});
+  const [rolePermissionIds, setRolePermissionIds] = useState<
+    Record<string, string[]>
+  >({});
+  const [grantedPermissionIdsByUser, setGrantedPermissionIdsByUser] = useState<
+    Record<string, string[]>
+  >({});
+  const [deniedPermissionIdsByUser, setDeniedPermissionIdsByUser] = useState<
+    Record<string, string[]>
+  >({});
   const [editing, setEditing] = useState<UserEditorState | null>(null);
   const [assigningUserId, setAssigningUserId] = useState<string | null>(null);
   const [selectedRoleIds, setSelectedRoleIds] = useState<string[]>([]);
+  const [selectedGrantedPermissionIds, setSelectedGrantedPermissionIds] =
+    useState<string[]>([]);
+  const [selectedDeniedPermissionIds, setSelectedDeniedPermissionIds] =
+    useState<string[]>([]);
 
   useEffect(() => {
     if (!session) return;
-    void loadUsers(session, setUsers, setRoles, setAssignedRoleIds);
+    void loadUsers(
+      session,
+      setUsers,
+      setRoles,
+      setPermissions,
+      setAssignedRoleIds,
+      setRolePermissionIds,
+      setGrantedPermissionIdsByUser,
+      setDeniedPermissionIdsByUser,
+    );
   }, [session]);
 
   const filtered = useMemo(
-    () => users.filter((user) =>
-      !q
-      || user.displayName.toLowerCase().includes(q.toLowerCase())
-      || (user.email ?? "").toLowerCase().includes(q.toLowerCase())),
+    () =>
+      users.filter(
+        (user) =>
+          !q ||
+          user.displayName.toLowerCase().includes(q.toLowerCase()) ||
+          (user.email ?? "").toLowerCase().includes(q.toLowerCase()),
+      ),
     [users, q],
   );
+  const assigningUser = useMemo(
+    () => users.find((user) => user.id === assigningUserId) ?? null,
+    [assigningUserId, users],
+  );
+  const inheritedPermissionIds = useMemo(() => {
+    const next = new Set<string>();
+    for (const roleId of selectedRoleIds) {
+      for (const permissionId of rolePermissionIds[roleId] ?? []) {
+        next.add(permissionId);
+      }
+    }
+
+    return Array.from(next);
+  }, [rolePermissionIds, selectedRoleIds]);
 
   if (!session) {
     return null;
@@ -69,7 +138,15 @@ function UsersPage() {
         subtitle={t("users.subtitle")}
         action={
           <Button
-            onClick={() => setEditing({ email: "", displayName: "", password: "", isEnabled: true, isTenantAdmin: false })}
+            onClick={() =>
+              setEditing({
+                email: "",
+                displayName: "",
+                password: "",
+                isEnabled: true,
+                isTenantAdmin: false,
+              })
+            }
             className="bg-gradient-brand text-primary-foreground shadow-elegant hover:opacity-95"
           >
             <Plus className="mr-1.5 h-4 w-4" /> {t("users.invite")}
@@ -81,9 +158,16 @@ function UsersPage() {
         <div className="flex flex-wrap items-center gap-2 border-b border-border p-3">
           <div className="relative flex-1 min-w-[220px] max-w-sm">
             <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-            <Input value={q} onChange={(event) => setQ(event.target.value)} placeholder={t("users.search")} className="h-9 pl-9" />
+            <Input
+              value={q}
+              onChange={(event) => setQ(event.target.value)}
+              placeholder={t("users.search")}
+              className="h-9 pl-9"
+            />
           </div>
-          <div className="ml-auto text-sm text-muted-foreground">{filtered.length} {t("common.of")} {users.length}</div>
+          <div className="ml-auto text-sm text-muted-foreground">
+            {filtered.length} {t("common.of")} {users.length}
+          </div>
         </div>
 
         <Table>
@@ -103,10 +187,14 @@ function UsersPage() {
                 <TableRow key={user.id}>
                   <TableCell>
                     <div className="flex items-center gap-3">
-                      <div className="grid h-9 w-9 place-items-center rounded-full bg-gradient-brand text-xs font-semibold text-primary-foreground">{initials(user.displayName)}</div>
+                      <div className="grid h-9 w-9 place-items-center rounded-full bg-gradient-brand text-xs font-semibold text-primary-foreground">
+                        {initials(user.displayName)}
+                      </div>
                       <div>
                         <div className="font-medium">{user.displayName}</div>
-                        <div className="text-xs text-muted-foreground">{user.email}</div>
+                        <div className="text-xs text-muted-foreground">
+                          {user.email}
+                        </div>
                       </div>
                     </div>
                   </TableCell>
@@ -114,25 +202,53 @@ function UsersPage() {
                     <div className="flex flex-wrap gap-1">
                       {userRoleIds.map((roleId) => {
                         const role = roles.find((item) => item.id === roleId);
-                        return role ? <Badge key={roleId} variant="secondary" className="font-normal">{role.name}</Badge> : null;
+                        return role ? (
+                          <Badge
+                            key={roleId}
+                            variant="secondary"
+                            className="font-normal"
+                          >
+                            {role.name}
+                          </Badge>
+                        ) : null;
                       })}
                     </div>
                   </TableCell>
-                  <TableCell><StatusPill variant={statusVariant(user.isEnabled ? "Active" : "Disabled")}>{user.isEnabled ? "Active" : "Disabled"}</StatusPill></TableCell>
-                  <TableCell className="text-sm text-muted-foreground">{user.isSystemAdmin ? "System" : user.isTenantAdmin ? "Tenant" : "User"}</TableCell>
+                  <TableCell>
+                    <StatusPill
+                      variant={statusVariant(
+                        user.isEnabled ? "Active" : "Disabled",
+                      )}
+                    >
+                      {user.isEnabled ? "Active" : "Disabled"}
+                    </StatusPill>
+                  </TableCell>
+                  <TableCell className="text-sm text-muted-foreground">
+                    {user.isSystemAdmin
+                      ? "System"
+                      : user.isTenantAdmin
+                        ? "Tenant"
+                        : "User"}
+                  </TableCell>
                   <TableCell className="text-right">
                     <DropdownMenu>
-                      <DropdownMenuTrigger asChild><Button variant="ghost" size="icon"><MoreHorizontal className="h-4 w-4" /></Button></DropdownMenuTrigger>
+                      <DropdownMenuTrigger asChild>
+                        <Button variant="ghost" size="icon">
+                          <MoreHorizontal className="h-4 w-4" />
+                        </Button>
+                      </DropdownMenuTrigger>
                       <DropdownMenuContent align="end">
                         <DropdownMenuItem
-                          onClick={() => setEditing({
-                            id: user.id,
-                            email: user.email ?? "",
-                            displayName: user.displayName,
-                            password: "",
-                            isEnabled: user.isEnabled,
-                            isTenantAdmin: user.isTenantAdmin,
-                          })}
+                          onClick={() =>
+                            setEditing({
+                              id: user.id,
+                              email: user.email ?? "",
+                              displayName: user.displayName,
+                              password: "",
+                              isEnabled: user.isEnabled,
+                              isTenantAdmin: user.isTenantAdmin,
+                            })
+                          }
                         >
                           {t("common.edit")}
                         </DropdownMenuItem>
@@ -140,9 +256,15 @@ function UsersPage() {
                           onClick={() => {
                             setAssigningUserId(user.id);
                             setSelectedRoleIds(userRoleIds);
+                            setSelectedGrantedPermissionIds(
+                              grantedPermissionIdsByUser[user.id] ?? [],
+                            );
+                            setSelectedDeniedPermissionIds(
+                              deniedPermissionIdsByUser[user.id] ?? [],
+                            );
                           }}
                         >
-                          {t("users.tab.roles")}
+                          {t("users.tab.access")}
                         </DropdownMenuItem>
                         {!user.isEnabled && (
                           <DropdownMenuItem
@@ -164,11 +286,28 @@ function UsersPage() {
                           <DropdownMenuItem
                             onClick={async () => {
                               try {
-                                await identityFetch<CommandResult>(session, `/api/admin/tenant/users/${user.id}/disable`, { method: "POST" });
+                                await identityFetch<CommandResult>(
+                                  session,
+                                  `/api/admin/tenant/users/${user.id}/disable`,
+                                  { method: "POST" },
+                                );
                                 toast.success("User disabled.");
-                                await loadUsers(session, setUsers, setRoles, setAssignedRoleIds);
+                                await loadUsers(
+                                  session,
+                                  setUsers,
+                                  setRoles,
+                                  setPermissions,
+                                  setAssignedRoleIds,
+                                  setRolePermissionIds,
+                                  setGrantedPermissionIdsByUser,
+                                  setDeniedPermissionIdsByUser,
+                                );
                               } catch (reason: unknown) {
-                                toast.error(reason instanceof Error ? reason.message : "Unable to disable the user.");
+                                toast.error(
+                                  reason instanceof Error
+                                    ? reason.message
+                                    : "Unable to disable the user.",
+                                );
                               }
                             }}
                           >
@@ -179,11 +318,28 @@ function UsersPage() {
                           className="text-destructive"
                           onClick={async () => {
                             try {
-                              await identityFetch<CommandResult>(session, `/api/admin/tenant/users/${user.id}/delete`, { method: "POST" });
+                              await identityFetch<CommandResult>(
+                                session,
+                                `/api/admin/tenant/users/${user.id}/delete`,
+                                { method: "POST" },
+                              );
                               toast.success(t("users.deleted"));
-                              await loadUsers(session, setUsers, setRoles, setAssignedRoleIds);
+                              await loadUsers(
+                                session,
+                                setUsers,
+                                setRoles,
+                                setPermissions,
+                                setAssignedRoleIds,
+                                setRolePermissionIds,
+                                setGrantedPermissionIdsByUser,
+                                setDeniedPermissionIdsByUser,
+                              );
                             } catch (reason: unknown) {
-                              toast.error(reason instanceof Error ? reason.message : "Unable to delete the user.");
+                              toast.error(
+                                reason instanceof Error
+                                  ? reason.message
+                                  : "Unable to delete the user.",
+                              );
                             }
                           }}
                         >
@@ -199,28 +355,90 @@ function UsersPage() {
         </Table>
       </Card>
 
-      <Dialog open={!!editing} onOpenChange={(open) => !open && setEditing(null)}>
+      <Dialog
+        open={!!editing}
+        onOpenChange={(open) => !open && setEditing(null)}
+      >
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>{editing?.id ? t("users.editTitle") : t("users.inviteTitle")}</DialogTitle>
+            <DialogTitle>
+              {editing?.id ? t("users.editTitle") : t("users.inviteTitle")}
+            </DialogTitle>
           </DialogHeader>
           <div className="grid gap-4 py-2">
-            <div className="space-y-1.5"><Label>{t("users.fullName")}</Label><Input value={editing?.displayName ?? ""} onChange={(event) => setEditing((current) => current ? { ...current, displayName: event.target.value } : current)} /></div>
-            <div className="space-y-1.5"><Label>{t("users.email")}</Label><Input value={editing?.email ?? ""} onChange={(event) => setEditing((current) => current ? { ...current, email: event.target.value } : current)} /></div>
+            <div className="space-y-1.5">
+              <Label>{t("users.fullName")}</Label>
+              <Input
+                value={editing?.displayName ?? ""}
+                onChange={(event) =>
+                  setEditing((current) =>
+                    current
+                      ? { ...current, displayName: event.target.value }
+                      : current,
+                  )
+                }
+              />
+            </div>
+            <div className="space-y-1.5">
+              <Label>{t("users.email")}</Label>
+              <Input
+                value={editing?.email ?? ""}
+                onChange={(event) =>
+                  setEditing((current) =>
+                    current
+                      ? { ...current, email: event.target.value }
+                      : current,
+                  )
+                }
+              />
+            </div>
             {!editing?.id && (
-              <div className="space-y-1.5"><Label>{t("login.password")}</Label><Input type="password" value={editing?.password ?? ""} onChange={(event) => setEditing((current) => current ? { ...current, password: event.target.value } : current)} /></div>
+              <div className="space-y-1.5">
+                <Label>{t("login.password")}</Label>
+                <Input
+                  type="password"
+                  value={editing?.password ?? ""}
+                  onChange={(event) =>
+                    setEditing((current) =>
+                      current
+                        ? { ...current, password: event.target.value }
+                        : current,
+                    )
+                  }
+                />
+              </div>
             )}
             <label className="flex items-center gap-2 text-sm">
-              <Checkbox checked={editing?.isEnabled ?? true} onCheckedChange={(checked) => setEditing((current) => current ? { ...current, isEnabled: checked === true } : current)} />
+              <Checkbox
+                checked={editing?.isEnabled ?? true}
+                onCheckedChange={(checked) =>
+                  setEditing((current) =>
+                    current
+                      ? { ...current, isEnabled: checked === true }
+                      : current,
+                  )
+                }
+              />
               Enabled
             </label>
             <label className="flex items-center gap-2 text-sm">
-              <Checkbox checked={editing?.isTenantAdmin ?? false} onCheckedChange={(checked) => setEditing((current) => current ? { ...current, isTenantAdmin: checked === true } : current)} />
+              <Checkbox
+                checked={editing?.isTenantAdmin ?? false}
+                onCheckedChange={(checked) =>
+                  setEditing((current) =>
+                    current
+                      ? { ...current, isTenantAdmin: checked === true }
+                      : current,
+                  )
+                }
+              />
               Tenant administrator
             </label>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setEditing(null)}>{t("common.cancel")}</Button>
+            <Button variant="outline" onClick={() => setEditing(null)}>
+              {t("common.cancel")}
+            </Button>
             <Button
               className="bg-gradient-brand text-primary-foreground"
               onClick={async () => {
@@ -228,32 +446,55 @@ function UsersPage() {
 
                 try {
                   if (editing.id) {
-                    await identityFetch<CommandResult>(session, `/api/admin/tenant/users/${editing.id}/edit`, {
-                      method: "POST",
-                      body: JSON.stringify({
-                        email: editing.email,
-                        displayName: editing.displayName,
-                        isEnabled: editing.isEnabled,
-                        isTenantAdmin: editing.isTenantAdmin,
-                      }),
-                    });
+                    await identityFetch<CommandResult>(
+                      session,
+                      `/api/admin/tenant/users/${editing.id}/edit`,
+                      {
+                        method: "POST",
+                        body: JSON.stringify({
+                          email: editing.email,
+                          displayName: editing.displayName,
+                          isEnabled: editing.isEnabled,
+                          isTenantAdmin: editing.isTenantAdmin,
+                        }),
+                      },
+                    );
                   } else {
-                    await identityFetch<CommandResult>(session, "/api/admin/tenant/users", {
-                      method: "POST",
-                      body: JSON.stringify({
-                        email: editing.email,
-                        displayName: editing.displayName,
-                        password: editing.password,
-                        isTenantAdmin: editing.isTenantAdmin,
-                      }),
-                    });
+                    await identityFetch<CommandResult>(
+                      session,
+                      "/api/admin/tenant/users",
+                      {
+                        method: "POST",
+                        body: JSON.stringify({
+                          email: editing.email,
+                          displayName: editing.displayName,
+                          password: editing.password,
+                          isTenantAdmin: editing.isTenantAdmin,
+                        }),
+                      },
+                    );
                   }
 
-                  toast.success(editing.id ? t("users.updated") : t("users.invited"));
+                  toast.success(
+                    editing.id ? t("users.updated") : t("users.invited"),
+                  );
                   setEditing(null);
-                  await loadUsers(session, setUsers, setRoles, setAssignedRoleIds);
+                  await loadUsers(
+                    session,
+                    setUsers,
+                    setRoles,
+                    setPermissions,
+                    setAssignedRoleIds,
+                    setRolePermissionIds,
+                    setGrantedPermissionIdsByUser,
+                    setDeniedPermissionIdsByUser,
+                  );
                 } catch (reason: unknown) {
-                  toast.error(reason instanceof Error ? reason.message : "Unable to save the user.");
+                  toast.error(
+                    reason instanceof Error
+                      ? reason.message
+                      : "Unable to save the user.",
+                  );
                 }
               }}
             >
@@ -263,47 +504,136 @@ function UsersPage() {
         </DialogContent>
       </Dialog>
 
-      <Dialog open={!!assigningUserId} onOpenChange={(open) => !open && setAssigningUserId(null)}>
-        <DialogContent>
+      <Dialog
+        open={!!assigningUserId}
+        onOpenChange={(open) => !open && setAssigningUserId(null)}
+      >
+        <DialogContent className="flex h-[90vh] max-w-5xl flex-col overflow-hidden">
           <DialogHeader>
-            <DialogTitle>{t("users.tab.roles")}</DialogTitle>
+            <DialogTitle>{t("users.tab.access")}</DialogTitle>
           </DialogHeader>
-          <div className="grid gap-3 py-2">
-            {roles.map((role) => {
-              const checked = selectedRoleIds.includes(role.id);
-              return (
-                <label key={role.id} className="flex items-start gap-3 rounded-lg border border-border p-3 text-sm">
-                  <Checkbox
-                    checked={checked}
-                    onCheckedChange={(value) => {
-                      setSelectedRoleIds((current) => value === true ? [...current, role.id] : current.filter((item) => item !== role.id));
-                    }}
-                  />
-                  <div>
-                    <div className="font-medium">{role.name}</div>
-                    <div className="text-xs text-muted-foreground">{role.description}</div>
+          <div className="flex min-h-0 flex-1 flex-col gap-3 py-2">
+            <Tabs
+              defaultValue="roles"
+              className="flex min-h-0 flex-1 flex-col gap-3"
+            >
+              <TabsList>
+                <TabsTrigger value="roles">{t("users.tab.roles")}</TabsTrigger>
+                <TabsTrigger value="permissions">
+                  {t("users.tab.perms")}
+                </TabsTrigger>
+              </TabsList>
+
+              <TabsContent
+                value="roles"
+                className="min-h-0 flex-1 overflow-y-auto"
+              >
+                <div className="grid gap-3">
+                  {roles.map((role) => {
+                    const checked = selectedRoleIds.includes(role.id);
+                    return (
+                      <label
+                        key={role.id}
+                        className="flex items-start gap-3 rounded-lg border border-border p-3 text-sm"
+                      >
+                        <Checkbox
+                          checked={checked}
+                          onCheckedChange={(value) => {
+                            setSelectedRoleIds((current) =>
+                              value === true
+                                ? [...current, role.id]
+                                : current.filter((item) => item !== role.id),
+                            );
+                          }}
+                        />
+                        <div>
+                          <div className="font-medium">{role.name}</div>
+                          <div className="text-xs text-muted-foreground">
+                            {role.description}
+                          </div>
+                        </div>
+                      </label>
+                    );
+                  })}
+                </div>
+              </TabsContent>
+
+              <TabsContent
+                value="permissions"
+                className="min-h-0 flex-1 overflow-hidden"
+              >
+                <div className="flex min-h-0 h-full flex-col gap-3">
+                  <div className="rounded-lg border border-border bg-muted/40 px-3 py-2 text-sm text-muted-foreground">
+                    {t("users.permissionHelp")}
                   </div>
-                </label>
-              );
-            })}
+                  <div className="min-h-0 flex-1 overflow-y-auto">
+                    <UserPermissionOverridesTree
+                      permissions={permissions}
+                      inheritedIds={inheritedPermissionIds}
+                      grantedIds={selectedGrantedPermissionIds}
+                      deniedIds={selectedDeniedPermissionIds}
+                      onChange={(value) => {
+                        setSelectedGrantedPermissionIds(value.grantedIds);
+                        setSelectedDeniedPermissionIds(value.deniedIds);
+                      }}
+                      rootLabel={
+                        assigningUser?.displayName ?? t("users.tab.access")
+                      }
+                      rootDescription={assigningUser?.email}
+                      searchPlaceholder={t("roles.searchPermissions")}
+                      expandAllLabel={t("roles.expandAll")}
+                      collapseAllLabel={t("roles.collapseAll")}
+                      emptyLabel={t("roles.emptyPermissions")}
+                      inheritedLabel={t("users.permission.inherited")}
+                      grantLabel={t("users.permission.grant")}
+                      denyLabel={t("users.permission.deny")}
+                      clearLabel={t("users.permission.clear")}
+                    />
+                  </div>
+                </div>
+              </TabsContent>
+            </Tabs>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setAssigningUserId(null)}>{t("common.cancel")}</Button>
+            <Button variant="outline" onClick={() => setAssigningUserId(null)}>
+              {t("common.cancel")}
+            </Button>
             <Button
               className="bg-gradient-brand text-primary-foreground"
               onClick={async () => {
                 if (!assigningUserId) return;
 
                 try {
-                  await identityFetch<CommandResult>(session, `/api/admin/tenant/users/${assigningUserId}/roles`, {
-                    method: "POST",
-                    body: JSON.stringify({ roleIds: selectedRoleIds }),
-                  });
-                  toast.success("User roles updated.");
+                  await identityFetch<CommandResult>(
+                    session,
+                    `/api/admin/tenant/users/${assigningUserId}/access`,
+                    {
+                      method: "POST",
+                      body: JSON.stringify({
+                        roleIds: selectedRoleIds,
+                        grantedPermissionIds: selectedGrantedPermissionIds,
+                        deniedPermissionIds: selectedDeniedPermissionIds,
+                      }),
+                    },
+                  );
+                  toast.success(t("users.accessUpdated"));
                   setAssigningUserId(null);
-                  await loadUsers(session, setUsers, setRoles, setAssignedRoleIds);
+                  await loadUsers(
+                    session,
+                    setUsers,
+                    setRoles,
+                    setPermissions,
+                    setAssignedRoleIds,
+                    setRolePermissionIds,
+                    setGrantedPermissionIdsByUser,
+                    setDeniedPermissionIdsByUser,
+                  );
                 } catch (reason: unknown) {
-                  toast.error(reason instanceof Error ? reason.message : "Unable to update user roles.");
+                  toast.error(
+                    reason instanceof Error
+                      ? reason.message
+                      : "Unable to update user access.",
+                  );
                 }
               }}
             >
@@ -320,10 +650,21 @@ async function loadUsers(
   session: Parameters<typeof identityFetch<TenantUsersDto>>[0],
   setUsers: (users: TenantUserDto[]) => void,
   setRoles: (roles: TenantRoleDto[]) => void,
+  setPermissions: (permissions: TenantPermissionDto[]) => void,
   setAssignedRoleIds: (value: Record<string, string[]>) => void,
+  setRolePermissionIds: (value: Record<string, string[]>) => void,
+  setGrantedPermissionIdsByUser: (value: Record<string, string[]>) => void,
+  setDeniedPermissionIdsByUser: (value: Record<string, string[]>) => void,
 ) {
-  const result = await identityFetch<TenantUsersDto>(session, "/api/admin/tenant/users?q=&sort=email&dir=asc");
+  const result = await identityFetch<TenantUsersDto>(
+    session,
+    "/api/admin/tenant/users?q=&sort=email&dir=asc",
+  );
   setUsers(result.users);
   setRoles(result.roles);
+  setPermissions(result.permissions);
   setAssignedRoleIds(result.assignedRoleIds);
+  setRolePermissionIds(result.rolePermissionIds);
+  setGrantedPermissionIdsByUser(result.grantedPermissionIds);
+  setDeniedPermissionIdsByUser(result.deniedPermissionIds);
 }

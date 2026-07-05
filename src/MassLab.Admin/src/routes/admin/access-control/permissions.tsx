@@ -1,6 +1,12 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useEffect, useMemo, useState, type Dispatch, type SetStateAction } from "react";
-import { KeyRound, Layers, MoreHorizontal, Plus, Search } from "lucide-react";
+import {
+  useEffect,
+  useMemo,
+  useState,
+  type Dispatch,
+  type SetStateAction,
+} from "react";
+import { ChevronRight, KeyRound, Layers, MoreHorizontal, Plus, Search } from "lucide-react";
 
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -20,6 +26,11 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import {
+  buildPermissionTree,
+  type PermissionTreeItem,
+  type PermissionTreeNode,
+} from "@/components/permission-tree";
 import { PageHeader } from "../tenant/organizations";
 import { useI18n } from "@/lib/i18n";
 import { cn } from "@/lib/utils";
@@ -45,8 +56,10 @@ function PermissionsPage() {
   const [permissions, setPermissions] = useState<TenantPermissionDto[]>([]);
   const [roleMappings, setRoleMappings] = useState<Record<string, string[]>>({});
   const [activeModule, setActiveModule] = useState("");
+  const [openModules, setOpenModules] = useState<Record<string, boolean>>({});
   const [q, setQ] = useState("");
   const [editing, setEditing] = useState<PermissionEditor | null>(null);
+  const [saveAttempted, setSaveAttempted] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<TenantPermissionDto | null>(null);
 
   useEffect(() => {
@@ -54,18 +67,58 @@ function PermissionsPage() {
     void loadPermissions(session, setPermissions, setRoleMappings, setActiveModule);
   }, [session]);
 
+  const permissionItems = useMemo<PermissionTreeItem[]>(
+    () =>
+      permissions.map((permission) => ({
+        id: permission.id,
+        name: permission.name,
+        category: permission.category,
+        description: permission.description,
+      })),
+    [permissions],
+  );
   const modules = useMemo(() => {
-    const grouped = permissions.reduce<Record<string, TenantPermissionDto[]>>((accumulator, permission) => {
-      const key = permission.category || "ungrouped";
-      accumulator[key] = [...(accumulator[key] ?? []), permission];
-      return accumulator;
-    }, {});
-
-    return Object.entries(grouped).map(([id, items]) => ({ id, name: id, permissions: items }));
-  }, [permissions]);
-
-  const current = modules.find((module) => module.id === activeModule) ?? modules[0] ?? { id: "", name: "", permissions: [] as TenantPermissionDto[] };
-  const filteredPermissions = current.permissions.filter((permission) => !q || permission.name.toLowerCase().includes(q.toLowerCase()) || permission.description?.toLowerCase().includes(q.toLowerCase()));
+    return buildPermissionTree(permissionItems);
+  }, [permissionItems]);
+  const allModuleIds = useMemo(() => flattenNodeIds(modules), [modules]);
+  const moduleCount = allModuleIds.length;
+  const current = useMemo(() => {
+    return findTreeNode(modules, activeModule) ?? modules[0] ?? null;
+  }, [activeModule, modules]);
+  const currentPermissionIds = useMemo(
+    () => new Set(current?.permissionIds ?? permissions.map((permission) => permission.id)),
+    [current, permissions],
+  );
+  const currentPermissions = useMemo(
+    () => permissions.filter((permission) => currentPermissionIds.has(permission.id)),
+    [currentPermissionIds, permissions],
+  );
+  const filteredPermissions = useMemo(
+    () =>
+      currentPermissions.filter(
+        (permission) =>
+          !q ||
+          permission.name.toLowerCase().includes(q.toLowerCase()) ||
+          permission.category.toLowerCase().includes(q.toLowerCase()) ||
+          permission.description?.toLowerCase().includes(q.toLowerCase()),
+      ),
+    [currentPermissions, q],
+  );
+  const normalizedEditor = useMemo(
+    () =>
+      editing
+        ? {
+            name: normalizePermissionPath(editing.name),
+            category: normalizePermissionPath(editing.category),
+          }
+        : null,
+    [editing],
+  );
+  const editorErrors = useMemo(
+    () => validatePermissionEditor(editing, t),
+    [editing, t],
+  );
+  const canSave = editorErrors.length === 0;
 
   if (!session) {
     return null;
@@ -78,7 +131,14 @@ function PermissionsPage() {
         subtitle={t("perms.subtitle")}
         action={
           <Button
-            onClick={() => setEditing({ name: "", category: activeModule || modules[0]?.id || "", description: "" })}
+            onClick={() => {
+              setSaveAttempted(false);
+              setEditing({
+                name: "",
+                category: activeModule || modules[0]?.id || "",
+                description: "",
+              });
+            }}
             className="bg-gradient-brand text-primary-foreground shadow-elegant hover:opacity-95"
           >
             <Plus className="mr-1.5 h-4 w-4" /> {t("perms.addPerm")}
@@ -89,7 +149,7 @@ function PermissionsPage() {
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
         {[
           { l: t("perms.stat.total"), v: permissions.length },
-          { l: t("perms.stat.modules"), v: modules.length },
+          { l: t("perms.stat.modules"), v: moduleCount },
           { l: t("perms.stat.used"), v: Object.values(roleMappings).reduce((sum, names) => sum + names.length, 0) },
           { l: t("perms.stat.coverage"), v: "100%" },
         ].map((item) => (
@@ -109,19 +169,16 @@ function PermissionsPage() {
               <Layers className="h-3.5 w-3.5" /> {t("perms.modules")}
             </div>
           </div>
-          <div className="p-2">
+          <div className="space-y-2 p-2">
             {modules.map((module) => (
-              <button
+              <PermissionModuleBranch
                 key={module.id}
-                onClick={() => setActiveModule(module.id)}
-                className={cn(
-                  "flex w-full items-center justify-between rounded-lg px-3 py-2 text-left text-sm transition",
-                  module.id === current.id ? "bg-gradient-brand-soft font-semibold text-foreground" : "hover:bg-accent",
-                )}
-              >
-                <span>{module.name}</span>
-                <Badge variant="outline" className="font-normal">{module.permissions.length}</Badge>
-              </button>
+                node={module}
+                activeModuleId={current?.id ?? ""}
+                openModules={openModules}
+                setOpenModules={setOpenModules}
+                onSelect={setActiveModule}
+              />
             ))}
           </div>
         </Card>
@@ -130,7 +187,12 @@ function PermissionsPage() {
           <div className="flex flex-wrap items-center justify-between gap-2 border-b border-border p-3">
             <div className="flex items-center gap-3">
               <div className="grid h-9 w-9 place-items-center rounded-lg bg-gradient-brand text-primary-foreground"><KeyRound className="h-4 w-4" /></div>
-              <div><div className="font-semibold">{current.name}</div><div className="text-xs text-muted-foreground">{current.permissions.length} {t("perms.inModule")}</div></div>
+              <div>
+                <div className="font-semibold">{current ? current.path.join(" / ") : t("perms.modules")}</div>
+                <div className="text-xs text-muted-foreground">
+                  {currentPermissions.length} {t("perms.inModule")}
+                </div>
+              </div>
             </div>
             <div className="relative w-64 max-w-full">
               <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
@@ -141,6 +203,7 @@ function PermissionsPage() {
             <TableHeader>
               <TableRow>
                 <TableHead>{t("perms.col.perm")}</TableHead>
+                <TableHead>Category</TableHead>
                 <TableHead>{t("perms.col.id")}</TableHead>
                 <TableHead>{t("perms.col.usedBy")}</TableHead>
                 <TableHead />
@@ -150,6 +213,9 @@ function PermissionsPage() {
               {filteredPermissions.map((permission) => (
                 <TableRow key={permission.id}>
                   <TableCell className="font-medium">{permission.name}</TableCell>
+                  <TableCell>
+                    <code className="text-xs text-muted-foreground">{permission.category}</code>
+                  </TableCell>
                   <TableCell><code className="text-xs text-muted-foreground">{permission.name}</code></TableCell>
                   <TableCell>
                     <div className="flex flex-wrap gap-1">
@@ -162,12 +228,15 @@ function PermissionsPage() {
                       <DropdownMenuTrigger asChild><Button variant="ghost" size="icon"><MoreHorizontal className="h-4 w-4" /></Button></DropdownMenuTrigger>
                       <DropdownMenuContent align="end">
                         <DropdownMenuItem
-                          onClick={() => setEditing({
-                            id: permission.id,
-                            name: permission.name,
-                            category: permission.category,
-                            description: permission.description ?? "",
-                          })}
+                          onClick={() => {
+                            setSaveAttempted(false);
+                            setEditing({
+                              id: permission.id,
+                              name: permission.name,
+                              category: permission.category,
+                              description: permission.description ?? "",
+                            });
+                          }}
                         >
                           {t("common.edit")}
                         </DropdownMenuItem>
@@ -182,28 +251,103 @@ function PermissionsPage() {
         </Card>
       </div>
 
-      <Dialog open={!!editing} onOpenChange={(open) => !open && setEditing(null)}>
+      <Dialog
+        open={!!editing}
+        onOpenChange={(open) => {
+          if (!open) {
+            setEditing(null);
+            setSaveAttempted(false);
+          }
+        }}
+      >
         <DialogContent>
           <DialogHeader><DialogTitle>{editing?.id ? t("common.edit") : t("common.create")}</DialogTitle></DialogHeader>
           <div className="grid gap-4 py-2">
-            <div className="space-y-1.5"><Label>{t("perms.col.perm")}</Label><Input value={editing?.name ?? ""} onChange={(event) => setEditing((current) => current ? { ...current, name: event.target.value } : current)} /></div>
-            <div className="space-y-1.5"><Label>Category</Label><Input value={editing?.category ?? ""} onChange={(event) => setEditing((current) => current ? { ...current, category: event.target.value } : current)} /></div>
-            <div className="space-y-1.5"><Label>{t("roles.description")}</Label><Input value={editing?.description ?? ""} onChange={(event) => setEditing((current) => current ? { ...current, description: event.target.value } : current)} /></div>
+            <div className="space-y-1.5">
+              <Label>{t("perms.col.perm")}</Label>
+              <Input
+                value={editing?.name ?? ""}
+                placeholder={t("perms.namePlaceholder")}
+                onChange={(event) =>
+                  setEditing((current) =>
+                    current ? { ...current, name: event.target.value } : current,
+                  )
+                }
+              />
+              <div className="text-xs text-muted-foreground">
+                {t("perms.nameHint")}
+              </div>
+            </div>
+            <div className="space-y-1.5">
+              <Label>{t("perms.categoryLabel")}</Label>
+              <Input
+                value={editing?.category ?? ""}
+                placeholder={t("perms.categoryPlaceholder")}
+                onChange={(event) =>
+                  setEditing((current) =>
+                    current ? { ...current, category: event.target.value } : current,
+                  )
+                }
+              />
+              <div className="text-xs text-muted-foreground">
+                {t("perms.categoryHint")}
+              </div>
+              {normalizedEditor ? (
+                <div className="rounded-md border border-border bg-muted/40 px-3 py-2 text-xs text-muted-foreground">
+                  {t("perms.normalizedPreview")}{" "}
+                  <code className="text-foreground">
+                    {normalizedEditor.category || "access.users"}
+                  </code>
+                </div>
+              ) : null}
+            </div>
+            <div className="space-y-1.5">
+              <Label>{t("roles.description")}</Label>
+              <Input
+                value={editing?.description ?? ""}
+                placeholder={t("perms.descriptionPlaceholder")}
+                onChange={(event) =>
+                  setEditing((current) =>
+                    current
+                      ? { ...current, description: event.target.value }
+                      : current,
+                  )
+                }
+              />
+            </div>
+            {saveAttempted && editorErrors.length > 0 ? (
+              <div className="rounded-md border border-destructive/30 bg-destructive/5 px-3 py-2 text-sm text-destructive">
+                {editorErrors[0]}
+              </div>
+            ) : null}
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setEditing(null)}>{t("common.cancel")}</Button>
+            <Button
+              variant="outline"
+              onClick={() => {
+                setEditing(null);
+                setSaveAttempted(false);
+              }}
+            >
+              {t("common.cancel")}
+            </Button>
             <Button
               className="bg-gradient-brand text-primary-foreground"
+              disabled={!canSave}
               onClick={async () => {
                 if (!editing) return;
+                setSaveAttempted(true);
+                if (!canSave || !normalizedEditor) {
+                  return;
+                }
 
                 try {
                   if (editing.id) {
                     await identityFetch<CommandResult>(session, `/api/admin/tenant/permissions/${editing.id}/edit`, {
                       method: "POST",
                       body: JSON.stringify({
-                        name: editing.name,
-                        category: editing.category,
+                        name: normalizedEditor.name,
+                        category: normalizedEditor.category,
                         description: editing.description,
                       }),
                     });
@@ -211,15 +355,18 @@ function PermissionsPage() {
                     await identityFetch<CommandResult>(session, "/api/admin/tenant/permissions", {
                       method: "POST",
                       body: JSON.stringify({
-                        name: editing.name,
-                        category: editing.category,
+                        name: normalizedEditor.name,
+                        category: normalizedEditor.category,
                         description: editing.description,
                       }),
                     });
                   }
 
-                  toast.success(editing.id ? "Permission updated." : "Permission created.");
+                  toast.success(
+                    editing.id ? t("perms.permUpdated") : t("perms.permCreated"),
+                  );
                   setEditing(null);
+                  setSaveAttempted(false);
                   await loadPermissions(session, setPermissions, setRoleMappings, setActiveModule);
                 } catch (reason: unknown) {
                   toast.error(reason instanceof Error ? reason.message : "Unable to save the permission.");
@@ -249,7 +396,7 @@ function PermissionsPage() {
 
                 try {
                   await identityFetch<CommandResult>(session, `/api/admin/tenant/permissions/${deleteTarget.id}/delete`, { method: "POST" });
-                  toast.success("Permission deleted.");
+                  toast.success(t("perms.permDeleted"));
                   setDeleteTarget(null);
                   await loadPermissions(session, setPermissions, setRoleMappings, setActiveModule);
                 } catch (reason: unknown) {
@@ -292,6 +439,152 @@ async function loadPermissions(
   setPermissions(permissionsResult);
   setRoleMappings(mappings);
   if (permissionsResult.length > 0) {
-    setActiveModule((current) => current || permissionsResult[0].category);
+    const firstCategory = permissionsResult[0].category;
+    setActiveModule((current) => current || firstCategory);
   }
+}
+
+function PermissionModuleBranch({
+  node,
+  activeModuleId,
+  openModules,
+  setOpenModules,
+  onSelect,
+  depth = 0,
+}: {
+  node: PermissionTreeNode;
+  activeModuleId: string;
+  openModules: Record<string, boolean>;
+  setOpenModules: Dispatch<SetStateAction<Record<string, boolean>>>;
+  onSelect: (moduleId: string) => void;
+  depth?: number;
+}) {
+  const hasChildren = node.children.length > 0;
+  const isOpen = openModules[node.id] ?? true;
+  const isActive = activeModuleId === node.id;
+
+  return (
+    <div className="space-y-1">
+      <div
+        className={cn(
+          "flex items-center gap-1 rounded-lg",
+          isActive && "bg-gradient-brand-soft",
+        )}
+      >
+        <button
+          type="button"
+          className="grid h-8 w-8 shrink-0 place-items-center rounded-md text-muted-foreground transition hover:bg-accent disabled:opacity-0"
+          onClick={() =>
+            setOpenModules((current) => ({ ...current, [node.id]: !isOpen }))
+          }
+          disabled={!hasChildren}
+          aria-label={`Toggle ${node.label}`}
+        >
+          <ChevronRight
+            className={cn(
+              "h-4 w-4 transition-transform",
+              isOpen && "rotate-90",
+            )}
+          />
+        </button>
+        <button
+          type="button"
+          onClick={() => onSelect(node.id)}
+          className={cn(
+            "flex min-w-0 flex-1 items-center justify-between rounded-lg px-3 py-2 text-left text-sm transition hover:bg-accent",
+            isActive && "font-semibold text-foreground",
+          )}
+          style={{ paddingLeft: `${12 + depth * 14}px` }}
+        >
+          <span className="truncate">{node.label}</span>
+          <Badge variant="outline" className="ml-2 font-normal">
+            {node.permissionIds.length}
+          </Badge>
+        </button>
+      </div>
+
+      {hasChildren && isOpen ? (
+        <div className="space-y-1 border-l border-border/70 pl-2">
+          {node.children.map((child) => (
+            <PermissionModuleBranch
+              key={child.id}
+              node={child}
+              activeModuleId={activeModuleId}
+              openModules={openModules}
+              setOpenModules={setOpenModules}
+              onSelect={onSelect}
+              depth={depth + 1}
+            />
+          ))}
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
+function flattenNodeIds(nodes: PermissionTreeNode[]): string[] {
+  return nodes.flatMap((node) => [node.id, ...flattenNodeIds(node.children)]);
+}
+
+function findTreeNode(
+  nodes: PermissionTreeNode[],
+  nodeId: string,
+): PermissionTreeNode | null {
+  for (const node of nodes) {
+    if (node.id === nodeId) {
+      return node;
+    }
+
+    const nested = findTreeNode(node.children, nodeId);
+    if (nested) {
+      return nested;
+    }
+  }
+
+  return null;
+}
+
+function normalizePermissionPath(value: string) {
+  return value
+    .split(/[./\\:>|]/)
+    .map((segment) => segment.trim().toLowerCase())
+    .filter(Boolean)
+    .join(".");
+}
+
+function validatePermissionEditor(
+  editor: PermissionEditor | null,
+  t: (key: string) => string,
+) {
+  if (!editor) {
+    return [];
+  }
+
+  const errors: string[] = [];
+  const normalizedName = normalizePermissionPath(editor.name);
+  const normalizedCategory = normalizePermissionPath(editor.category);
+
+  if (!normalizedName) {
+    errors.push(t("perms.errNameRequired"));
+  }
+
+  if (!normalizedCategory) {
+    errors.push(t("perms.errCategoryRequired"));
+  }
+
+  if (normalizedName && !isValidPermissionPath(normalizedName)) {
+    errors.push(t("perms.errNameFormat"));
+  }
+
+  if (normalizedCategory && !isValidPermissionPath(normalizedCategory)) {
+    errors.push(t("perms.errCategoryFormat"));
+  }
+
+  return errors;
+}
+
+function isValidPermissionPath(value: string) {
+  return value
+    .split(".")
+    .every((segment) => /^[a-z0-9_-]+$/.test(segment));
 }

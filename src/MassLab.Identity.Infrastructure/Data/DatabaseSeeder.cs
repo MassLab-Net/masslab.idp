@@ -10,6 +10,19 @@ namespace MassLab.Identity.Infrastructure.Data;
 
 public static class DatabaseSeeder
 {
+    private static readonly SeedPermissionDefinition[] SeedPermissions =
+    [
+        new("tenants.manage", "platform.tenants", "Manage tenant lifecycle and tenant settings"),
+        new("users.manage", "access.users", "Manage tenant users"),
+        new("roles.manage", "access.roles", "Manage tenant roles"),
+        new("permissions.manage", "access.permissions", "Manage tenant permissions"),
+        new("clients.manage", "integrations.clients", "Manage client applications"),
+        new("providers.manage", "integrations.providers", "Manage external login providers"),
+        new("smtp.manage", "settings.notifications.smtp", "Manage SMTP configuration"),
+        new("sessions.manage", "security.sessions", "Manage user sessions"),
+        new("audit.read", "security.audit", "View audit logs")
+    ];
+
     public static async Task SeedAsync(IServiceProvider services, CancellationToken cancellationToken = default)
     {
         await using var scope = services.CreateAsyncScope();
@@ -17,7 +30,7 @@ public static class DatabaseSeeder
         var userManager = scope.ServiceProvider.GetRequiredService<UserManager<ApplicationUser>>();
         var secretService = scope.ServiceProvider.GetRequiredService<ISecretService>();
 
-        await db.Database.EnsureCreatedAsync(cancellationToken);
+        await db.Database.MigrateAsync(cancellationToken);
 
         var tenant = await db.Tenants.IgnoreQueryFilters().FirstOrDefaultAsync(x => x.Slug == "demo", cancellationToken);
         if (tenant is null)
@@ -32,25 +45,28 @@ public static class DatabaseSeeder
         await EnsureUserAsync(userManager, tenant.Id, "system@masslab.local", "System Admin", isSystemAdmin: true, isTenantAdmin: false);
         var tenantAdmin = await EnsureUserAsync(userManager, tenant.Id, "admin@demo.local", "Demo Tenant Admin", isSystemAdmin: false, isTenantAdmin: true);
 
-        var permissions = new[]
+        foreach (var definition in SeedPermissions)
         {
-            "tenants.manage",
-            "users.manage",
-            "roles.manage",
-            "permissions.manage",
-            "clients.manage",
-            "providers.manage",
-            "smtp.manage",
-            "sessions.manage",
-            "audit.read"
-        };
+            var permission = await db.TenantPermissions
+                .IgnoreQueryFilters()
+                .FirstOrDefaultAsync(
+                    x => x.TenantId == tenant.Id && x.Name == definition.Name,
+                    cancellationToken);
 
-        foreach (var permission in permissions)
-        {
-            if (!await db.TenantPermissions.IgnoreQueryFilters().AnyAsync(x => x.TenantId == tenant.Id && x.Name == permission, cancellationToken))
+            if (permission is null)
             {
-                db.TenantPermissions.Add(new TenantPermission { TenantId = tenant.Id, Name = permission, Category = permission.Split('.')[0] });
+                db.TenantPermissions.Add(new TenantPermission
+                {
+                    TenantId = tenant.Id,
+                    Name = definition.Name,
+                    Category = definition.Category,
+                    Description = definition.Description
+                });
+                continue;
             }
+
+            permission.Category = definition.Category;
+            permission.Description = definition.Description;
         }
 
         await db.SaveChangesAsync(cancellationToken);
@@ -136,4 +152,6 @@ public static class DatabaseSeeder
 
         return user;
     }
+
+    private sealed record SeedPermissionDefinition(string Name, string Category, string Description);
 }

@@ -50,6 +50,14 @@ public sealed class TenantAdminApiController : ControllerBase
     public async Task<IActionResult> SetUserRoles(Guid userId, SetTenantUserRolesInput input)
         => ToActionResult(await _sender.Send(new SetTenantUserRolesCommand(userId, input.RoleIds.Distinct().ToArray())));
 
+    [HttpPost("users/{userId:guid}/access")]
+    public async Task<IActionResult> SetUserAccess(Guid userId, SetTenantUserAccessInput input)
+        => ToActionResult(await _sender.Send(new SetTenantUserAccessCommand(
+            userId,
+            input.RoleIds.Distinct().ToArray(),
+            input.GrantedPermissionIds.Distinct().ToArray(),
+            input.DeniedPermissionIds.Distinct().ToArray())));
+
     [HttpGet("roles")]
     public async Task<ActionResult<TenantRolesDto>> GetRoles([FromQuery] string? q = null, [FromQuery] string sort = "name", [FromQuery] string dir = "asc")
         => Ok(await _sender.Send(new GetTenantRolesQuery(q, sort, dir)));

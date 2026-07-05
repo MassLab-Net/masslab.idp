@@ -572,6 +572,27 @@ namespace MassLab.Identity.Infrastructure.Data.Migrations
                     b.ToTable("UserExternalLoginLinks");
                 });
 
+            modelBuilder.Entity("MassLab.Identity.Domain.UserPermissionAssignment", b =>
+                {
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("PermissionId")
+                        .HasColumnType("uuid");
+
+                    b.Property<bool>("IsGranted")
+                        .HasColumnType("boolean");
+
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("UserId", "PermissionId");
+
+                    b.HasIndex("PermissionId");
+
+                    b.ToTable("UserPermissionAssignments");
+                });
+
             modelBuilder.Entity("MassLab.Identity.Domain.UserRoleAssignment", b =>
                 {
                     b.Property<Guid>("UserId")
@@ -1040,6 +1061,25 @@ namespace MassLab.Identity.Infrastructure.Data.Migrations
                     b.Navigation("User");
                 });
 
+            modelBuilder.Entity("MassLab.Identity.Domain.UserPermissionAssignment", b =>
+                {
+                    b.HasOne("MassLab.Identity.Domain.TenantPermission", "Permission")
+                        .WithMany()
+                        .HasForeignKey("PermissionId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("MassLab.Identity.Domain.ApplicationUser", "User")
+                        .WithMany("PermissionAssignments")
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Permission");
+
+                    b.Navigation("User");
+                });
+
             modelBuilder.Entity("MassLab.Identity.Domain.UserRoleAssignment", b =>
                 {
                     b.HasOne("MassLab.Identity.Domain.TenantRole", "Role")
@@ -1148,6 +1188,8 @@ namespace MassLab.Identity.Infrastructure.Data.Migrations
             modelBuilder.Entity("MassLab.Identity.Domain.ApplicationUser", b =>
                 {
                     b.Navigation("ExternalLogins");
+
+                    b.Navigation("PermissionAssignments");
 
                     b.Navigation("RoleAssignments");
                 });

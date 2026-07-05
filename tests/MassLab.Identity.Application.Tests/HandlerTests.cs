@@ -78,7 +78,14 @@ public sealed class HandlerTests
         public Task<TenantAdminDashboardDto> GetDashboardAsync(CancellationToken cancellationToken = default) => Task.FromResult(Dashboard);
 
         public Task<TenantUsersDto> GetUsersAsync(string? query, string sort, string direction, CancellationToken cancellationToken = default)
-            => Task.FromResult(new TenantUsersDto(Array.Empty<TenantUserDto>(), Array.Empty<TenantRoleDto>(), new Dictionary<Guid, HashSet<Guid>>()));
+            => Task.FromResult(new TenantUsersDto(
+                Array.Empty<TenantUserDto>(),
+                Array.Empty<TenantRoleDto>(),
+                Array.Empty<TenantPermissionDto>(),
+                new Dictionary<Guid, HashSet<Guid>>(),
+                new Dictionary<Guid, HashSet<Guid>>(),
+                new Dictionary<Guid, HashSet<Guid>>(),
+                new Dictionary<Guid, HashSet<Guid>>()));
 
         public Task<TenantRolesDto> GetRolesAsync(string? query, string sort, string direction, CancellationToken cancellationToken = default)
             => Task.FromResult(new TenantRolesDto(Array.Empty<TenantRoleDto>(), Array.Empty<TenantPermissionDto>(), new Dictionary<Guid, HashSet<Guid>>()));

@@ -15,6 +15,16 @@ public sealed class TenantPermission : TenantEntity
     public string Category { get; set; } = string.Empty;
 }
 
+public sealed class UserPermissionAssignment
+{
+    public Guid UserId { get; set; }
+    public ApplicationUser? User { get; set; }
+    public Guid PermissionId { get; set; }
+    public TenantPermission? Permission { get; set; }
+    public Guid TenantId { get; set; }
+    public bool IsGranted { get; set; }
+}
+
 public sealed class UserRoleAssignment
 {
     public Guid UserId { get; set; }

@@ -82,6 +82,20 @@ internal sealed class TenantAdminApplicationService : ITenantAdminQueries, ITena
             .GroupBy(x => x.UserId)
             .ToDictionaryAsync(x => x.Key, x => x.Select(a => a.RoleId).ToHashSet(), cancellationToken);
 
+        var rolePermissionIds = await _db.RolePermissionAssignments
+            .GroupBy(x => x.RoleId)
+            .ToDictionaryAsync(x => x.Key, x => x.Select(a => a.PermissionId).ToHashSet(), cancellationToken);
+
+        var grantedPermissionIds = await _db.UserPermissionAssignments
+            .Where(x => x.IsGranted)
+            .GroupBy(x => x.UserId)
+            .ToDictionaryAsync(x => x.Key, x => x.Select(a => a.PermissionId).ToHashSet(), cancellationToken);
+
+        var deniedPermissionIds = await _db.UserPermissionAssignments
+            .Where(x => !x.IsGranted)
+            .GroupBy(x => x.UserId)
+            .ToDictionaryAsync(x => x.Key, x => x.Select(a => a.PermissionId).ToHashSet(), cancellationToken);
+
         return new TenantUsersDto(
             await usersQuery
                 .Select(x => new TenantUserDto(
@@ -96,7 +110,15 @@ internal sealed class TenantAdminApplicationService : ITenantAdminQueries, ITena
                 .OrderBy(x => x.Name)
                 .Select(x => new TenantRoleDto(x.Id, x.Name, x.Description))
                 .ToListAsync(cancellationToken),
-            assignments);
+            await _db.TenantPermissions
+                .OrderBy(x => x.Category)
+                .ThenBy(x => x.Name)
+                .Select(x => new TenantPermissionDto(x.Id, x.Name, x.Category, x.Description))
+                .ToListAsync(cancellationToken),
+            assignments,
+            rolePermissionIds,
+            grantedPermissionIds,
+            deniedPermissionIds);
     }
 
     public async Task<TenantRolesDto> GetRolesAsync(string? query, string sort, string direction, CancellationToken cancellationToken = default)
@@ -294,6 +316,7 @@ internal sealed class TenantAdminApplicationService : ITenantAdminQueries, ITena
         }
 
         _db.UserRoleAssignments.RemoveRange(_db.UserRoleAssignments.Where(x => x.UserId == id));
+        _db.UserPermissionAssignments.RemoveRange(_db.UserPermissionAssignments.Where(x => x.UserId == id));
         _db.UserSessions.RemoveRange(_db.UserSessions.Where(x => x.UserId == id));
         await _userManager.DeleteAsync(user);
         await _audit.WriteAsync("user.deleted", AuditResult.Success, "user", id.ToString(), cancellationToken: cancellationToken);
@@ -316,6 +339,66 @@ internal sealed class TenantAdminApplicationService : ITenantAdminQueries, ITena
 
         await _db.SaveChangesAsync(cancellationToken);
         await _audit.WriteAsync("user_roles.updated", AuditResult.Success, "user", userId.ToString(), cancellationToken: cancellationToken);
+        return CommandResult.Success();
+    }
+
+    public async Task<CommandResult> SetUserAccessAsync(
+        Guid userId,
+        IReadOnlyCollection<Guid> roleIds,
+        IReadOnlyCollection<Guid> grantedPermissionIds,
+        IReadOnlyCollection<Guid> deniedPermissionIds,
+        CancellationToken cancellationToken = default)
+    {
+        if (!_tenant.Id.HasValue)
+        {
+            return CommandResult.Failure("Tenant is required.");
+        }
+
+        if (grantedPermissionIds.Intersect(deniedPermissionIds).Any())
+        {
+            return CommandResult.Failure("A permission cannot be both granted and denied.");
+        }
+
+        var userExists = await _db.Users.AnyAsync(x => x.Id == userId, cancellationToken);
+        if (!userExists)
+        {
+            return CommandResult.Missing();
+        }
+
+        var existingRoles = await _db.UserRoleAssignments.Where(x => x.UserId == userId).ToListAsync(cancellationToken);
+        _db.UserRoleAssignments.RemoveRange(existingRoles);
+        foreach (var roleId in roleIds.Distinct())
+        {
+            _db.UserRoleAssignments.Add(new UserRoleAssignment { TenantId = _tenant.Id.Value, UserId = userId, RoleId = roleId });
+        }
+
+        var existingOverrides = await _db.UserPermissionAssignments.Where(x => x.UserId == userId).ToListAsync(cancellationToken);
+        _db.UserPermissionAssignments.RemoveRange(existingOverrides);
+
+        foreach (var permissionId in grantedPermissionIds.Distinct())
+        {
+            _db.UserPermissionAssignments.Add(new UserPermissionAssignment
+            {
+                TenantId = _tenant.Id.Value,
+                UserId = userId,
+                PermissionId = permissionId,
+                IsGranted = true
+            });
+        }
+
+        foreach (var permissionId in deniedPermissionIds.Distinct())
+        {
+            _db.UserPermissionAssignments.Add(new UserPermissionAssignment
+            {
+                TenantId = _tenant.Id.Value,
+                UserId = userId,
+                PermissionId = permissionId,
+                IsGranted = false
+            });
+        }
+
+        await _db.SaveChangesAsync(cancellationToken);
+        await _audit.WriteAsync("user_access.updated", AuditResult.Success, "user", userId.ToString(), cancellationToken: cancellationToken);
         return CommandResult.Success();
     }
 
@@ -389,6 +472,10 @@ internal sealed class TenantAdminApplicationService : ITenantAdminQueries, ITena
             return CommandResult.Failure("Tenant is required.");
         }
 
+        name = NormalizePermissionName(name);
+        category = NormalizePermissionCategory(category);
+        description = NormalizeOptional(description);
+
         var validationErrors = ValidatePermission(name, category);
         if (validationErrors.Count > 0)
         {
@@ -398,9 +485,9 @@ internal sealed class TenantAdminApplicationService : ITenantAdminQueries, ITena
         var permission = new TenantPermission
         {
             TenantId = _tenant.Id.Value,
-            Name = name.Trim(),
-            Category = category.Trim(),
-            Description = NormalizeOptional(description)
+            Name = name,
+            Category = category,
+            Description = description
         };
         _db.TenantPermissions.Add(permission);
         await _db.SaveChangesAsync(cancellationToken);
@@ -452,15 +539,19 @@ internal sealed class TenantAdminApplicationService : ITenantAdminQueries, ITena
             return CommandResult.Missing();
         }
 
+        name = NormalizePermissionName(name);
+        category = NormalizePermissionCategory(category);
+        description = NormalizeOptional(description);
+
         var validationErrors = ValidatePermission(name, category);
         if (validationErrors.Count > 0)
         {
             return CommandResult.Failure(validationErrors);
         }
 
-        permission.Name = name.Trim();
-        permission.Category = category.Trim();
-        permission.Description = NormalizeOptional(description);
+        permission.Name = name;
+        permission.Category = category;
+        permission.Description = description;
         permission.UpdatedAt = DateTimeOffset.UtcNow;
         await _db.SaveChangesAsync(cancellationToken);
         await _audit.WriteAsync("permission.updated", AuditResult.Success, "permission", id.ToString(), cancellationToken: cancellationToken);
@@ -476,6 +567,7 @@ internal sealed class TenantAdminApplicationService : ITenantAdminQueries, ITena
         }
 
         _db.RolePermissionAssignments.RemoveRange(_db.RolePermissionAssignments.Where(x => x.PermissionId == id));
+        _db.UserPermissionAssignments.RemoveRange(_db.UserPermissionAssignments.Where(x => x.PermissionId == id));
         _db.TenantPermissions.Remove(permission);
         await _db.SaveChangesAsync(cancellationToken);
         await _audit.WriteAsync("permission.deleted", AuditResult.Success, "permission", id.ToString(), cancellationToken: cancellationToken);
@@ -580,6 +672,31 @@ internal sealed class TenantAdminApplicationService : ITenantAdminQueries, ITena
         return string.IsNullOrWhiteSpace(value) ? null : value.Trim();
     }
 
+    private static string NormalizePermissionName(string value)
+    {
+        return NormalizePermissionSegments(value, '.');
+    }
+
+    private static string NormalizePermissionCategory(string value)
+    {
+        return NormalizePermissionSegments(value, '.');
+    }
+
+    private static string NormalizePermissionSegments(string value, char separator)
+    {
+        if (string.IsNullOrWhiteSpace(value))
+        {
+            return string.Empty;
+        }
+
+        var segments = value
+            .Split(['.', '/', '\\', ':', '>', '|'], StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+            .Where(segment => !string.IsNullOrWhiteSpace(segment))
+            .Select(segment => segment.ToLowerInvariant());
+
+        return string.Join(separator, segments);
+    }
+
     private static List<string> ValidatePermission(string name, string category)
     {
         var errors = new List<string>();
@@ -587,12 +704,34 @@ internal sealed class TenantAdminApplicationService : ITenantAdminQueries, ITena
         {
             errors.Add("Permission name is required.");
         }
+        else if (!IsValidPermissionPath(name))
+        {
+            errors.Add("Permission name must use lowercase segments separated by dots.");
+        }
 
         if (string.IsNullOrWhiteSpace(category))
         {
             errors.Add("Category is required.");
         }
+        else if (!IsValidPermissionPath(category))
+        {
+            errors.Add("Category must use lowercase segments separated by dots.");
+        }
 
         return errors;
+    }
+
+    private static bool IsValidPermissionPath(string value)
+    {
+        var segments = value.Split('.', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+        if (segments.Length == 0)
+        {
+            return false;
+        }
+
+        return segments.All(segment => segment.All(character =>
+            char.IsLower(character) ||
+            char.IsDigit(character) ||
+            character is '-' or '_'));
     }
 }

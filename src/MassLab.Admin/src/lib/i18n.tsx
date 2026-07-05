@@ -1,4 +1,10 @@
-import { createContext, useContext, useEffect, useState, type ReactNode } from "react";
+import {
+  createContext,
+  useContext,
+  useEffect,
+  useState,
+  type ReactNode,
+} from "react";
 
 export type Lang = "en" | "vi";
 
@@ -26,11 +32,12 @@ const en = {
   "login.tagline": "Multi-tenant · SOC 2 · ISO 27001",
   "login.headline1": "One identity layer for every",
   "login.headline2": "app, team, and tenant",
-  "login.body": "Granular RBAC, direct permissions, organization-scoped roles, and an audit-ready trail — built on the open MassLab platform.",
+  "login.body":
+    "Granular RBAC, direct permissions, organization-scoped roles, and an audit-ready trail — built on the open MassLab platform.",
   "login.stat.tenants": "Tenants",
   "login.stat.identities": "Identities",
   "login.stat.uptime": "Uptime SLA",
-  "login.quote": "\"Replaced three internal IAM tools in a week.\"",
+  "login.quote": '"Replaced three internal IAM tools in a week."',
   "login.quoteAuthor": "Elena Ng — Platform Lead, Contoso Bank",
 
   // Register
@@ -61,37 +68,49 @@ const en = {
   "home.badge": "Enterprise-grade IAM platform",
   "home.hero1": "One identity layer for every",
   "home.hero2": "app, team, and tenant",
-  "home.heroSub": "MassLab IAM delivers multi-tenant RBAC, single sign-on, and audit-ready compliance in a single, developer-friendly platform.",
+  "home.heroSub":
+    "MassLab IAM delivers multi-tenant RBAC, single sign-on, and audit-ready compliance in a single, developer-friendly platform.",
   "home.startFree": "Start free trial",
   "home.seeDemo": "See demo",
   "home.noCc": "No credit card required · Free 14-day trial",
   "home.featuresTitle": "Everything you need to manage identity",
-  "home.featuresSub": "A complete suite of tools to secure access across your organization.",
+  "home.featuresSub":
+    "A complete suite of tools to secure access across your organization.",
   "home.f1Title": "Role-Based Access Control",
-  "home.f1Desc": "Define roles with granular permissions. Assign multiple roles per user. Inherit permissions across teams and tenants.",
+  "home.f1Desc":
+    "Define roles with granular permissions. Assign multiple roles per user. Inherit permissions across teams and tenants.",
   "home.f2Title": "User Management",
-  "home.f2Desc": "Invite, onboard, and offboard users with ease. Audit trails for every action. Self-service password reset and MFA.",
+  "home.f2Desc":
+    "Invite, onboard, and offboard users with ease. Audit trails for every action. Self-service password reset and MFA.",
   "home.f3Title": "Direct Permissions",
-  "home.f3Desc": "Grant specific permissions directly to users when roles aren't enough. Clear visibility into effective permissions.",
+  "home.f3Desc":
+    "Grant specific permissions directly to users when roles aren't enough. Clear visibility into effective permissions.",
   "home.f4Title": "Multi-Tenant Architecture",
-  "home.f4Desc": "Isolate data and roles per organization. Cross-tenant visibility for platform admins. White-label friendly.",
+  "home.f4Desc":
+    "Isolate data and roles per organization. Cross-tenant visibility for platform admins. White-label friendly.",
   "home.f5Title": "Single Sign-On",
-  "home.f5Desc": "Connect Google, Microsoft Entra, Okta, or any SAML/OIDC provider. Seamless login experience for your team.",
+  "home.f5Desc":
+    "Connect Google, Microsoft Entra, Okta, or any SAML/OIDC provider. Seamless login experience for your team.",
   "home.f6Title": "Real-Time Audit Logs",
-  "home.f6Desc": "Track every login, permission change, and role assignment. Export logs for compliance. Retain data for years.",
+  "home.f6Desc":
+    "Track every login, permission change, and role assignment. Export logs for compliance. Retain data for years.",
   "home.statTenants": "Active tenants",
   "home.statIdentities": "Managed identities",
   "home.statUptime": "Uptime SLA",
   "home.statLatency": "Avg. response time",
   "home.testimonialsTitle": "Trusted by teams worldwide",
-  "home.testimonialsSub": "See what organizations are saying about MassLab IAM.",
-  "home.t1Quote": "We migrated from Auth0 in under a week. The multi-tenant architecture was exactly what we needed for our SaaS platform.",
+  "home.testimonialsSub":
+    "See what organizations are saying about MassLab IAM.",
+  "home.t1Quote":
+    "We migrated from Auth0 in under a week. The multi-tenant architecture was exactly what we needed for our SaaS platform.",
   "home.t1Author": "Elena Ng",
   "home.t1Role": "Platform Lead",
-  "home.t2Quote": "Finally, an IAM solution that doesn't require a PhD to configure. Our team was productive from day one.",
+  "home.t2Quote":
+    "Finally, an IAM solution that doesn't require a PhD to configure. Our team was productive from day one.",
   "home.t2Author": "Marcus Chen",
   "home.t2Role": "CTO",
-  "home.t3Quote": "The audit logs alone saved us weeks during our SOC 2 certification. Highly recommended for any compliance-heavy org.",
+  "home.t3Quote":
+    "The audit logs alone saved us weeks during our SOC 2 certification. Highly recommended for any compliance-heavy org.",
   "home.t3Author": "Priya Sharma",
   "home.t3Role": "Security Engineer",
   "home.ctaTitle": "Ready to secure your identity layer?",
@@ -107,102 +126,145 @@ const en = {
   "privacy.lastUpdated": "Last updated: June 27, 2025",
   "privacy.contents": "Contents",
   "privacy.introTitle": "Introduction",
-  "privacy.introDesc": "MassLab IAM (\"we\", \"our\", or \"us\") respects your privacy and is committed to protecting your personal data. This privacy policy explains how we collect, use, and safeguard your information when you use our identity and access management platform.",
+  "privacy.introDesc":
+    'MassLab IAM ("we", "our", or "us") respects your privacy and is committed to protecting your personal data. This privacy policy explains how we collect, use, and safeguard your information when you use our identity and access management platform.',
   "privacy.collectTitle": "Information We Collect",
-  "privacy.collectDesc": "We collect information you provide directly to us, such as when you create an account, use our services, or contact us for support.",
+  "privacy.collectDesc":
+    "We collect information you provide directly to us, such as when you create an account, use our services, or contact us for support.",
   "privacy.collect1Title": "Account Information",
-  "privacy.collect1Desc": "Name, email address, organization name, and role assignments.",
+  "privacy.collect1Desc":
+    "Name, email address, organization name, and role assignments.",
   "privacy.collect2Title": "Authentication Data",
-  "privacy.collect2Desc": "Login credentials, MFA configuration, and session tokens.",
+  "privacy.collect2Desc":
+    "Login credentials, MFA configuration, and session tokens.",
   "privacy.collect3Title": "Usage Data",
-  "privacy.collect3Desc": "Features used, API call logs, and activity timestamps.",
+  "privacy.collect3Desc":
+    "Features used, API call logs, and activity timestamps.",
   "privacy.collect4Title": "Device Information",
   "privacy.collect4Desc": "IP address, browser user agent, and device type.",
   "privacy.useTitle": "How We Use Your Information",
-  "privacy.useDesc": "We use the information we collect to provide, maintain, and improve our services:",
-  "privacy.use1": "To authenticate and authorize access to your organization's resources",
-  "privacy.use2": "To communicate with you about your account, security alerts, and service updates",
-  "privacy.use3": "To detect, prevent, and address technical issues and security threats",
-  "privacy.use4": "To comply with legal obligations and enforce our terms of service",
+  "privacy.useDesc":
+    "We use the information we collect to provide, maintain, and improve our services:",
+  "privacy.use1":
+    "To authenticate and authorize access to your organization's resources",
+  "privacy.use2":
+    "To communicate with you about your account, security alerts, and service updates",
+  "privacy.use3":
+    "To detect, prevent, and address technical issues and security threats",
+  "privacy.use4":
+    "To comply with legal obligations and enforce our terms of service",
   "privacy.shareTitle": "Information Sharing",
-  "privacy.shareDesc": "We do not sell your personal data. We may share your information with third-party service providers who perform services on our behalf (e.g., cloud hosting, analytics, customer support). All such providers are contractually bound to protect your data.",
+  "privacy.shareDesc":
+    "We do not sell your personal data. We may share your information with third-party service providers who perform services on our behalf (e.g., cloud hosting, analytics, customer support). All such providers are contractually bound to protect your data.",
   "privacy.securityTitle": "Data Security",
-  "privacy.securityDesc": "We implement industry-standard security measures including encryption at rest and in transit, regular security audits, and access controls. However, no method of transmission over the Internet is 100% secure, and we cannot guarantee absolute security.",
+  "privacy.securityDesc":
+    "We implement industry-standard security measures including encryption at rest and in transit, regular security audits, and access controls. However, no method of transmission over the Internet is 100% secure, and we cannot guarantee absolute security.",
   "privacy.rightsTitle": "Your Rights",
-  "privacy.rightsDesc": "Depending on your location, you may have certain rights regarding your personal data:",
+  "privacy.rightsDesc":
+    "Depending on your location, you may have certain rights regarding your personal data:",
   "privacy.rights1Title": "Access",
-  "privacy.rights1Desc": "Request a copy of the personal data we hold about you.",
+  "privacy.rights1Desc":
+    "Request a copy of the personal data we hold about you.",
   "privacy.rights2Title": "Rectification",
   "privacy.rights2Desc": "Request correction of inaccurate or incomplete data.",
   "privacy.rights3Title": "Deletion",
-  "privacy.rights3Desc": "Request deletion of your personal data, subject to legal requirements.",
+  "privacy.rights3Desc":
+    "Request deletion of your personal data, subject to legal requirements.",
   "privacy.cookiesTitle": "Cookies and Tracking",
-  "privacy.cookiesDesc": "We use essential cookies to maintain your session and remember your preferences. We do not use third-party tracking cookies or advertising cookies. You can configure your browser to reject cookies, but some features may not function properly.",
+  "privacy.cookiesDesc":
+    "We use essential cookies to maintain your session and remember your preferences. We do not use third-party tracking cookies or advertising cookies. You can configure your browser to reject cookies, but some features may not function properly.",
   "privacy.contactTitle": "Contact Us",
-  "privacy.contactDesc": "If you have questions about this privacy policy or wish to exercise your rights, please contact us at:",
+  "privacy.contactDesc":
+    "If you have questions about this privacy policy or wish to exercise your rights, please contact us at:",
 
   // Terms of Service
   "terms.badge": "Legal · Terms",
   "terms.title": "Terms of Service",
-  "terms.subtitle": "The rules and guidelines for using the MassLab IAM platform.",
+  "terms.subtitle":
+    "The rules and guidelines for using the MassLab IAM platform.",
   "terms.lastUpdated": "Last updated: June 27, 2025",
   "terms.contents": "Contents",
   "terms.introTitle": "Agreement to Terms",
-  "terms.introDesc": "By accessing or using MassLab IAM, you agree to be bound by these Terms of Service and all applicable laws and regulations. If you do not agree with any of these terms, you are prohibited from using or accessing this platform.",
+  "terms.introDesc":
+    "By accessing or using MassLab IAM, you agree to be bound by these Terms of Service and all applicable laws and regulations. If you do not agree with any of these terms, you are prohibited from using or accessing this platform.",
   "terms.acceptanceTitle": "Acceptance of Terms",
-  "terms.acceptanceDesc": "By creating an account or using our services, you represent that you are at least 18 years old and have the authority to bind your organization to these terms.",
+  "terms.acceptanceDesc":
+    "By creating an account or using our services, you represent that you are at least 18 years old and have the authority to bind your organization to these terms.",
   "terms.accountsTitle": "Account Responsibilities",
-  "terms.accountsDesc": "You are responsible for maintaining the confidentiality of your account credentials and for all activities that occur under your account. You agree to notify us immediately of any unauthorized use or security breach.",
+  "terms.accountsDesc":
+    "You are responsible for maintaining the confidentiality of your account credentials and for all activities that occur under your account. You agree to notify us immediately of any unauthorized use or security breach.",
   "terms.usageTitle": "Acceptable Use",
-  "terms.usageDesc": "You agree not to use MassLab IAM for any of the following:",
+  "terms.usageDesc":
+    "You agree not to use MassLab IAM for any of the following:",
   "terms.usage1Title": "Unlawful Activity",
-  "terms.usage1Desc": "Any purpose that violates applicable laws or regulations.",
+  "terms.usage1Desc":
+    "Any purpose that violates applicable laws or regulations.",
   "terms.usage2Title": "Malicious Code",
-  "terms.usage2Desc": "Transmitting viruses, malware, or other harmful software.",
+  "terms.usage2Desc":
+    "Transmitting viruses, malware, or other harmful software.",
   "terms.usage3Title": "Unauthorized Access",
-  "terms.usage3Desc": "Attempting to access other users' data or our internal systems.",
+  "terms.usage3Desc":
+    "Attempting to access other users' data or our internal systems.",
   "terms.usage4Title": "Platform Disruption",
-  "terms.usage4Desc": "Interfering with the integrity or performance of the platform.",
+  "terms.usage4Desc":
+    "Interfering with the integrity or performance of the platform.",
   "terms.paymentTitle": "Payment and Billing",
-  "terms.paymentDesc": "Paid plans are billed in advance on a monthly or annual basis. You may cancel at any time, and your subscription will remain active until the end of the current billing period. Refunds are provided at our sole discretion.",
+  "terms.paymentDesc":
+    "Paid plans are billed in advance on a monthly or annual basis. You may cancel at any time, and your subscription will remain active until the end of the current billing period. Refunds are provided at our sole discretion.",
   "terms.intellectualTitle": "Intellectual Property",
-  "terms.intellectualDesc": "MassLab IAM and its original content, features, and functionality are owned by MassLab and are protected by international copyright, trademark, and other intellectual property laws. Your data remains your property.",
+  "terms.intellectualDesc":
+    "MassLab IAM and its original content, features, and functionality are owned by MassLab and are protected by international copyright, trademark, and other intellectual property laws. Your data remains your property.",
   "terms.limitationTitle": "Limitation of Liability",
-  "terms.limitationDesc": "To the maximum extent permitted by law, MassLab shall not be liable for any indirect, incidental, special, consequential, or punitive damages resulting from your use or inability to use the platform.",
+  "terms.limitationDesc":
+    "To the maximum extent permitted by law, MassLab shall not be liable for any indirect, incidental, special, consequential, or punitive damages resulting from your use or inability to use the platform.",
   "terms.terminationTitle": "Termination",
-  "terms.terminationDesc": "We may terminate or suspend your account and access to the platform immediately, without prior notice, for any reason, including breach of these Terms. Upon termination, your right to use the platform will immediately cease.",
+  "terms.terminationDesc":
+    "We may terminate or suspend your account and access to the platform immediately, without prior notice, for any reason, including breach of these Terms. Upon termination, your right to use the platform will immediately cease.",
   "terms.governingTitle": "Governing Law",
-  "terms.governingDesc": "These Terms shall be governed by and construed in accordance with the laws of Singapore, without regard to its conflict of law provisions.",
+  "terms.governingDesc":
+    "These Terms shall be governed by and construed in accordance with the laws of Singapore, without regard to its conflict of law provisions.",
   "terms.changesTitle": "Changes to Terms",
-  "terms.changesDesc": "We reserve the right to modify these terms at any time. We will notify users of material changes via email or in-app notification. Your continued use of the platform after such changes constitutes acceptance of the new terms.",
+  "terms.changesDesc":
+    "We reserve the right to modify these terms at any time. We will notify users of material changes via email or in-app notification. Your continued use of the platform after such changes constitutes acceptance of the new terms.",
   "terms.contactTitle": "Contact Us",
-  "terms.contactDesc": "If you have any questions about these Terms, please contact us at:",
+  "terms.contactDesc":
+    "If you have any questions about these Terms, please contact us at:",
 
   // Documentation
   "docs.badge": "v2.0 Documentation",
   "docs.title": "Build with MassLab IAM",
-  "docs.subtitle": "Complete documentation for integrating, configuring, and managing identity in your applications.",
+  "docs.subtitle":
+    "Complete documentation for integrating, configuring, and managing identity in your applications.",
   "docs.quickstart": "Quickstart Guide",
   "docs.gettingStarted": "Getting Started",
   "docs.gs1Title": "Create your tenant",
-  "docs.gs1Desc": "Sign up and create an organization to isolate users, roles, and permissions.",
+  "docs.gs1Desc":
+    "Sign up and create an organization to isolate users, roles, and permissions.",
   "docs.gs2Title": "Define roles & permissions",
-  "docs.gs2Desc": "Use the dashboard or API to create roles and assign granular permissions.",
+  "docs.gs2Desc":
+    "Use the dashboard or API to create roles and assign granular permissions.",
   "docs.gs3Title": "Integrate your app",
-  "docs.gs3Desc": "Use our SDKs or REST API to authenticate users and check permissions in real-time.",
+  "docs.gs3Desc":
+    "Use our SDKs or REST API to authenticate users and check permissions in real-time.",
   "docs.coreConcepts": "Core Concepts",
   "docs.concept1Title": "Users",
-  "docs.concept1Desc": "Identities that can authenticate and be granted access. Users can belong to multiple organizations.",
+  "docs.concept1Desc":
+    "Identities that can authenticate and be granted access. Users can belong to multiple organizations.",
   "docs.concept2Title": "Roles",
-  "docs.concept2Desc": "Named collections of permissions. Users can have multiple roles, with permissions aggregated.",
+  "docs.concept2Desc":
+    "Named collections of permissions. Users can have multiple roles, with permissions aggregated.",
   "docs.concept3Title": "Permissions",
-  "docs.concept3Desc": "Fine-grained access controls. Permissions can be inherited from roles or assigned directly.",
+  "docs.concept3Desc":
+    "Fine-grained access controls. Permissions can be inherited from roles or assigned directly.",
   "docs.concept4Title": "Tenants",
-  "docs.concept4Desc": "Isolated organizational boundaries. Each tenant has separate users, roles, and configuration.",
+  "docs.concept4Desc":
+    "Isolated organizational boundaries. Each tenant has separate users, roles, and configuration.",
   "docs.concept5Title": "API Keys",
-  "docs.concept5Desc": "Server-side credentials for programmatic access. Scoped to specific permissions and tenants.",
+  "docs.concept5Desc":
+    "Server-side credentials for programmatic access. Scoped to specific permissions and tenants.",
   "docs.concept6Title": "Audit Logs",
-  "docs.concept6Desc": "Immutable records of all access decisions, role changes, and authentication events.",
+  "docs.concept6Desc":
+    "Immutable records of all access decisions, role changes, and authentication events.",
   "docs.codeExample": "Code Example",
   "docs.apiRef": "API Reference",
   "docs.apiUsers": "List all users in tenant",
@@ -233,7 +295,8 @@ const en = {
   "orders.subtitle": "Review, filter, and process customer orders.",
   "orders.detailTitle": "Order",
   "orders.detailSubtitle": "View and update order details.",
-  "orders.search": "Search by order, customer, email, product, or organization…",
+  "orders.search":
+    "Search by order, customer, email, product, or organization…",
   "orders.filters": "Filters",
   "orders.filter.statusAll": "All statuses",
   "orders.filter.payment": "Payment status",
@@ -254,11 +317,13 @@ const en = {
   "orders.empty": "No orders match the current filters.",
   "orders.page": "Page",
   "orders.deleteTitle": "Delete order?",
-  "orders.deleteDesc": "This action cannot be undone. The order will be removed:",
+  "orders.deleteDesc":
+    "This action cannot be undone. The order will be removed:",
   "orders.deleted": "Order deleted",
   "orders.updated": "Order updated",
   "orders.notFound": "Order not found",
-  "orders.notFoundDesc": "The order may have been deleted or the link is invalid.",
+  "orders.notFoundDesc":
+    "The order may have been deleted or the link is invalid.",
   "orders.sectionCustomer": "Customer details",
   "orders.customerName": "Customer name",
   "orders.customerEmail": "Customer email",
@@ -354,13 +419,15 @@ const en = {
   "org.settings": "Settings",
   "org.impersonate": "Impersonate admin",
   "org.deleteTitle": "Delete organization?",
-  "org.deleteDesc": "This action cannot be undone. The organization will be removed from the tenant:",
+  "org.deleteDesc":
+    "This action cannot be undone. The organization will be removed from the tenant:",
   "org.created": "Organization created",
   "org.deleted": "Organization deleted",
 
   // Users
   "users.title": "User Management",
-  "users.subtitle": "Invite team members, assign roles, and grant direct permissions.",
+  "users.subtitle":
+    "Invite team members, assign roles, and grant direct permissions.",
   "users.invite": "Invite user",
   "users.search": "Search by name or email…",
   "users.status.all": "All statuses",
@@ -385,17 +452,27 @@ const en = {
   "users.editDesc": "Assign multiple roles and optional direct permissions.",
   "users.tab.details": "Details",
   "users.tab.roles": "Roles",
+  "users.tab.access": "Access",
   "users.tab.perms": "Permissions",
   "users.fullName": "Full name",
   "users.email": "Email",
   "users.organization": "Organization",
   "users.system": "System",
-  "users.permsInherit": "Permissions inherited from roles are shown checked. Add extra direct permissions for this user.",
+  "users.permsInherit":
+    "Permissions inherited from roles are shown checked. Add extra direct permissions for this user.",
+  "users.permissionHelp":
+    "Roles define the base access. Then grant extra permissions or deny inherited permissions for this specific user.",
+  "users.permission.inherited": "Inherited",
+  "users.permission.grant": "Grant",
+  "users.permission.deny": "Deny",
+  "users.permission.clear": "Inherit",
+  "users.accessUpdated": "User access updated",
   "users.updated": "User updated",
   "users.invited": "Invitation sent",
   "users.deleted": "User deleted",
   "users.deleteTitle": "Delete user?",
-  "users.deleteDesc": "This action cannot be undone. The user will be removed from the tenant:",
+  "users.deleteDesc":
+    "This action cannot be undone. The user will be removed from the tenant:",
   "users.resetTitle": "Reset password?",
   "users.resetDesc": "A password reset email will be sent to this user:",
   "users.resetPw": "Reset password",
@@ -404,14 +481,21 @@ const en = {
 
   // Roles
   "roles.title": "Role Management",
-  "roles.subtitle": "Group permissions into roles. Assign multiple roles per user.",
+  "roles.subtitle":
+    "Group permissions into roles. Assign multiple roles per user.",
   "roles.new": "New role",
   "roles.permissions": "Permissions",
   "roles.users": "Users",
   "roles.manage": "Manage permissions",
   "roles.edit": "Edit role",
   "roles.create": "New role",
-  "roles.editDesc": "Select permissions from the tree. Module checkboxes apply to all children.",
+  "roles.editDesc":
+    "Select permissions from the tree. Module checkboxes apply to all children.",
+  "roles.searchPermissions": "Search permissions...",
+  "roles.selected": "selected",
+  "roles.expandAll": "Expand all",
+  "roles.collapseAll": "Collapse all",
+  "roles.emptyPermissions": "No permissions found.",
   "roles.name": "Role name",
   "roles.slug": "Slug",
   "roles.description": "Description",
@@ -421,7 +505,8 @@ const en = {
   "roles.created": "Role created",
   "roles.deleted": "Role deleted",
   "roles.deleteTitle": "Delete role?",
-  "roles.deleteDesc": "This action cannot be undone. The role will be removed from the tenant:",
+  "roles.deleteDesc":
+    "This action cannot be undone. The role will be removed from the tenant:",
   "roles.duplicateTitle": "Duplicate role?",
   "roles.duplicateDesc": "A copy of this role will be created from:",
   "roles.duplicated": "Role duplicated",
@@ -430,11 +515,13 @@ const en = {
 
   // Products
   "products.title": "Product Management",
-  "products.subtitle": "Create, organize, and govern products in the admin catalog.",
+  "products.subtitle":
+    "Create, organize, and govern products in the admin catalog.",
   "products.new": "New product",
   "products.newTitle": "Create product",
   "products.editTitle": "Edit product",
-  "products.formSubtitle": "Use a dedicated page for product creation and editing.",
+  "products.formSubtitle":
+    "Use a dedicated page for product creation and editing.",
   "products.sectionBasic": "Basic details",
   "products.sectionPricing": "Pricing",
   "products.sectionTags": "Tags",
@@ -457,7 +544,8 @@ const en = {
   "products.outOfStock": "Out of stock",
   "products.deleted": "Product deleted",
   "products.deleteTitle": "Delete product?",
-  "products.deleteDesc": "This action cannot be undone. The product will be removed from the catalog:",
+  "products.deleteDesc":
+    "This action cannot be undone. The product will be removed from the catalog:",
   "products.empty": "No products match the current filters.",
   "products.page": "Page",
   "products.created": "Product created",
@@ -471,7 +559,8 @@ const en = {
   "products.errPrice": "Price must be zero or greater",
   "products.errStock": "Stock must be zero or greater",
   "products.description": "Description",
-  "products.descriptionPlaceholder": "Describe the product, target users, and notable capabilities.",
+  "products.descriptionPlaceholder":
+    "Describe the product, target users, and notable capabilities.",
   "products.price": "Price",
   "products.currency": "Currency",
   "products.tagPlaceholder": "Enter a tag and press Enter",
@@ -483,7 +572,8 @@ const en = {
 
   // Permissions
   "perms.title": "Permission Management",
-  "perms.subtitle": "Permissions are grouped by feature modules and assigned to roles or directly to users.",
+  "perms.subtitle":
+    "Permissions are grouped by feature modules and assigned to roles or directly to users.",
   "perms.stat.total": "Total permissions",
   "perms.stat.modules": "Modules",
   "perms.stat.used": "Used in roles",
@@ -511,10 +601,27 @@ const en = {
   "perms.moduleDeleted": "Module deleted",
   "perms.permDeleted": "Permission deleted",
   "perms.deleteModuleTitle": "Delete module?",
-  "perms.deleteModuleDesc": "This will remove the module and all permissions inside it:",
+  "perms.deleteModuleDesc":
+    "This will remove the module and all permissions inside it:",
   "perms.deletePermTitle": "Delete permission?",
-  "perms.deletePermDesc": "This action cannot be undone. The permission will be removed:",
+  "perms.deletePermDesc":
+    "This action cannot be undone. The permission will be removed:",
   "perms.errExists": "Identifier already exists",
+  "perms.categoryLabel": "Category path",
+  "perms.categoryPlaceholder": "access.users",
+  "perms.categoryHint":
+    "Use lowercase path segments. Separators like /, >, : will be normalized to dots.",
+  "perms.namePlaceholder": "users.manage",
+  "perms.nameHint":
+    "Use a stable permission key, for example users.manage or audit.read.",
+  "perms.descriptionPlaceholder": "Explain what this permission allows.",
+  "perms.normalizedPreview": "Normalized path:",
+  "perms.errNameRequired": "Permission name is required.",
+  "perms.errCategoryRequired": "Category is required.",
+  "perms.errNameFormat":
+    "Permission name must use lowercase segments separated by dots.",
+  "perms.errCategoryFormat":
+    "Category must use lowercase segments separated by dots.",
 
   // Profile
   "profile.title": "My Profile",
@@ -569,24 +676,28 @@ const en = {
   "profile.tfaApp": "Authenticator app",
   "profile.tfaAppSub": "Use Google Authenticator, Authy, or similar",
   "profile.tfaSetupTitle": "Set up authenticator app",
-  "profile.tfaSetupDesc": "Scan the QR code with your authenticator app, then enter the 6-digit code.",
+  "profile.tfaSetupDesc":
+    "Scan the QR code with your authenticator app, then enter the 6-digit code.",
   "profile.tfaOtpLabel": "Verification code",
   "profile.tfaOtpError": "Please enter the 6-digit code",
   "profile.tfaVerify": "Verify & enable",
   "profile.tfaEnabled": "Two-factor authentication enabled",
   "profile.tfaDisabled": "Two-factor authentication disabled",
   "profile.tfaDisableTitle": "Disable two-factor authentication?",
-  "profile.tfaDisableDesc": "Your account will be less secure without a second factor. Are you sure?",
+  "profile.tfaDisableDesc":
+    "Your account will be less secure without a second factor. Are you sure?",
   "profile.tfaDisableBtn": "Yes, disable 2FA",
   "profile.tfaViewCodes": "View backup codes",
   "profile.tfaCodesTitle": "Backup codes",
-  "profile.tfaCodesDesc": "Store these codes somewhere safe. Each can only be used once.",
+  "profile.tfaCodesDesc":
+    "Store these codes somewhere safe. Each can only be used once.",
   "profile.tfaCopied": "Copied to clipboard",
   "profile.tfaRegenerate": "Regenerate codes",
 
   // Profile – Recovery email
   "profile.recoveryTitle": "Update recovery email",
-  "profile.recoveryDesc": "This email is used to recover access to your account.",
+  "profile.recoveryDesc":
+    "This email is used to recover access to your account.",
   "profile.recoveryLabel": "Recovery email address",
   "profile.recoveryHint": "Must be different from your primary account email.",
   "profile.recoverySaved": "Recovery email updated",
@@ -617,11 +728,12 @@ const vi: Partial<Record<keyof typeof en, string>> = {
   "login.tagline": "Đa tổ chức · SOC 2 · ISO 27001",
   "login.headline1": "Một lớp danh tính cho mọi",
   "login.headline2": "ứng dụng, đội nhóm và tổ chức",
-  "login.body": "Phân quyền RBAC chi tiết, quyền trực tiếp, vai trò theo tổ chức và nhật ký kiểm toán — xây trên nền tảng mở MassLab.",
+  "login.body":
+    "Phân quyền RBAC chi tiết, quyền trực tiếp, vai trò theo tổ chức và nhật ký kiểm toán — xây trên nền tảng mở MassLab.",
   "login.stat.tenants": "Tổ chức",
   "login.stat.identities": "Danh tính",
   "login.stat.uptime": "SLA hoạt động",
-  "login.quote": "\"Đã thay thế 3 công cụ IAM nội bộ chỉ trong một tuần.\"",
+  "login.quote": '"Đã thay thế 3 công cụ IAM nội bộ chỉ trong một tuần."',
   "login.quoteAuthor": "Elena Ng — Trưởng nền tảng, Contoso Bank",
 
   // Register
@@ -652,37 +764,48 @@ const vi: Partial<Record<keyof typeof en, string>> = {
   "home.badge": "Nền tảng IAM cấp doanh nghiệp",
   "home.hero1": "Một lớp danh tính cho mọi",
   "home.hero2": "ứng dụng, đội nhóm và tổ chức",
-  "home.heroSub": "MassLab IAM cung cấp RBAC đa tổ chức, đăng nhập một lần và tuân thủ kiểm toán trong một nền tảng thân thiện với lập trình viên.",
+  "home.heroSub":
+    "MassLab IAM cung cấp RBAC đa tổ chức, đăng nhập một lần và tuân thủ kiểm toán trong một nền tảng thân thiện với lập trình viên.",
   "home.startFree": "Dùng thử miễn phí",
   "home.seeDemo": "Xem demo",
   "home.noCc": "Không cần thẻ · Dùng thử 14 ngày miễn phí",
   "home.featuresTitle": "Tất cả những gì bạn cần để quản lý danh tính",
-  "home.featuresSub": "Bộ công cụ hoàn chỉnh để bảo mật quyền truy cập trong tổ chức của bạn.",
+  "home.featuresSub":
+    "Bộ công cụ hoàn chỉnh để bảo mật quyền truy cập trong tổ chức của bạn.",
   "home.f1Title": "Kiểm soát truy cập theo vai trò",
-  "home.f1Desc": "Định nghĩa vai trò với quyền chi tiết. Gán nhiều vai trò cho mỗi người dùng. Kế thừa quyền qua các nhóm và tổ chức.",
+  "home.f1Desc":
+    "Định nghĩa vai trò với quyền chi tiết. Gán nhiều vai trò cho mỗi người dùng. Kế thừa quyền qua các nhóm và tổ chức.",
   "home.f2Title": "Quản lý người dùng",
-  "home.f2Desc": "Mời, onboarding và offboard người dùng dễ dàng. Nhật ký kiểm toán cho mọi hành động. Tự đặt lại mật khẩu và MFA.",
+  "home.f2Desc":
+    "Mời, onboarding và offboard người dùng dễ dàng. Nhật ký kiểm toán cho mọi hành động. Tự đặt lại mật khẩu và MFA.",
   "home.f3Title": "Quyền trực tiếp",
-  "home.f3Desc": "Cấp quyền cụ thể trực tiếp cho người dùng khi vai trò chưa đủ. Minh bạch về quyền hiệu lực.",
+  "home.f3Desc":
+    "Cấp quyền cụ thể trực tiếp cho người dùng khi vai trò chưa đủ. Minh bạch về quyền hiệu lực.",
   "home.f4Title": "Kiến trúc đa tổ chức",
-  "home.f4Desc": "Cách ly dữ liệu và vai trò theo tổ chức. Nhìn thấy chéo cho quản trị nền tảng. Hỗ trợ white-label.",
+  "home.f4Desc":
+    "Cách ly dữ liệu và vai trò theo tổ chức. Nhìn thấy chéo cho quản trị nền tảng. Hỗ trợ white-label.",
   "home.f5Title": "Đăng nhập một lần",
-  "home.f5Desc": "Kết nối Google, Microsoft Entra, Okta hoặc bất kỳ nhà cung cấp SAML/OIDC. Trải nghiệm đăng nhập liền mạch.",
+  "home.f5Desc":
+    "Kết nối Google, Microsoft Entra, Okta hoặc bất kỳ nhà cung cấp SAML/OIDC. Trải nghiệm đăng nhập liền mạch.",
   "home.f6Title": "Nhật ký kiểm toán thời gian thực",
-  "home.f6Desc": "Theo dõi mọi đăng nhập, thay đổi quyền và gán vai trò. Xuất nhật ký cho tuân thủ. Lưu trữ trong nhiều năm.",
+  "home.f6Desc":
+    "Theo dõi mọi đăng nhập, thay đổi quyền và gán vai trò. Xuất nhật ký cho tuân thủ. Lưu trữ trong nhiều năm.",
   "home.statTenants": "Tổ chức đang dùng",
   "home.statIdentities": "Danh tính được quản lý",
   "home.statUptime": "SLA hoạt động",
   "home.statLatency": "Thời gian phản hồi TB",
   "home.testimonialsTitle": "Được tin dùng trên toàn cầu",
   "home.testimonialsSub": "Xem các tổ chức nói gì về MassLab IAM.",
-  "home.t1Quote": "Chúng tôi chuyển từ Auth0 trong chưa đầy một tuần. Kiến trúc đa tổ chức chính là điều chúng tôi cần cho nền tảng SaaS.",
+  "home.t1Quote":
+    "Chúng tôi chuyển từ Auth0 trong chưa đầy một tuần. Kiến trúc đa tổ chức chính là điều chúng tôi cần cho nền tảng SaaS.",
   "home.t1Author": "Elena Ng",
   "home.t1Role": "Trưởng nền tảng",
-  "home.t2Quote": "Cuối cùng đã có giải pháp IAM không cần bằng tiến sĩ để cấu hình. Đội ngũ của chúng tôi làm việc hiệu quả từ ngày đầu tiên.",
+  "home.t2Quote":
+    "Cuối cùng đã có giải pháp IAM không cần bằng tiến sĩ để cấu hình. Đội ngũ của chúng tôi làm việc hiệu quả từ ngày đầu tiên.",
   "home.t2Author": "Marcus Chen",
   "home.t2Role": "Giám đốc công nghệ",
-  "home.t3Quote": "Chỉ riêng nhật ký kiểm toán đã tiết kiệm cho chúng tôi hàng tuần trong chứng nhận SOC 2. Rất khuyến nghị cho tổ chức cần tuân thủ.",
+  "home.t3Quote":
+    "Chỉ riêng nhật ký kiểm toán đã tiết kiệm cho chúng tôi hàng tuần trong chứng nhận SOC 2. Rất khuyến nghị cho tổ chức cần tuân thủ.",
   "home.t3Author": "Priya Sharma",
   "home.t3Role": "Kỹ sư bảo mật",
   "home.ctaTitle": "Sẵn sàng bảo mật lớp danh tính của bạn?",
@@ -694,43 +817,60 @@ const vi: Partial<Record<keyof typeof en, string>> = {
   // Privacy Policy
   "privacy.badge": "Pháp lý · Bảo mật",
   "privacy.title": "Chính sách bảo mật",
-  "privacy.subtitle": "Cách chúng tôi thu thập, sử dụng và bảo vệ dữ liệu cá nhân của bạn.",
+  "privacy.subtitle":
+    "Cách chúng tôi thu thập, sử dụng và bảo vệ dữ liệu cá nhân của bạn.",
   "privacy.lastUpdated": "Cập nhật lần cuối: 27 tháng 6, 2025",
   "privacy.contents": "Mục lục",
   "privacy.introTitle": "Giới thiệu",
-  "privacy.introDesc": "MassLab IAM (\"chúng tôi\") tôn trọng quyền riêng tư của bạn và cam kết bảo vệ dữ liệu cá nhân của bạn. Chính sách này giải thích cách chúng tôi thu thập, sử dụng và bảo vệ thông tin của bạn.",
+  "privacy.introDesc":
+    'MassLab IAM ("chúng tôi") tôn trọng quyền riêng tư của bạn và cam kết bảo vệ dữ liệu cá nhân của bạn. Chính sách này giải thích cách chúng tôi thu thập, sử dụng và bảo vệ thông tin của bạn.',
   "privacy.collectTitle": "Thông tin chúng tôi thu thập",
-  "privacy.collectDesc": "Chúng tôi thu thập thông tin bạn cung cấp trực tiếp khi tạo tài khoản, sử dụng dịch vụ hoặc liên hệ hỗ trợ.",
+  "privacy.collectDesc":
+    "Chúng tôi thu thập thông tin bạn cung cấp trực tiếp khi tạo tài khoản, sử dụng dịch vụ hoặc liên hệ hỗ trợ.",
   "privacy.collect1Title": "Thông tin tài khoản",
-  "privacy.collect1Desc": "Họ tên, địa chỉ email, tên tổ chức và các vai trò được gán.",
+  "privacy.collect1Desc":
+    "Họ tên, địa chỉ email, tên tổ chức và các vai trò được gán.",
   "privacy.collect2Title": "Dữ liệu xác thực",
   "privacy.collect2Desc": "Thông tin đăng nhập, cấu hình MFA và token phiên.",
   "privacy.collect3Title": "Dữ liệu sử dụng",
-  "privacy.collect3Desc": "Tính năng đã dùng, nhật ký lệnh gọi API và dấu thời gian hoạt động.",
+  "privacy.collect3Desc":
+    "Tính năng đã dùng, nhật ký lệnh gọi API và dấu thời gian hoạt động.",
   "privacy.collect4Title": "Thông tin thiết bị",
-  "privacy.collect4Desc": "Địa chỉ IP, user agent trình duyệt và loại thiết bị.",
+  "privacy.collect4Desc":
+    "Địa chỉ IP, user agent trình duyệt và loại thiết bị.",
   "privacy.useTitle": "Cách chúng tôi sử dụng thông tin",
-  "privacy.useDesc": "Chúng tôi sử dụng thông tin thu thập để cung cấp, duy trì và cải thiện dịch vụ:",
+  "privacy.useDesc":
+    "Chúng tôi sử dụng thông tin thu thập để cung cấp, duy trì và cải thiện dịch vụ:",
   "privacy.use1": "Để xác thực và cấp quyền truy cập tài nguyên của tổ chức",
-  "privacy.use2": "Để liên hệ về tài khoản, cảnh báo bảo mật và cập nhật dịch vụ",
-  "privacy.use3": "Để phát hiện, ngăn chặn và xử lý các vấn đề kỹ thuật và mối đe dọa bảo mật",
+  "privacy.use2":
+    "Để liên hệ về tài khoản, cảnh báo bảo mật và cập nhật dịch vụ",
+  "privacy.use3":
+    "Để phát hiện, ngăn chặn và xử lý các vấn đề kỹ thuật và mối đe dọa bảo mật",
   "privacy.use4": "Để tuân thủ nghĩa vụ pháp lý và thực thi điều khoản dịch vụ",
   "privacy.shareTitle": "Chia sẻ thông tin",
-  "privacy.shareDesc": "Chúng tôi không bán dữ liệu cá nhân của bạn. Chúng tôi có thể chia sẻ thông tin với các nhà cung cấp dịch vụ bên thứ ba thực hiện dịch vụ thay mặt chúng tôi. Tất cả các nhà cung cấp đều bị ràng buộc hợp đồng để bảo vệ dữ liệu của bạn.",
+  "privacy.shareDesc":
+    "Chúng tôi không bán dữ liệu cá nhân của bạn. Chúng tôi có thể chia sẻ thông tin với các nhà cung cấp dịch vụ bên thứ ba thực hiện dịch vụ thay mặt chúng tôi. Tất cả các nhà cung cấp đều bị ràng buộc hợp đồng để bảo vệ dữ liệu của bạn.",
   "privacy.securityTitle": "Bảo mật dữ liệu",
-  "privacy.securityDesc": "Chúng tôi áp dụng các biện pháp bảo mật tiêu chuẩn ngành bao gồm mã hóa khi lưu và khi truyền, kiểm tra bảo mật định kỳ và kiểm soát truy cập.",
+  "privacy.securityDesc":
+    "Chúng tôi áp dụng các biện pháp bảo mật tiêu chuẩn ngành bao gồm mã hóa khi lưu và khi truyền, kiểm tra bảo mật định kỳ và kiểm soát truy cập.",
   "privacy.rightsTitle": "Quyền của bạn",
-  "privacy.rightsDesc": "Tùy thuộc vào vị trí của bạn, bạn có thể có một số quyền liên quan đến dữ liệu cá nhân:",
+  "privacy.rightsDesc":
+    "Tùy thuộc vào vị trí của bạn, bạn có thể có một số quyền liên quan đến dữ liệu cá nhân:",
   "privacy.rights1Title": "Truy cập",
-  "privacy.rights1Desc": "Yêu cầu bản sao dữ liệu cá nhân chúng tôi lưu giữ về bạn.",
+  "privacy.rights1Desc":
+    "Yêu cầu bản sao dữ liệu cá nhân chúng tôi lưu giữ về bạn.",
   "privacy.rights2Title": "Sửa đổi",
-  "privacy.rights2Desc": "Yêu cầu chỉnh sửa dữ liệu không chính xác hoặc không đầy đủ.",
+  "privacy.rights2Desc":
+    "Yêu cầu chỉnh sửa dữ liệu không chính xác hoặc không đầy đủ.",
   "privacy.rights3Title": "Xóa",
-  "privacy.rights3Desc": "Yêu cầu xóa dữ liệu cá nhân, tuân theo yêu cầu lưu trữ pháp lý.",
+  "privacy.rights3Desc":
+    "Yêu cầu xóa dữ liệu cá nhân, tuân theo yêu cầu lưu trữ pháp lý.",
   "privacy.cookiesTitle": "Cookies và theo dõi",
-  "privacy.cookiesDesc": "Chúng tôi sử dụng cookies thiết yếu để duy trì phiên và ghi nhớ tùy chọn. Chúng tôi không sử dụng cookies theo dõi bên thứ ba hoặc quảng cáo.",
+  "privacy.cookiesDesc":
+    "Chúng tôi sử dụng cookies thiết yếu để duy trì phiên và ghi nhớ tùy chọn. Chúng tôi không sử dụng cookies theo dõi bên thứ ba hoặc quảng cáo.",
   "privacy.contactTitle": "Liên hệ",
-  "privacy.contactDesc": "Nếu bạn có câu hỏi về chính sách bảo mật này hoặc muốn thực hiện quyền của mình, vui lòng liên hệ với chúng tôi tại:",
+  "privacy.contactDesc":
+    "Nếu bạn có câu hỏi về chính sách bảo mật này hoặc muốn thực hiện quyền của mình, vui lòng liên hệ với chúng tôi tại:",
 
   // Terms of Service
   "terms.badge": "Pháp lý · Điều khoản",
@@ -739,61 +879,86 @@ const vi: Partial<Record<keyof typeof en, string>> = {
   "terms.lastUpdated": "Cập nhật lần cuối: 27 tháng 6, 2025",
   "terms.contents": "Mục lục",
   "terms.introTitle": "Đồng ý với điều khoản",
-  "terms.introDesc": "Bằng cách truy cập hoặc sử dụng MassLab IAM, bạn đồng ý bị ràng buộc bởi các Điều khoản Dịch vụ này. Nếu bạn không đồng ý, bạn bị cấm sử dụng nền tảng này.",
+  "terms.introDesc":
+    "Bằng cách truy cập hoặc sử dụng MassLab IAM, bạn đồng ý bị ràng buộc bởi các Điều khoản Dịch vụ này. Nếu bạn không đồng ý, bạn bị cấm sử dụng nền tảng này.",
   "terms.acceptanceTitle": "Chấp nhận điều khoản",
-  "terms.acceptanceDesc": "Bằng cách tạo tài khoản hoặc sử dụng dịch vụ, bạn xác nhận bạn ít nhất 18 tuổi và có quyền ràng buộc tổ chức của bạn với các điều khoản này.",
+  "terms.acceptanceDesc":
+    "Bằng cách tạo tài khoản hoặc sử dụng dịch vụ, bạn xác nhận bạn ít nhất 18 tuổi và có quyền ràng buộc tổ chức của bạn với các điều khoản này.",
   "terms.accountsTitle": "Trách nhiệm tài khoản",
-  "terms.accountsDesc": "Bạn chịu trách nhiệm duy trì tính bảo mật của thông tin đăng nhập và thông báo cho chúng tôi ngay lập tức về bất kỳ sử dụng trái phép nào.",
+  "terms.accountsDesc":
+    "Bạn chịu trách nhiệm duy trì tính bảo mật của thông tin đăng nhập và thông báo cho chúng tôi ngay lập tức về bất kỳ sử dụng trái phép nào.",
   "terms.usageTitle": "Sử dụng chấp nhận được",
-  "terms.usageDesc": "Bạn đồng ý không sử dụng MassLab IAM cho các mục đích sau:",
+  "terms.usageDesc":
+    "Bạn đồng ý không sử dụng MassLab IAM cho các mục đích sau:",
   "terms.usage1Title": "Hoạt động trái pháp luật",
-  "terms.usage1Desc": "Bất kỳ mục đích nào vi phạm luật hoặc quy định hiện hành.",
+  "terms.usage1Desc":
+    "Bất kỳ mục đích nào vi phạm luật hoặc quy định hiện hành.",
   "terms.usage2Title": "Mã độc hại",
-  "terms.usage2Desc": "Truyền virus, phần mềm độc hại hoặc phần mềm có hại khác.",
+  "terms.usage2Desc":
+    "Truyền virus, phần mềm độc hại hoặc phần mềm có hại khác.",
   "terms.usage3Title": "Truy cập trái phép",
-  "terms.usage3Desc": "Cố gắng truy cập dữ liệu người dùng khác hoặc hệ thống nội bộ của chúng tôi.",
+  "terms.usage3Desc":
+    "Cố gắng truy cập dữ liệu người dùng khác hoặc hệ thống nội bộ của chúng tôi.",
   "terms.usage4Title": "Phá vỡ nền tảng",
-  "terms.usage4Desc": "Can thiệp vào tính toàn vẹn hoặc hiệu suất của nền tảng.",
+  "terms.usage4Desc":
+    "Can thiệp vào tính toàn vẹn hoặc hiệu suất của nền tảng.",
   "terms.paymentTitle": "Thanh toán và hóa đơn",
-  "terms.paymentDesc": "Các gói trả phí được thanh toán trước hàng tháng hoặc hàng năm. Bạn có thể hủy bất cứ lúc nào và đăng ký vẫn hoạt động đến cuối kỳ thanh toán hiện tại.",
+  "terms.paymentDesc":
+    "Các gói trả phí được thanh toán trước hàng tháng hoặc hàng năm. Bạn có thể hủy bất cứ lúc nào và đăng ký vẫn hoạt động đến cuối kỳ thanh toán hiện tại.",
   "terms.intellectualTitle": "Sở hữu trí tuệ",
-  "terms.intellectualDesc": "MassLab IAM và nội dung gốc của nó thuộc sở hữu của MassLab và được bảo vệ bởi luật bản quyền quốc tế. Dữ liệu của bạn vẫn là tài sản của bạn.",
+  "terms.intellectualDesc":
+    "MassLab IAM và nội dung gốc của nó thuộc sở hữu của MassLab và được bảo vệ bởi luật bản quyền quốc tế. Dữ liệu của bạn vẫn là tài sản của bạn.",
   "terms.limitationTitle": "Giới hạn trách nhiệm",
-  "terms.limitationDesc": "Trong phạm vi tối đa được phép theo luật, MassLab không chịu trách nhiệm cho bất kỳ thiệt hại gián tiếp, ngẫu nhiên, đặc biệt hoặc phạt nào phát sinh từ việc sử dụng nền tảng.",
+  "terms.limitationDesc":
+    "Trong phạm vi tối đa được phép theo luật, MassLab không chịu trách nhiệm cho bất kỳ thiệt hại gián tiếp, ngẫu nhiên, đặc biệt hoặc phạt nào phát sinh từ việc sử dụng nền tảng.",
   "terms.terminationTitle": "Chấm dứt",
-  "terms.terminationDesc": "Chúng tôi có thể chấm dứt hoặc đình chỉ tài khoản và quyền truy cập của bạn ngay lập tức, mà không cần thông báo trước, vì bất kỳ lý do nào, bao gồm vi phạm các Điều khoản này.",
+  "terms.terminationDesc":
+    "Chúng tôi có thể chấm dứt hoặc đình chỉ tài khoản và quyền truy cập của bạn ngay lập tức, mà không cần thông báo trước, vì bất kỳ lý do nào, bao gồm vi phạm các Điều khoản này.",
   "terms.governingTitle": "Luật điều chỉnh",
-  "terms.governingDesc": "Các Điều khoản này được điều chỉnh và giải thích theo pháp luật Singapore.",
+  "terms.governingDesc":
+    "Các Điều khoản này được điều chỉnh và giải thích theo pháp luật Singapore.",
   "terms.changesTitle": "Thay đổi điều khoản",
-  "terms.changesDesc": "Chúng tôi có quyền sửa đổi các điều khoản này bất cứ lúc nào và sẽ thông báo cho người dùng qua email hoặc thông báo trong ứng dụng.",
+  "terms.changesDesc":
+    "Chúng tôi có quyền sửa đổi các điều khoản này bất cứ lúc nào và sẽ thông báo cho người dùng qua email hoặc thông báo trong ứng dụng.",
   "terms.contactTitle": "Liên hệ",
-  "terms.contactDesc": "Nếu bạn có câu hỏi về các Điều khoản này, vui lòng liên hệ với chúng tôi tại:",
+  "terms.contactDesc":
+    "Nếu bạn có câu hỏi về các Điều khoản này, vui lòng liên hệ với chúng tôi tại:",
 
   // Documentation
   "docs.badge": "Tài liệu v2.0",
   "docs.title": "Xây dựng với MassLab IAM",
-  "docs.subtitle": "Tài liệu đầy đủ để tích hợp, cấu hình và quản lý danh tính trong ứng dụng của bạn.",
+  "docs.subtitle":
+    "Tài liệu đầy đủ để tích hợp, cấu hình và quản lý danh tính trong ứng dụng của bạn.",
   "docs.quickstart": "Hướng dẫn nhanh",
   "docs.gettingStarted": "Bắt đầu",
   "docs.gs1Title": "Tạo tổ chức của bạn",
-  "docs.gs1Desc": "Đăng ký và tạo một tổ chức để cách ly người dùng, vai trò và quyền.",
+  "docs.gs1Desc":
+    "Đăng ký và tạo một tổ chức để cách ly người dùng, vai trò và quyền.",
   "docs.gs2Title": "Định nghĩa vai trò & quyền",
-  "docs.gs2Desc": "Sử dụng bảng điều khiển hoặc API để tạo vai trò và gán quyền chi tiết.",
+  "docs.gs2Desc":
+    "Sử dụng bảng điều khiển hoặc API để tạo vai trò và gán quyền chi tiết.",
   "docs.gs3Title": "Tích hợp ứng dụng",
-  "docs.gs3Desc": "Sử dụng SDK hoặc REST API để xác thực người dùng và kiểm tra quyền trong thời gian thực.",
+  "docs.gs3Desc":
+    "Sử dụng SDK hoặc REST API để xác thực người dùng và kiểm tra quyền trong thời gian thực.",
   "docs.coreConcepts": "Khái niệm cốt lõi",
   "docs.concept1Title": "Người dùng",
-  "docs.concept1Desc": "Danh tính có thể xác thực và được cấp quyền truy cập. Người dùng có thể thuộc nhiều tổ chức.",
+  "docs.concept1Desc":
+    "Danh tính có thể xác thực và được cấp quyền truy cập. Người dùng có thể thuộc nhiều tổ chức.",
   "docs.concept2Title": "Vai trò",
-  "docs.concept2Desc": "Tập hợp quyền được đặt tên. Người dùng có thể có nhiều vai trò, quyền được tổng hợp.",
+  "docs.concept2Desc":
+    "Tập hợp quyền được đặt tên. Người dùng có thể có nhiều vai trò, quyền được tổng hợp.",
   "docs.concept3Title": "Quyền",
-  "docs.concept3Desc": "Kiểm soát truy cập chi tiết. Quyền có thể được kế thừa từ vai trò hoặc gán trực tiếp.",
+  "docs.concept3Desc":
+    "Kiểm soát truy cập chi tiết. Quyền có thể được kế thừa từ vai trò hoặc gán trực tiếp.",
   "docs.concept4Title": "Tổ chức",
-  "docs.concept4Desc": "Ranh giới tổ chức được cách ly. Mỗi tổ chức có người dùng, vai trò và cấu hình riêng.",
+  "docs.concept4Desc":
+    "Ranh giới tổ chức được cách ly. Mỗi tổ chức có người dùng, vai trò và cấu hình riêng.",
   "docs.concept5Title": "API Keys",
-  "docs.concept5Desc": "Thông tin đăng nhập phía máy chủ cho truy cập lập trình. Phạm vi theo quyền và tổ chức cụ thể.",
+  "docs.concept5Desc":
+    "Thông tin đăng nhập phía máy chủ cho truy cập lập trình. Phạm vi theo quyền và tổ chức cụ thể.",
   "docs.concept6Title": "Nhật ký kiểm toán",
-  "docs.concept6Desc": "Bản ghi không thể thay đổi về tất cả quyết định truy cập, thay đổi vai trò và sự kiện xác thực.",
+  "docs.concept6Desc":
+    "Bản ghi không thể thay đổi về tất cả quyết định truy cập, thay đổi vai trò và sự kiện xác thực.",
   "docs.codeExample": "Ví dụ mã",
   "docs.apiRef": "Tài liệu API",
   "docs.apiUsers": "Liệt kê tất cả người dùng trong tổ chức",
@@ -849,7 +1014,8 @@ const vi: Partial<Record<keyof typeof en, string>> = {
   "orders.deleted": "Đã xóa đơn hàng",
   "orders.updated": "Đã cập nhật đơn hàng",
   "orders.notFound": "Không tìm thấy đơn hàng",
-  "orders.notFoundDesc": "Đơn hàng có thể đã bị xóa hoặc liên kết không hợp lệ.",
+  "orders.notFoundDesc":
+    "Đơn hàng có thể đã bị xóa hoặc liên kết không hợp lệ.",
   "orders.sectionCustomer": "Thông tin khách hàng",
   "orders.customerName": "Tên khách hàng",
   "orders.customerEmail": "Email khách hàng",
@@ -945,7 +1111,8 @@ const vi: Partial<Record<keyof typeof en, string>> = {
   "org.settings": "Cài đặt",
   "org.impersonate": "Mạo danh quản trị",
   "org.deleteTitle": "Xóa tổ chức?",
-  "org.deleteDesc": "Thao tác này không thể hoàn tác. Tổ chức sẽ bị xóa khỏi tenant:",
+  "org.deleteDesc":
+    "Thao tác này không thể hoàn tác. Tổ chức sẽ bị xóa khỏi tenant:",
   "org.created": "Đã tạo tổ chức",
   "org.deleted": "Đã xóa tổ chức",
 
@@ -976,33 +1143,51 @@ const vi: Partial<Record<keyof typeof en, string>> = {
   "users.editDesc": "Gán nhiều vai trò và quyền trực tiếp tùy chọn.",
   "users.tab.details": "Chi tiết",
   "users.tab.roles": "Vai trò",
+  "users.tab.access": "Truy cập",
   "users.tab.perms": "Quyền hạn",
   "users.fullName": "Họ và tên",
   "users.email": "Email",
   "users.organization": "Tổ chức",
   "users.system": "Hệ thống",
-  "users.permsInherit": "Quyền kế thừa từ vai trò được tích sẵn. Thêm quyền trực tiếp cho người dùng nếu cần.",
+  "users.permsInherit":
+    "Quyền kế thừa từ vai trò được tích sẵn. Thêm quyền trực tiếp cho người dùng nếu cần.",
+  "users.permissionHelp":
+    "Vai trò tạo ra quyền nền. Sau đó có thể cấp thêm hoặc chặn riêng từng quyền cho người dùng này.",
+  "users.permission.inherited": "Kế thừa",
+  "users.permission.grant": "Cấp thêm",
+  "users.permission.deny": "Chặn",
+  "users.permission.clear": "Kế thừa",
+  "users.accessUpdated": "Đã cập nhật quyền truy cập người dùng",
   "users.updated": "Đã cập nhật người dùng",
   "users.invited": "Đã gửi lời mời",
   "users.deleted": "Đã xóa người dùng",
   "users.deleteTitle": "Xóa người dùng?",
-  "users.deleteDesc": "Thao tác này không thể hoàn tác. Người dùng sẽ bị xóa khỏi tenant:",
+  "users.deleteDesc":
+    "Thao tác này không thể hoàn tác. Người dùng sẽ bị xóa khỏi tenant:",
   "users.resetTitle": "Đặt lại mật khẩu?",
-  "users.resetDesc": "Một email đặt lại mật khẩu sẽ được gửi tới người dùng này:",
+  "users.resetDesc":
+    "Một email đặt lại mật khẩu sẽ được gửi tới người dùng này:",
   "users.resetPw": "Đặt lại mật khẩu",
   "users.resetSent": "Đã gửi email đặt lại mật khẩu",
   "users.permissions": "quyền",
 
   // Roles
   "roles.title": "Quản lý vai trò",
-  "roles.subtitle": "Nhóm các quyền thành vai trò. Mỗi người dùng có thể có nhiều vai trò.",
+  "roles.subtitle":
+    "Nhóm các quyền thành vai trò. Mỗi người dùng có thể có nhiều vai trò.",
   "roles.new": "Vai trò mới",
   "roles.permissions": "Quyền",
   "roles.users": "Người dùng",
   "roles.manage": "Quản lý quyền",
   "roles.edit": "Sửa vai trò",
   "roles.create": "Vai trò mới",
-  "roles.editDesc": "Chọn quyền từ cây. Tích mô-đun sẽ áp dụng cho tất cả mục con.",
+  "roles.editDesc":
+    "Chọn quyền từ cây. Tích mô-đun sẽ áp dụng cho tất cả mục con.",
+  "roles.searchPermissions": "Tìm quyền...",
+  "roles.selected": "đã chọn",
+  "roles.expandAll": "Mở tất cả",
+  "roles.collapseAll": "Thu gọn",
+  "roles.emptyPermissions": "Không tìm thấy quyền phù hợp.",
   "roles.name": "Tên vai trò",
   "roles.slug": "Mã định danh",
   "roles.description": "Mô tả",
@@ -1012,7 +1197,8 @@ const vi: Partial<Record<keyof typeof en, string>> = {
   "roles.created": "Đã tạo vai trò",
   "roles.deleted": "Đã xóa vai trò",
   "roles.deleteTitle": "Xóa vai trò?",
-  "roles.deleteDesc": "Thao tác này không thể hoàn tác. Vai trò sẽ bị xóa khỏi tenant:",
+  "roles.deleteDesc":
+    "Thao tác này không thể hoàn tác. Vai trò sẽ bị xóa khỏi tenant:",
   "roles.duplicateTitle": "Nhân bản vai trò?",
   "roles.duplicateDesc": "Một bản sao của vai trò này sẽ được tạo từ:",
   "roles.duplicated": "Đã nhân bản vai trò",
@@ -1021,7 +1207,8 @@ const vi: Partial<Record<keyof typeof en, string>> = {
 
   // Products
   "products.title": "Quản lý sản phẩm",
-  "products.subtitle": "Tạo, tổ chức và quản trị sản phẩm trong danh mục admin.",
+  "products.subtitle":
+    "Tạo, tổ chức và quản trị sản phẩm trong danh mục admin.",
   "products.new": "Sản phẩm mới",
   "products.newTitle": "Tạo sản phẩm",
   "products.editTitle": "Sửa sản phẩm",
@@ -1048,7 +1235,8 @@ const vi: Partial<Record<keyof typeof en, string>> = {
   "products.outOfStock": "Hết hàng",
   "products.deleted": "Đã xóa sản phẩm",
   "products.deleteTitle": "Xóa sản phẩm?",
-  "products.deleteDesc": "Thao tác này không thể hoàn tác. Sản phẩm sẽ bị xóa khỏi danh mục:",
+  "products.deleteDesc":
+    "Thao tác này không thể hoàn tác. Sản phẩm sẽ bị xóa khỏi danh mục:",
   "products.empty": "Không có sản phẩm nào khớp bộ lọc hiện tại.",
   "products.page": "Trang",
   "products.created": "Đã tạo sản phẩm",
@@ -1062,7 +1250,8 @@ const vi: Partial<Record<keyof typeof en, string>> = {
   "products.errPrice": "Giá phải lớn hơn hoặc bằng 0",
   "products.errStock": "Tồn kho phải lớn hơn hoặc bằng 0",
   "products.description": "Mô tả",
-  "products.descriptionPlaceholder": "Mô tả sản phẩm, nhóm người dùng mục tiêu và các khả năng nổi bật.",
+  "products.descriptionPlaceholder":
+    "Mô tả sản phẩm, nhóm người dùng mục tiêu và các khả năng nổi bật.",
   "products.price": "Giá",
   "products.currency": "Tiền tệ",
   "products.tagPlaceholder": "Nhập thẻ và nhấn Enter",
@@ -1074,7 +1263,8 @@ const vi: Partial<Record<keyof typeof en, string>> = {
 
   // Permissions
   "perms.title": "Quản lý quyền hạn",
-  "perms.subtitle": "Các quyền được gom theo mô-đun và gán cho vai trò hoặc trực tiếp cho người dùng.",
+  "perms.subtitle":
+    "Các quyền được gom theo mô-đun và gán cho vai trò hoặc trực tiếp cho người dùng.",
   "perms.stat.total": "Tổng quyền",
   "perms.stat.modules": "Mô-đun",
   "perms.stat.used": "Đang dùng trong vai trò",
@@ -1102,10 +1292,26 @@ const vi: Partial<Record<keyof typeof en, string>> = {
   "perms.moduleDeleted": "Đã xóa mô-đun",
   "perms.permDeleted": "Đã xóa quyền",
   "perms.deleteModuleTitle": "Xóa mô-đun?",
-  "perms.deleteModuleDesc": "Thao tác này sẽ xóa mô-đun và toàn bộ quyền bên trong:",
+  "perms.deleteModuleDesc":
+    "Thao tác này sẽ xóa mô-đun và toàn bộ quyền bên trong:",
   "perms.deletePermTitle": "Xóa quyền?",
   "perms.deletePermDesc": "Thao tác này không thể hoàn tác. Quyền sẽ bị xóa:",
   "perms.errExists": "Mã định danh đã tồn tại",
+  "perms.categoryLabel": "Đường dẫn danh mục",
+  "perms.categoryPlaceholder": "access.users",
+  "perms.categoryHint":
+    "Dùng các segment chữ thường. Các dấu phân tách như /, >, : sẽ được chuẩn hóa thành dấu chấm.",
+  "perms.namePlaceholder": "users.manage",
+  "perms.nameHint":
+    "Dùng key quyền ổn định, ví dụ users.manage hoặc audit.read.",
+  "perms.descriptionPlaceholder": "Mô tả quyền này cho phép làm gì.",
+  "perms.normalizedPreview": "Đường dẫn sau chuẩn hóa:",
+  "perms.errNameRequired": "Tên quyền là bắt buộc.",
+  "perms.errCategoryRequired": "Danh mục là bắt buộc.",
+  "perms.errNameFormat":
+    "Tên quyền phải dùng các segment chữ thường, phân tách bằng dấu chấm.",
+  "perms.errCategoryFormat":
+    "Danh mục phải dùng các segment chữ thường, phân tách bằng dấu chấm.",
 
   // Profile
   "profile.title": "Hồ sơ của tôi",
@@ -1160,24 +1366,28 @@ const vi: Partial<Record<keyof typeof en, string>> = {
   "profile.tfaApp": "Ứng dụng xác thực",
   "profile.tfaAppSub": "Dùng Google Authenticator, Authy hoặc tương tự",
   "profile.tfaSetupTitle": "Cài đặt ứng dụng xác thực",
-  "profile.tfaSetupDesc": "Quét mã QR bằng ứng dụng xác thực, sau đó nhập mã 6 chữ số.",
+  "profile.tfaSetupDesc":
+    "Quét mã QR bằng ứng dụng xác thực, sau đó nhập mã 6 chữ số.",
   "profile.tfaOtpLabel": "Mã xác minh",
   "profile.tfaOtpError": "Vui lòng nhập mã 6 chữ số",
   "profile.tfaVerify": "Xác minh & bật",
   "profile.tfaEnabled": "Đã bật xác thực hai bước",
   "profile.tfaDisabled": "Đã tắt xác thực hai bước",
   "profile.tfaDisableTitle": "Tắt xác thực hai bước?",
-  "profile.tfaDisableDesc": "Tài khoản sẽ kém an toàn hơn nếu không có bước xác minh thứ hai. Bạn có chắc không?",
+  "profile.tfaDisableDesc":
+    "Tài khoản sẽ kém an toàn hơn nếu không có bước xác minh thứ hai. Bạn có chắc không?",
   "profile.tfaDisableBtn": "Có, tắt 2FA",
   "profile.tfaViewCodes": "Xem mã dự phòng",
   "profile.tfaCodesTitle": "Mã dự phòng",
-  "profile.tfaCodesDesc": "Lưu các mã này ở nơi an toàn. Mỗi mã chỉ dùng được một lần.",
+  "profile.tfaCodesDesc":
+    "Lưu các mã này ở nơi an toàn. Mỗi mã chỉ dùng được một lần.",
   "profile.tfaCopied": "Đã sao chép vào clipboard",
   "profile.tfaRegenerate": "Tạo lại mã",
 
   // Profile – Recovery email
   "profile.recoveryTitle": "Cập nhật email khôi phục",
-  "profile.recoveryDesc": "Email này dùng để khôi phục quyền truy cập tài khoản của bạn.",
+  "profile.recoveryDesc":
+    "Email này dùng để khôi phục quyền truy cập tài khoản của bạn.",
   "profile.recoveryLabel": "Địa chỉ email khôi phục",
   "profile.recoveryHint": "Phải khác với email tài khoản chính.",
   "profile.recoverySaved": "Đã cập nhật email khôi phục",
@@ -1202,8 +1412,12 @@ export function I18nProvider({ children }: { children: ReactNode }) {
     localStorage.setItem("masslab.lang", l);
     setLangState(l);
   };
-  const t = (k: TKey) => (lang === "vi" ? vi[k] ?? en[k] : en[k]) ?? k;
-  return <I18nContext.Provider value={{ lang, setLang, t }}>{children}</I18nContext.Provider>;
+  const t = (k: TKey) => (lang === "vi" ? (vi[k] ?? en[k]) : en[k]) ?? k;
+  return (
+    <I18nContext.Provider value={{ lang, setLang, t }}>
+      {children}
+    </I18nContext.Provider>
+  );
 }
 
 export function useI18n() {

@@ -91,7 +91,11 @@ export type TenantAdminDashboardDto = {
 export type TenantUsersDto = {
   users: TenantUserDto[];
   roles: TenantRoleDto[];
+  permissions: TenantPermissionDto[];
   assignedRoleIds: Record<string, string[]>;
+  rolePermissionIds: Record<string, string[]>;
+  grantedPermissionIds: Record<string, string[]>;
+  deniedPermissionIds: Record<string, string[]>;
 };
 
 export type TenantRolesDto = {
@@ -111,7 +115,11 @@ export type CreateClientResult = CommandResult & {
   clientSecret?: string;
 };
 
-export async function identityFetch<T>(session: AuthSession, path: string, init?: RequestInit): Promise<T> {
+export async function identityFetch<T>(
+  session: AuthSession,
+  path: string,
+  init?: RequestInit,
+): Promise<T> {
   const headers = new Headers(init?.headers);
   headers.set("Authorization", `Bearer ${session.accessToken}`);
   if (init?.body && !headers.has("Content-Type")) {
@@ -129,7 +137,12 @@ export async function identityFetch<T>(session: AuthSession, path: string, init?
 
   if (!response.ok) {
     const payload = await tryReadJson(response);
-    throw new Error(payload?.errors?.[0] ?? payload?.title ?? payload?.error_description ?? "Identity API request failed.");
+    throw new Error(
+      payload?.errors?.[0] ??
+        payload?.title ??
+        payload?.error_description ??
+        "Identity API request failed.",
+    );
   }
 
   if (response.status === 204) {

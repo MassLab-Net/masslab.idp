@@ -111,7 +111,11 @@ public sealed record TenantAdminDashboardDto(
 public sealed record TenantUsersDto(
     IReadOnlyCollection<TenantUserDto> Users,
     IReadOnlyCollection<TenantRoleDto> Roles,
-    IReadOnlyDictionary<Guid, HashSet<Guid>> AssignedRoleIds);
+    IReadOnlyCollection<TenantPermissionDto> Permissions,
+    IReadOnlyDictionary<Guid, HashSet<Guid>> AssignedRoleIds,
+    IReadOnlyDictionary<Guid, HashSet<Guid>> RolePermissionIds,
+    IReadOnlyDictionary<Guid, HashSet<Guid>> GrantedPermissionIds,
+    IReadOnlyDictionary<Guid, HashSet<Guid>> DeniedPermissionIds);
 
 public sealed record TenantRolesDto(
     IReadOnlyCollection<TenantRoleDto> Roles,
@@ -137,6 +141,12 @@ public interface ITenantAdminCommands
     Task<CommandResult> EditUserAsync(Guid id, string email, string displayName, bool isEnabled, bool isTenantAdmin, CancellationToken cancellationToken = default);
     Task<CommandResult> DeleteUserAsync(Guid id, CancellationToken cancellationToken = default);
     Task<CommandResult> SetUserRolesAsync(Guid userId, IReadOnlyCollection<Guid> roleIds, CancellationToken cancellationToken = default);
+    Task<CommandResult> SetUserAccessAsync(
+        Guid userId,
+        IReadOnlyCollection<Guid> roleIds,
+        IReadOnlyCollection<Guid> grantedPermissionIds,
+        IReadOnlyCollection<Guid> deniedPermissionIds,
+        CancellationToken cancellationToken = default);
     Task<CommandResult> CreateRoleAsync(string name, string description, CancellationToken cancellationToken = default);
     Task<CommandResult> EditRoleAsync(Guid id, string name, string description, CancellationToken cancellationToken = default);
     Task<CommandResult> DeleteRoleAsync(Guid id, CancellationToken cancellationToken = default);

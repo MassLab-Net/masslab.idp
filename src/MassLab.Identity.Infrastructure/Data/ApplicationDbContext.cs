@@ -21,6 +21,7 @@ public sealed class ApplicationDbContext : IdentityDbContext<ApplicationUser, Mi
     public DbSet<TenantRole> TenantRoles => Set<TenantRole>();
     public DbSet<TenantPermission> TenantPermissions => Set<TenantPermission>();
     public DbSet<UserRoleAssignment> UserRoleAssignments => Set<UserRoleAssignment>();
+    public DbSet<UserPermissionAssignment> UserPermissionAssignments => Set<UserPermissionAssignment>();
     public DbSet<RolePermissionAssignment> RolePermissionAssignments => Set<RolePermissionAssignment>();
     public DbSet<ClientApplication> ClientApplications => Set<ClientApplication>();
     public DbSet<ClientRedirectUri> ClientRedirectUris => Set<ClientRedirectUri>();
@@ -81,6 +82,12 @@ public sealed class ApplicationDbContext : IdentityDbContext<ApplicationUser, Mi
         builder.Entity<UserRoleAssignment>(entity =>
         {
             entity.HasKey(x => new { x.UserId, x.RoleId });
+            entity.HasQueryFilter(x => !_currentTenant.Id.HasValue || x.TenantId == _currentTenant.Id);
+        });
+
+        builder.Entity<UserPermissionAssignment>(entity =>
+        {
+            entity.HasKey(x => new { x.UserId, x.PermissionId });
             entity.HasQueryFilter(x => !_currentTenant.Id.HasValue || x.TenantId == _currentTenant.Id);
         });
 

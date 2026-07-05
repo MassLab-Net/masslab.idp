@@ -13,5 +13,6 @@ public sealed class ApplicationUser : IdentityUser<Guid>
     public string? TotpSecret { get; set; }
     public DateTimeOffset CreatedAt { get; set; } = DateTimeOffset.UtcNow;
     public ICollection<UserRoleAssignment> RoleAssignments { get; set; } = new List<UserRoleAssignment>();
+    public ICollection<UserPermissionAssignment> PermissionAssignments { get; set; } = new List<UserPermissionAssignment>();
     public ICollection<UserExternalLoginLink> ExternalLogins { get; set; } = new List<UserExternalLoginLink>();
 }
