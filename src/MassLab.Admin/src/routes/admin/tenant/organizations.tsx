@@ -32,7 +32,7 @@ export const Route = createFileRoute("/admin/tenant/organizations")({
 
 function Organizations() {
   const { t } = useI18n();
-  const { session } = useAuth();
+  const { session, user } = useAuth();
   const [orgs, setOrgs] = useState<SystemTenantDto[]>([]);
   const [q, setQ] = useState("");
   const [open, setOpen] = useState(false);
@@ -53,6 +53,22 @@ function Organizations() {
 
   if (!session) {
     return null;
+  }
+
+  if (!user?.isSystemAdmin) {
+    return (
+      <div className="space-y-6">
+        <PageHeader
+          title={t("org.title")}
+          subtitle="Only the default system tenant can manage tenant organizations."
+        />
+        <Card className="border-border shadow-card">
+          <CardContent className="p-6 text-sm text-muted-foreground">
+            Tenant management is only available for the system tenant.
+          </CardContent>
+        </Card>
+      </div>
+    );
   }
 
   return (

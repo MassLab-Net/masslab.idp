@@ -26,6 +26,14 @@
                     <div asp-validation-summary="All" class="masslab-login__validation @(ViewData.ModelState.IsValid ? "validation-summary-valid" : "validation-summary-errors")"></div>
 
                     <div class="form-group masslab-login__field">
+                        <label asp-for="Tenant" data-i18n="tenantLabel">Tenant</label>
+                        <div class="masslab-login__input-wrap">
+                            <span class="fa fa-building masslab-login__input-icon" aria-hidden="true"></span>
+                            <input asp-for="Tenant" class="form-control masslab-login__input" placeholder="demo" autocomplete="organization" data-i18n-placeholder="tenantPlaceholder" />
+                        </div>
+                    </div>
+
+                    <div class="form-group masslab-login__field">
                         <label asp-for="Email" data-i18n="usernameLabel">Username</label>
                         <div class="masslab-login__input-wrap">
                             <span class="fa fa-envelope masslab-login__input-icon" aria-hidden="true"></span>
@@ -117,6 +125,8 @@
                 en: {
                     title: "Sign in to MassLab IAM",
                     subtitle: "Use your MassLab Identity account to continue to the admin workspace.",
+                    tenantLabel: "Tenant",
+                    tenantPlaceholder: "demo",
                     usernameLabel: "Username",
                     usernamePlaceholder: "you@company.com",
                     passwordLabel: "Password",
@@ -135,6 +145,8 @@
                 vi: {
                     title: "Đăng nhập vào MassLab IAM",
                     subtitle: "Dùng tài khoản MassLab Identity để tiếp tục vào khu vực quản trị.",
+                    tenantLabel: "Tenant",
+                    tenantPlaceholder: "demo",
                     usernameLabel: "Tên đăng nhập",
                     usernamePlaceholder: "ban@congty.com",
                     passwordLabel: "Mật khẩu",

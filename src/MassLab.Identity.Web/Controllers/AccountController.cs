@@ -24,7 +24,7 @@ public sealed class AccountController : Controller
     }
 
     [HttpGet("login")]
-    public IActionResult Login(string? returnUrl = null)
+    public IActionResult Login(string? returnUrl = null, string? tenant = null)
     {
         var normalizedReturnUrl = NormalizeReturnUrl(returnUrl);
         if (User.Identity?.IsAuthenticated == true)
@@ -32,7 +32,11 @@ public sealed class AccountController : Controller
             return LocalRedirect(normalizedReturnUrl ?? "/");
         }
 
-        return View(new LoginInput { ReturnUrl = normalizedReturnUrl });
+        return View(new LoginInput
+        {
+            ReturnUrl = normalizedReturnUrl,
+            Tenant = tenant ?? Request.Query["tenant"].FirstOrDefault() ?? string.Empty
+        });
     }
 
     [HttpPost("login")]

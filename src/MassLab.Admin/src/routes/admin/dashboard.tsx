@@ -74,7 +74,9 @@ function Dashboard() {
     { label: t("dash.users"), value: dashboard?.users ?? 0, change: recentUsers.length ? `${recentUsers.length} ${t("dash.viewAll")}` : "-", icon: Users, to: "/admin/access-control/users" },
     { label: t("dash.roles"), value: dashboard?.roles ?? 0, change: dashboard ? `${dashboard.permissions} ${t("dash.perms")}` : "-", icon: ShieldCheck, to: "/admin/access-control/roles" },
     { label: t("dash.perms"), value: dashboard?.permissions ?? 0, change: dashboard ? `${dashboard.providers} providers` : "-", icon: KeyRound, to: "/admin/access-control/permissions" },
-    { label: t("dash.orgs"), value: organizationCount, change: dashboard ? `${dashboard.clients} apps` : "-", icon: Building2, to: "/admin/tenant/organizations" },
+    ...(user?.isSystemAdmin
+      ? [{ label: t("dash.orgs"), value: organizationCount, change: dashboard ? `${dashboard.clients} apps` : "-", icon: Building2, to: "/admin/tenant/organizations" }]
+      : []),
   ];
 
   return (

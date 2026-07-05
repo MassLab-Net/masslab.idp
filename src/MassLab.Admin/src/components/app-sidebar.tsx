@@ -88,7 +88,9 @@ export function AppSidebar() {
 
       <SidebarContent className="px-1.5">
         <Section label={t("nav.account")} items={account} />
-        <Section label={t("nav.tenant")} items={tenant} />
+        {user?.isSystemAdmin ? (
+          <Section label={t("nav.tenant")} items={tenant} />
+        ) : null}
         <Section label={t("nav.catalog")} items={catalog} />
         <Section label={t("nav.access")} items={access} />
       </SidebarContent>
