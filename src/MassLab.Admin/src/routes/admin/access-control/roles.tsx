@@ -1,6 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
 import {
+  Loader2,
   MoreHorizontal,
   Plus,
   ShieldCheck,
@@ -67,16 +68,30 @@ function RolesPage() {
   const [selectedPermissionIds, setSelectedPermissionIds] = useState<string[]>(
     [],
   );
+  const [isLoading, setIsLoading] = useState(false);
+  const [isSavingRole, setIsSavingRole] = useState(false);
+  const [isSavingPermissions, setIsSavingPermissions] = useState(false);
+  const [busyRoleId, setBusyRoleId] = useState<string | null>(null);
+
+  const refreshRoles = async () => {
+    if (!session) return;
+    setIsLoading(true);
+    try {
+      await loadRoles(
+        session,
+        setRoles,
+        setPermissions,
+        setAssignedPermissionIds,
+        setUserCounts,
+      );
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   useEffect(() => {
     if (!session) return;
-    void loadRoles(
-      session,
-      setRoles,
-      setPermissions,
-      setAssignedPermissionIds,
-      setUserCounts,
-    );
+    void refreshRoles();
   }, [session]);
 
   const filtered = useMemo(
@@ -106,6 +121,7 @@ function RolesPage() {
         action={
           <Button
             onClick={() => setEditing({ name: "", description: "" })}
+            disabled={isLoading || isSavingRole || isSavingPermissions}
             className="bg-gradient-brand text-primary-foreground shadow-elegant hover:opacity-95"
           >
             <Plus className="mr-1.5 h-4 w-4" /> {t("roles.new")}
@@ -118,10 +134,19 @@ function RolesPage() {
           value={q}
           onChange={(event) => setQ(event.target.value)}
           placeholder="Search roles..."
+          disabled={isLoading}
         />
       </div>
 
       <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+        {isLoading && roles.length === 0 ? (
+          <div className="col-span-full rounded-xl border border-dashed border-border bg-card p-8 text-sm text-muted-foreground">
+            <div className="flex items-center gap-2">
+              <Loader2 className="h-4 w-4 animate-spin" />
+              Loading roles and permissions...
+            </div>
+          </div>
+        ) : null}
         {filtered.map((role) => (
           <Card
             key={role.id}
@@ -171,6 +196,7 @@ function RolesPage() {
                     <DropdownMenuItem
                       className="text-destructive"
                       onClick={async () => {
+                        setBusyRoleId(role.id);
                         try {
                           await identityFetch<CommandResult>(
                             session,
@@ -178,19 +204,15 @@ function RolesPage() {
                             { method: "POST" },
                           );
                           toast.success(t("roles.deleted"));
-                          await loadRoles(
-                            session,
-                            setRoles,
-                            setPermissions,
-                            setAssignedPermissionIds,
-                            setUserCounts,
-                          );
+                          await refreshRoles();
                         } catch (reason: unknown) {
                           toast.error(
                             reason instanceof Error
                               ? reason.message
                               : "Unable to delete the role.",
                           );
+                        } finally {
+                          setBusyRoleId(null);
                         }
                       }}
                     >
@@ -239,6 +261,12 @@ function RolesPage() {
               <Button
                 variant="outline"
                 className="mt-5 w-full"
+                disabled={
+                  isLoading ||
+                  isSavingRole ||
+                  isSavingPermissions ||
+                  busyRoleId === role.id
+                }
                 onClick={() => {
                   setAssigningRoleId(role.id);
                   setSelectedPermissionIds(
@@ -297,10 +325,12 @@ function RolesPage() {
               {t("common.cancel")}
             </Button>
             <Button
+              disabled={isSavingRole}
               className="bg-gradient-brand text-primary-foreground"
               onClick={async () => {
                 if (!editing) return;
 
+                setIsSavingRole(true);
                 try {
                   if (editing.id) {
                     await identityFetch<CommandResult>(
@@ -332,23 +362,23 @@ function RolesPage() {
                     editing.id ? t("roles.updated") : t("roles.created"),
                   );
                   setEditing(null);
-                  await loadRoles(
-                    session,
-                    setRoles,
-                    setPermissions,
-                    setAssignedPermissionIds,
-                    setUserCounts,
-                  );
+                  await refreshRoles();
                 } catch (reason: unknown) {
                   toast.error(
                     reason instanceof Error
                       ? reason.message
                       : "Unable to save the role.",
                   );
+                } finally {
+                  setIsSavingRole(false);
                 }
               }}
             >
-              {t("roles.saveBtn")}
+              {isSavingRole ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                t("roles.saveBtn")
+              )}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -385,10 +415,12 @@ function RolesPage() {
               {t("common.cancel")}
             </Button>
             <Button
+              disabled={isSavingPermissions}
               className="bg-gradient-brand text-primary-foreground"
               onClick={async () => {
                 if (!assigningRoleId) return;
 
+                setIsSavingPermissions(true);
                 try {
                   await identityFetch<CommandResult>(
                     session,
@@ -402,23 +434,23 @@ function RolesPage() {
                   );
                   toast.success("Role permissions updated.");
                   setAssigningRoleId(null);
-                  await loadRoles(
-                    session,
-                    setRoles,
-                    setPermissions,
-                    setAssignedPermissionIds,
-                    setUserCounts,
-                  );
+                  await refreshRoles();
                 } catch (reason: unknown) {
                   toast.error(
                     reason instanceof Error
                       ? reason.message
                       : "Unable to update role permissions.",
                   );
+                } finally {
+                  setIsSavingPermissions(false);
                 }
               }}
             >
-              {t("common.save")}
+              {isSavingPermissions ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                t("common.save")
+              )}
             </Button>
           </DialogFooter>
         </DialogContent>

@@ -24,35 +24,87 @@ export type PermissionTreeNode = {
   permissionIds: string[];
 };
 
-type Props = {
+export type PermissionOverrideState = {
+  inheritedIds: string[];
+  grantedIds: string[];
+  deniedIds: string[];
+};
+
+export type PermissionOverrideLabels = {
+  grantLabel?: string;
+  denyLabel?: string;
+  summaryLabel?: string;
+};
+
+type BaseProps = {
   permissions: PermissionTreeItem[];
-  selected: string[];
-  onChange: (next: string[]) => void;
   rootLabel?: string;
   rootDescription?: string;
   searchPlaceholder?: string;
-  selectedLabel?: string;
   expandAllLabel?: string;
   collapseAllLabel?: string;
   emptyLabel?: string;
   readOnly?: boolean;
 };
 
-const CATEGORY_SPLITTER = /\s*(?:\/|>|:|\\|\|)\s*|\./;
+type SelectionProps = BaseProps & {
+  selected: string[];
+  onChange: (next: string[]) => void;
+  selectedLabel?: string;
+  overrides?: never;
+  onOverrideChange?: never;
+  overrideLabels?: never;
+};
 
-export function PermissionTree({
-  permissions,
-  selected,
-  onChange,
-  rootLabel = "Permissions",
-  rootDescription,
-  searchPlaceholder = "Search permissions...",
-  selectedLabel = "selected",
-  expandAllLabel = "Expand all",
-  collapseAllLabel = "Collapse all",
-  emptyLabel = "No permissions found.",
-  readOnly,
-}: Props) {
+type OverrideProps = BaseProps & {
+  selected?: never;
+  onChange?: never;
+  selectedLabel?: never;
+  overrides: PermissionOverrideState;
+  onOverrideChange: (value: PermissionOverrideState) => void;
+  overrideLabels?: PermissionOverrideLabels;
+};
+
+type Props = SelectionProps | OverrideProps;
+
+type OverrideMode = "inherit" | "grant" | "deny";
+
+type EffectiveBranchMode = {
+  kind: "selection";
+  selectedLabel: string;
+};
+
+type OverrideBranchMode = {
+  kind: "override";
+  overrides: PermissionOverrideState;
+  labels: Required<PermissionOverrideLabels>;
+  onChange: (value: PermissionOverrideState) => void;
+};
+
+type TreeMode = EffectiveBranchMode | OverrideBranchMode;
+
+const CATEGORY_SPLITTER = /\s*(?:\/|>|:|\\|\|)\s*|\./;
+const DEFAULT_OVERRIDE_LABELS = {
+  grantLabel: "Grant",
+  denyLabel: "Deny",
+  summaryLabel: "customized",
+} satisfies Required<PermissionOverrideLabels>;
+
+function isOverrideProps(props: Props): props is OverrideProps {
+  return "overrides" in props;
+}
+
+export function PermissionTree(props: Props) {
+  const {
+    permissions,
+    rootLabel = "Permissions",
+    rootDescription,
+    searchPlaceholder = "Search permissions...",
+    expandAllLabel = "Expand all",
+    collapseAllLabel = "Collapse all",
+    emptyLabel = "No permissions found.",
+    readOnly,
+  } = props;
   const [query, setQuery] = useState("");
   const [open, setOpen] = useState<Record<string, boolean>>({});
   const deferredQuery = useDeferredValue(query);
@@ -74,8 +126,37 @@ export function PermissionTree({
     () => buildPermissionTree(filteredPermissions),
     [filteredPermissions],
   );
-  const selectedSet = useMemo(() => new Set(selected), [selected]);
   const allNodeIds = useMemo(() => flattenNodeIds(tree), [tree]);
+
+  const overrideProps = isOverrideProps(props) ? props : null;
+  const selectionProps = isOverrideProps(props) ? null : props;
+
+  const mode: TreeMode = overrideProps
+    ? {
+        kind: "override",
+        overrides: overrideProps.overrides,
+        labels: {
+          ...DEFAULT_OVERRIDE_LABELS,
+          ...(overrideProps.overrideLabels ?? {}),
+        },
+        onChange: overrideProps.onOverrideChange,
+      }
+    : {
+        kind: "selection",
+        selectedLabel: selectionProps!.selectedLabel ?? "selected",
+      };
+
+  const effectiveSelected = useMemo(
+    () =>
+      mode.kind === "override"
+        ? getEffectivePermissionIds(mode.overrides)
+        : selectionProps!.selected,
+    [mode, selectionProps],
+  );
+  const effectiveSelectedSet = useMemo(
+    () => new Set(effectiveSelected),
+    [effectiveSelected],
+  );
 
   const setAllExpanded = (isExpanded: boolean) => {
     setOpen(Object.fromEntries(allNodeIds.map((id) => [id, isExpanded])));
@@ -86,14 +167,19 @@ export function PermissionTree({
       return;
     }
 
-    const next = new Set(selected);
+    if (mode.kind === "override") {
+      mode.onChange(applyOverrideChecked(mode.overrides, [permissionId], checked));
+      return;
+    }
+
+    const next = new Set(selectionProps!.selected);
     if (checked) {
       next.add(permissionId);
     } else {
       next.delete(permissionId);
     }
 
-    onChange(Array.from(next));
+    selectionProps!.onChange(Array.from(next));
   };
 
   const toggleNode = (permissionIds: string[], checked: boolean) => {
@@ -101,7 +187,12 @@ export function PermissionTree({
       return;
     }
 
-    const next = new Set(selected);
+    if (mode.kind === "override") {
+      mode.onChange(applyOverrideChecked(mode.overrides, permissionIds, checked));
+      return;
+    }
+
+    const next = new Set(selectionProps!.selected);
     for (const permissionId of permissionIds) {
       if (checked) {
         next.add(permissionId);
@@ -110,8 +201,15 @@ export function PermissionTree({
       }
     }
 
-    onChange(Array.from(next));
+    selectionProps!.onChange(Array.from(next));
   };
+
+  const summaryValue =
+      mode.kind === "override"
+      ? `${mode.overrides.grantedIds.length + mode.overrides.deniedIds.length} ${mode.labels.summaryLabel}`
+      : `${selectionProps!.selected.length} ${mode.selectedLabel}`;
+
+  const rootGlyph = mode.kind === "override" ? "U" : "R";
 
   return (
     <div className="rounded-xl border border-border/70 bg-card">
@@ -127,7 +225,7 @@ export function PermissionTree({
         </div>
         <div className="flex items-center gap-2">
           <Badge variant="outline" className="font-normal">
-            {selected.length} {selectedLabel}
+            {summaryValue}
           </Badge>
           <Button
             type="button"
@@ -157,7 +255,7 @@ export function PermissionTree({
           <div className="relative ml-5">
             <div className="relative flex items-center gap-2 py-1.5">
               <div className="grid h-5 w-5 place-items-center rounded-sm border border-border bg-muted text-[10px] font-semibold text-muted-foreground">
-                R
+                {rootGlyph}
               </div>
               <div className="min-w-0 flex-1">
                 <div className="truncate text-sm font-semibold">
@@ -178,9 +276,10 @@ export function PermissionTree({
                 node={node}
                 open={open}
                 setOpen={setOpen}
-                selectedSet={selectedSet}
+                selectedSet={effectiveSelectedSet}
                 readOnly={readOnly}
                 forceExpanded={!!normalizedQuery}
+                mode={mode}
                 onToggleNode={toggleNode}
                 onTogglePermission={togglePermission}
               />
@@ -199,6 +298,7 @@ type PermissionBranchProps = {
   selectedSet: Set<string>;
   readOnly?: boolean;
   forceExpanded: boolean;
+  mode: TreeMode;
   onToggleNode: (permissionIds: string[], checked: boolean) => void;
   onTogglePermission: (permissionId: string, checked: boolean) => void;
 };
@@ -210,6 +310,7 @@ function PermissionBranch({
   selectedSet,
   readOnly,
   forceExpanded,
+  mode,
   onToggleNode,
   onTogglePermission,
 }: PermissionBranchProps) {
@@ -222,12 +323,14 @@ function PermissionBranch({
     checkedCount > 0 && checkedCount < node.permissionIds.length;
   const isExpanded = forceExpanded || open[node.id] !== false;
   const hasChildren = node.children.length > 0 || node.permissions.length > 0;
-
-  const descendants = [...node.children, ...node.permissions];
+  const overrideSummary =
+    mode.kind === "override"
+      ? summarizeOverrideState(node.permissionIds, mode.overrides)
+      : null;
 
   return (
     <div className="relative">
-      <div className="relative flex items-center gap-2 py-1.5">
+      <div className="relative flex flex-wrap items-center gap-2 py-1.5">
         <span
           aria-hidden
           className="absolute left-2 top-5 h-0 w-3 border-t border-dashed border-border"
@@ -265,6 +368,20 @@ function PermissionBranch({
             {checkedCount}/{node.permissionIds.length}
           </div>
         </div>
+        {overrideSummary && mode.kind === "override" ? (
+          <div className="flex flex-wrap items-center gap-2">
+            {overrideSummary.grantedCount > 0 ? (
+              <Badge className="bg-emerald-600 text-white hover:bg-emerald-600">
+                +{overrideSummary.grantedCount} {mode.labels.grantLabel}
+              </Badge>
+            ) : null}
+            {overrideSummary.deniedCount > 0 ? (
+              <Badge className="bg-rose-600 text-white hover:bg-rose-600">
+                -{overrideSummary.deniedCount} {mode.labels.denyLabel}
+              </Badge>
+            ) : null}
+          </div>
+        ) : null}
       </div>
 
       {isExpanded ? (
@@ -280,6 +397,7 @@ function PermissionBranch({
                   selectedSet={selectedSet}
                   readOnly={readOnly}
                   forceExpanded={forceExpanded}
+                  mode={mode}
                   onToggleNode={onToggleNode}
                   onTogglePermission={onTogglePermission}
                 />
@@ -291,40 +409,72 @@ function PermissionBranch({
             <div className="space-y-0.5">
               {node.permissions.map((permission) => {
                 const checked = selectedSet.has(permission.id);
+                const permissionOverrideMode =
+                  mode.kind === "override"
+                    ? getPermissionOverrideBadgeMode(
+                        permission.id,
+                        mode.overrides,
+                      )
+                    : null;
 
                 return (
-                  <label
+                  <div
                     key={permission.id}
                     className={cn(
-                      "relative flex cursor-pointer items-start gap-2 rounded-md px-2 py-1.5 transition hover:bg-accent/40",
-                      readOnly && "cursor-default",
+                      "relative rounded-md px-2 py-1.5 transition hover:bg-accent/40",
+                      readOnly && "hover:bg-transparent",
                     )}
                   >
                     <span
                       aria-hidden
                       className="absolute left-0 top-5 h-0 w-3 border-t border-dashed border-border"
                     />
-                    <Checkbox
-                      checked={checked}
-                      onCheckedChange={(value) =>
-                        onTogglePermission(permission.id, value === true)
-                      }
-                      disabled={readOnly}
-                    />
-                    <div className="min-w-0 flex-1">
-                      <div className="text-sm">
-                        {toPermissionDisplayName(permission)}
-                      </div>
-                      <div className="truncate text-[11px] text-muted-foreground">
-                        {permission.name}
-                      </div>
-                      {permission.description ? (
-                        <div className="mt-0.5 text-xs text-muted-foreground">
-                          {permission.description}
+                    <div className="flex flex-col gap-2 md:flex-row md:items-start md:justify-between">
+                      <label
+                        className={cn(
+                          "flex min-w-0 flex-1 cursor-pointer items-start gap-2",
+                          readOnly && "cursor-default",
+                        )}
+                      >
+                        <Checkbox
+                          checked={checked}
+                          onCheckedChange={(value) =>
+                            onTogglePermission(permission.id, value === true)
+                          }
+                          disabled={readOnly}
+                        />
+                        <div className="min-w-0 flex-1">
+                          <div className="flex flex-wrap items-center gap-2">
+                            <div className="text-sm">
+                              {toPermissionDisplayName(permission)}
+                            </div>
+                            {permissionOverrideMode && mode.kind === "override" ? (
+                              <>
+                                {permissionOverrideMode === "grant" ? (
+                                  <Badge className="bg-emerald-600 text-white hover:bg-emerald-600">
+                                    {mode.labels.grantLabel}
+                                  </Badge>
+                                ) : null}
+                                {permissionOverrideMode === "deny" ? (
+                                  <Badge className="bg-rose-600 text-white hover:bg-rose-600">
+                                    {mode.labels.denyLabel}
+                                  </Badge>
+                                ) : null}
+                              </>
+                            ) : null}
+                          </div>
+                          <div className="truncate text-[11px] text-muted-foreground">
+                            {permission.name}
+                          </div>
+                          {permission.description ? (
+                            <div className="mt-0.5 text-xs text-muted-foreground">
+                              {permission.description}
+                            </div>
+                          ) : null}
                         </div>
-                      ) : null}
+                      </label>
                     </div>
-                  </label>
+                  </div>
                 );
               })}
             </div>
@@ -333,6 +483,89 @@ function PermissionBranch({
       ) : null}
     </div>
   );
+}
+
+function getEffectivePermissionIds(overrides: PermissionOverrideState) {
+  const granted = new Set(overrides.grantedIds);
+  const denied = new Set(overrides.deniedIds);
+  const effective = new Set(overrides.inheritedIds);
+
+  for (const permissionId of granted) {
+    effective.add(permissionId);
+  }
+
+  for (const permissionId of denied) {
+    effective.delete(permissionId);
+  }
+
+  return Array.from(effective);
+}
+
+function getPermissionOverrideBadgeMode(
+  permissionId: string,
+  overrides: PermissionOverrideState,
+): Exclude<OverrideMode, "inherit"> | null {
+  if (overrides.deniedIds.includes(permissionId)) {
+    return "deny";
+  }
+
+  if (overrides.grantedIds.includes(permissionId)) {
+    return "grant";
+  }
+
+  return null;
+}
+
+function applyOverrideChecked(
+  overrides: PermissionOverrideState,
+  permissionIds: string[],
+  checked: boolean,
+): PermissionOverrideState {
+  const inheritedSet = new Set(overrides.inheritedIds);
+  const nextGranted = new Set(overrides.grantedIds);
+  const nextDenied = new Set(overrides.deniedIds);
+
+  for (const permissionId of permissionIds) {
+    nextGranted.delete(permissionId);
+    nextDenied.delete(permissionId);
+
+    if (checked) {
+      if (!inheritedSet.has(permissionId)) {
+        nextGranted.add(permissionId);
+      }
+    } else if (inheritedSet.has(permissionId)) {
+      nextDenied.add(permissionId);
+    }
+  }
+
+  return {
+    inheritedIds: overrides.inheritedIds,
+    grantedIds: Array.from(nextGranted),
+    deniedIds: Array.from(nextDenied),
+  };
+}
+
+function summarizeOverrideState(
+  permissionIds: string[],
+  overrides: PermissionOverrideState,
+) {
+  const grantedSet = new Set(overrides.grantedIds);
+  const deniedSet = new Set(overrides.deniedIds);
+  let grantedCount = 0;
+  let deniedCount = 0;
+
+  for (const permissionId of permissionIds) {
+    if (deniedSet.has(permissionId)) {
+      deniedCount += 1;
+      continue;
+    }
+
+    if (grantedSet.has(permissionId)) {
+      grantedCount += 1;
+    }
+  }
+
+  return { grantedCount, deniedCount };
 }
 
 export function buildPermissionTree(
@@ -410,7 +643,7 @@ function compareTreeNodes(left: PermissionTreeNode, right: PermissionTreeNode) {
   return left.label.localeCompare(right.label);
 }
 
-function flattenNodeIds(nodes: PermissionTreeNode[]) {
+function flattenNodeIds(nodes: PermissionTreeNode[]): string[] {
   return nodes.flatMap((node) => [node.id, ...flattenNodeIds(node.children)]);
 }
 

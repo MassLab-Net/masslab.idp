@@ -96,6 +96,44 @@ internal sealed class TenantAdminApplicationService : ITenantAdminQueries, ITena
             .GroupBy(x => x.UserId)
             .ToDictionaryAsync(x => x.Key, x => x.Select(a => a.PermissionId).ToHashSet(), cancellationToken);
 
+        var normalizedGrantedPermissionIds = new Dictionary<Guid, HashSet<Guid>>();
+        var normalizedDeniedPermissionIds = new Dictionary<Guid, HashSet<Guid>>();
+
+        foreach (var userId in assignments.Keys
+            .Concat(grantedPermissionIds.Keys)
+            .Concat(deniedPermissionIds.Keys)
+            .Distinct())
+        {
+            var inheritedPermissionIds = new HashSet<Guid>();
+            foreach (var roleId in assignments.GetValueOrDefault(userId) ?? [])
+            {
+                foreach (var permissionId in rolePermissionIds.GetValueOrDefault(roleId) ?? [])
+                {
+                    inheritedPermissionIds.Add(permissionId);
+                }
+            }
+
+            var normalizedGranted = grantedPermissionIds
+                .GetValueOrDefault(userId)?
+                .Where(permissionId => !inheritedPermissionIds.Contains(permissionId))
+                .ToHashSet() ?? [];
+
+            var normalizedDenied = deniedPermissionIds
+                .GetValueOrDefault(userId)?
+                .Where(permissionId => inheritedPermissionIds.Contains(permissionId))
+                .ToHashSet() ?? [];
+
+            if (normalizedGranted.Count > 0)
+            {
+                normalizedGrantedPermissionIds[userId] = normalizedGranted;
+            }
+
+            if (normalizedDenied.Count > 0)
+            {
+                normalizedDeniedPermissionIds[userId] = normalizedDenied;
+            }
+        }
+
         return new TenantUsersDto(
             await usersQuery
                 .Select(x => new TenantUserDto(
@@ -117,8 +155,8 @@ internal sealed class TenantAdminApplicationService : ITenantAdminQueries, ITena
                 .ToListAsync(cancellationToken),
             assignments,
             rolePermissionIds,
-            grantedPermissionIds,
-            deniedPermissionIds);
+            normalizedGrantedPermissionIds,
+            normalizedDeniedPermissionIds);
     }
 
     public async Task<TenantRolesDto> GetRolesAsync(string? query, string sort, string direction, CancellationToken cancellationToken = default)

@@ -25,9 +25,26 @@ public sealed class TenantResolutionMiddleware
             .ToLowerInvariant();
 
         var localhostTenant = context.Request.Query["tenant"].FirstOrDefault();
-        var tenant = !string.IsNullOrWhiteSpace(localhostTenant)
-            ? await db.Tenants.IgnoreQueryFilters().FirstOrDefaultAsync(x => x.Slug == localhostTenant)
-            : await ResolveByHostAsync(db, host, configuredRoot);
+        var headerTenantSlug = context.Request.Headers["X-Tenant-Slug"].FirstOrDefault();
+        var headerTenantId = context.Request.Headers["X-Tenant-Id"].FirstOrDefault();
+        Domain.Tenant? tenant = null;
+
+        if (!string.IsNullOrWhiteSpace(localhostTenant))
+        {
+            tenant = await db.Tenants.IgnoreQueryFilters().FirstOrDefaultAsync(x => x.Slug == localhostTenant);
+        }
+
+        if (tenant is null && !string.IsNullOrWhiteSpace(headerTenantSlug))
+        {
+            tenant = await db.Tenants.IgnoreQueryFilters().FirstOrDefaultAsync(x => x.Slug == headerTenantSlug);
+        }
+
+        if (tenant is null && Guid.TryParse(headerTenantId, out var parsedTenantIdFromHeader))
+        {
+            tenant = await db.Tenants.IgnoreQueryFilters().FirstOrDefaultAsync(x => x.Id == parsedTenantIdFromHeader);
+        }
+
+        tenant ??= await ResolveByHostAsync(db, host, configuredRoot);
 
         if (tenant is null)
         {

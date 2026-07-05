@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
-import { MoreHorizontal, Plus, Search } from "lucide-react";
+import { Loader2, MoreHorizontal, Plus, Search } from "lucide-react";
 
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -87,19 +87,33 @@ function UsersPage() {
     useState<string[]>([]);
   const [selectedDeniedPermissionIds, setSelectedDeniedPermissionIds] =
     useState<string[]>([]);
+  const [isLoading, setIsLoading] = useState(false);
+  const [isSavingUser, setIsSavingUser] = useState(false);
+  const [isSavingAccess, setIsSavingAccess] = useState(false);
+  const [busyUserId, setBusyUserId] = useState<string | null>(null);
+
+  const refreshUsers = async () => {
+    if (!session) return;
+    setIsLoading(true);
+    try {
+      await loadUsers(
+        session,
+        setUsers,
+        setRoles,
+        setPermissions,
+        setAssignedRoleIds,
+        setRolePermissionIds,
+        setGrantedPermissionIdsByUser,
+        setDeniedPermissionIdsByUser,
+      );
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   useEffect(() => {
     if (!session) return;
-    void loadUsers(
-      session,
-      setUsers,
-      setRoles,
-      setPermissions,
-      setAssignedRoleIds,
-      setRolePermissionIds,
-      setGrantedPermissionIdsByUser,
-      setDeniedPermissionIdsByUser,
-    );
+    void refreshUsers();
   }, [session]);
 
   const filtered = useMemo(
@@ -147,6 +161,7 @@ function UsersPage() {
                 isTenantAdmin: false,
               })
             }
+            disabled={isLoading || isSavingUser || isSavingAccess}
             className="bg-gradient-brand text-primary-foreground shadow-elegant hover:opacity-95"
           >
             <Plus className="mr-1.5 h-4 w-4" /> {t("users.invite")}
@@ -163,12 +178,22 @@ function UsersPage() {
               onChange={(event) => setQ(event.target.value)}
               placeholder={t("users.search")}
               className="h-9 pl-9"
+              disabled={isLoading}
             />
           </div>
           <div className="ml-auto text-sm text-muted-foreground">
             {filtered.length} {t("common.of")} {users.length}
           </div>
         </div>
+
+        {isLoading && users.length === 0 ? (
+          <div className="p-6 text-sm text-muted-foreground">
+            <div className="flex items-center gap-2">
+              <Loader2 className="h-4 w-4 animate-spin" />
+              Loading users, roles and permissions...
+            </div>
+          </div>
+        ) : null}
 
         <Table>
           <TableHeader>
@@ -233,8 +258,12 @@ function UsersPage() {
                   <TableCell className="text-right">
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>
-                        <Button variant="ghost" size="icon">
-                          <MoreHorizontal className="h-4 w-4" />
+                        <Button variant="ghost" size="icon" disabled={busyUserId === user.id}>
+                          {busyUserId === user.id ? (
+                            <Loader2 className="h-4 w-4 animate-spin" />
+                          ) : (
+                            <MoreHorizontal className="h-4 w-4" />
+                          )}
                         </Button>
                       </DropdownMenuTrigger>
                       <DropdownMenuContent align="end">
@@ -285,6 +314,7 @@ function UsersPage() {
                         {user.isEnabled && (
                           <DropdownMenuItem
                             onClick={async () => {
+                              setBusyUserId(user.id);
                               try {
                                 await identityFetch<CommandResult>(
                                   session,
@@ -292,22 +322,15 @@ function UsersPage() {
                                   { method: "POST" },
                                 );
                                 toast.success("User disabled.");
-                                await loadUsers(
-                                  session,
-                                  setUsers,
-                                  setRoles,
-                                  setPermissions,
-                                  setAssignedRoleIds,
-                                  setRolePermissionIds,
-                                  setGrantedPermissionIdsByUser,
-                                  setDeniedPermissionIdsByUser,
-                                );
+                                await refreshUsers();
                               } catch (reason: unknown) {
                                 toast.error(
                                   reason instanceof Error
                                     ? reason.message
                                     : "Unable to disable the user.",
                                 );
+                              } finally {
+                                setBusyUserId(null);
                               }
                             }}
                           >
@@ -317,6 +340,7 @@ function UsersPage() {
                         <DropdownMenuItem
                           className="text-destructive"
                           onClick={async () => {
+                            setBusyUserId(user.id);
                             try {
                               await identityFetch<CommandResult>(
                                 session,
@@ -324,22 +348,15 @@ function UsersPage() {
                                 { method: "POST" },
                               );
                               toast.success(t("users.deleted"));
-                              await loadUsers(
-                                session,
-                                setUsers,
-                                setRoles,
-                                setPermissions,
-                                setAssignedRoleIds,
-                                setRolePermissionIds,
-                                setGrantedPermissionIdsByUser,
-                                setDeniedPermissionIdsByUser,
-                              );
+                              await refreshUsers();
                             } catch (reason: unknown) {
                               toast.error(
                                 reason instanceof Error
                                   ? reason.message
                                   : "Unable to delete the user.",
                               );
+                            } finally {
+                              setBusyUserId(null);
                             }
                           }}
                         >
@@ -440,10 +457,12 @@ function UsersPage() {
               {t("common.cancel")}
             </Button>
             <Button
+              disabled={isSavingUser}
               className="bg-gradient-brand text-primary-foreground"
               onClick={async () => {
                 if (!editing) return;
 
+                setIsSavingUser(true);
                 try {
                   if (editing.id) {
                     await identityFetch<CommandResult>(
@@ -479,26 +498,25 @@ function UsersPage() {
                     editing.id ? t("users.updated") : t("users.invited"),
                   );
                   setEditing(null);
-                  await loadUsers(
-                    session,
-                    setUsers,
-                    setRoles,
-                    setPermissions,
-                    setAssignedRoleIds,
-                    setRolePermissionIds,
-                    setGrantedPermissionIdsByUser,
-                    setDeniedPermissionIdsByUser,
-                  );
+                  await refreshUsers();
                 } catch (reason: unknown) {
                   toast.error(
                     reason instanceof Error
                       ? reason.message
                       : "Unable to save the user.",
                   );
+                } finally {
+                  setIsSavingUser(false);
                 }
               }}
             >
-              {editing?.id ? t("common.save") : t("users.invite")}
+              {isSavingUser ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : editing?.id ? (
+                t("common.save")
+              ) : (
+                t("users.invite")
+              )}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -584,10 +602,8 @@ function UsersPage() {
                       expandAllLabel={t("roles.expandAll")}
                       collapseAllLabel={t("roles.collapseAll")}
                       emptyLabel={t("roles.emptyPermissions")}
-                      inheritedLabel={t("users.permission.inherited")}
                       grantLabel={t("users.permission.grant")}
                       denyLabel={t("users.permission.deny")}
-                      clearLabel={t("users.permission.clear")}
                     />
                   </div>
                 </div>
@@ -599,10 +615,12 @@ function UsersPage() {
               {t("common.cancel")}
             </Button>
             <Button
+              disabled={isSavingAccess}
               className="bg-gradient-brand text-primary-foreground"
               onClick={async () => {
                 if (!assigningUserId) return;
 
+                setIsSavingAccess(true);
                 try {
                   await identityFetch<CommandResult>(
                     session,
@@ -618,26 +636,23 @@ function UsersPage() {
                   );
                   toast.success(t("users.accessUpdated"));
                   setAssigningUserId(null);
-                  await loadUsers(
-                    session,
-                    setUsers,
-                    setRoles,
-                    setPermissions,
-                    setAssignedRoleIds,
-                    setRolePermissionIds,
-                    setGrantedPermissionIdsByUser,
-                    setDeniedPermissionIdsByUser,
-                  );
+                  await refreshUsers();
                 } catch (reason: unknown) {
                   toast.error(
                     reason instanceof Error
                       ? reason.message
                       : "Unable to update user access.",
                   );
+                } finally {
+                  setIsSavingAccess(false);
                 }
               }}
             >
-              {t("common.save")}
+              {isSavingAccess ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                t("common.save")
+              )}
             </Button>
           </DialogFooter>
         </DialogContent>

@@ -122,11 +122,22 @@ export async function identityFetch<T>(
 ): Promise<T> {
   const headers = new Headers(init?.headers);
   headers.set("Authorization", `Bearer ${session.accessToken}`);
+  if (session.organizationSlug) {
+    headers.set("X-Tenant-Slug", session.organizationSlug);
+  }
+  if (session.user.tenantId) {
+    headers.set("X-Tenant-Id", session.user.tenantId);
+  }
   if (init?.body && !headers.has("Content-Type")) {
     headers.set("Content-Type", "application/json");
   }
 
-  const response = await fetch(new URL(path, session.identityBaseUrl), {
+  const requestUrl = new URL(path, session.identityBaseUrl);
+  if (session.organizationSlug && !requestUrl.searchParams.has("tenant")) {
+    requestUrl.searchParams.set("tenant", session.organizationSlug);
+  }
+
+  const response = await fetch(requestUrl, {
     ...init,
     headers,
   });
