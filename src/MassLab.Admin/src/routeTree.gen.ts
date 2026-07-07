@@ -28,6 +28,7 @@ import { Route as AdminOrdersIdRouteImport } from './routes/admin/orders/$id'
 import { Route as AdminAccessControlUsersRouteImport } from './routes/admin/access-control/users'
 import { Route as AdminAccessControlRolesRouteImport } from './routes/admin/access-control/roles'
 import { Route as AdminAccessControlPermissionsRouteImport } from './routes/admin/access-control/permissions'
+import { Route as AdminAccessControlClientsRouteImport } from './routes/admin/access-control/clients'
 import { Route as AdminProductsIdEditRouteImport } from './routes/admin/products/$id.edit'
 
 const TermsRoute = TermsRouteImport.update({
@@ -127,6 +128,12 @@ const AdminAccessControlPermissionsRoute =
     path: '/access-control/permissions',
     getParentRoute: () => AdminRouteRoute,
   } as any)
+const AdminAccessControlClientsRoute =
+  AdminAccessControlClientsRouteImport.update({
+    id: '/access-control/clients',
+    path: '/access-control/clients',
+    getParentRoute: () => AdminRouteRoute,
+  } as any)
 const AdminProductsIdEditRoute = AdminProductsIdEditRouteImport.update({
   id: '/products/$id/edit',
   path: '/products/$id/edit',
@@ -145,6 +152,7 @@ export interface FileRoutesByFullPath {
   '/terms': typeof TermsRoute
   '/admin/dashboard': typeof AdminDashboardRoute
   '/admin/profile': typeof AdminProfileRoute
+  '/admin/access-control/clients': typeof AdminAccessControlClientsRoute
   '/admin/access-control/permissions': typeof AdminAccessControlPermissionsRoute
   '/admin/access-control/roles': typeof AdminAccessControlRolesRoute
   '/admin/access-control/users': typeof AdminAccessControlUsersRoute
@@ -167,6 +175,7 @@ export interface FileRoutesByTo {
   '/terms': typeof TermsRoute
   '/admin/dashboard': typeof AdminDashboardRoute
   '/admin/profile': typeof AdminProfileRoute
+  '/admin/access-control/clients': typeof AdminAccessControlClientsRoute
   '/admin/access-control/permissions': typeof AdminAccessControlPermissionsRoute
   '/admin/access-control/roles': typeof AdminAccessControlRolesRoute
   '/admin/access-control/users': typeof AdminAccessControlUsersRoute
@@ -190,6 +199,7 @@ export interface FileRoutesById {
   '/terms': typeof TermsRoute
   '/admin/dashboard': typeof AdminDashboardRoute
   '/admin/profile': typeof AdminProfileRoute
+  '/admin/access-control/clients': typeof AdminAccessControlClientsRoute
   '/admin/access-control/permissions': typeof AdminAccessControlPermissionsRoute
   '/admin/access-control/roles': typeof AdminAccessControlRolesRoute
   '/admin/access-control/users': typeof AdminAccessControlUsersRoute
@@ -214,6 +224,7 @@ export interface FileRouteTypes {
     | '/terms'
     | '/admin/dashboard'
     | '/admin/profile'
+    | '/admin/access-control/clients'
     | '/admin/access-control/permissions'
     | '/admin/access-control/roles'
     | '/admin/access-control/users'
@@ -236,6 +247,7 @@ export interface FileRouteTypes {
     | '/terms'
     | '/admin/dashboard'
     | '/admin/profile'
+    | '/admin/access-control/clients'
     | '/admin/access-control/permissions'
     | '/admin/access-control/roles'
     | '/admin/access-control/users'
@@ -258,6 +270,7 @@ export interface FileRouteTypes {
     | '/terms'
     | '/admin/dashboard'
     | '/admin/profile'
+    | '/admin/access-control/clients'
     | '/admin/access-control/permissions'
     | '/admin/access-control/roles'
     | '/admin/access-control/users'
@@ -416,6 +429,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminAccessControlPermissionsRouteImport
       parentRoute: typeof AdminRouteRoute
     }
+    '/admin/access-control/clients': {
+      id: '/admin/access-control/clients'
+      path: '/access-control/clients'
+      fullPath: '/admin/access-control/clients'
+      preLoaderRoute: typeof AdminAccessControlClientsRouteImport
+      parentRoute: typeof AdminRouteRoute
+    }
     '/admin/products/$id/edit': {
       id: '/admin/products/$id/edit'
       path: '/products/$id/edit'
@@ -429,6 +449,7 @@ declare module '@tanstack/react-router' {
 interface AdminRouteRouteChildren {
   AdminDashboardRoute: typeof AdminDashboardRoute
   AdminProfileRoute: typeof AdminProfileRoute
+  AdminAccessControlClientsRoute: typeof AdminAccessControlClientsRoute
   AdminAccessControlPermissionsRoute: typeof AdminAccessControlPermissionsRoute
   AdminAccessControlRolesRoute: typeof AdminAccessControlRolesRoute
   AdminAccessControlUsersRoute: typeof AdminAccessControlUsersRoute
@@ -443,6 +464,7 @@ interface AdminRouteRouteChildren {
 const AdminRouteRouteChildren: AdminRouteRouteChildren = {
   AdminDashboardRoute: AdminDashboardRoute,
   AdminProfileRoute: AdminProfileRoute,
+  AdminAccessControlClientsRoute: AdminAccessControlClientsRoute,
   AdminAccessControlPermissionsRoute: AdminAccessControlPermissionsRoute,
   AdminAccessControlRolesRoute: AdminAccessControlRolesRoute,
   AdminAccessControlUsersRoute: AdminAccessControlUsersRoute,

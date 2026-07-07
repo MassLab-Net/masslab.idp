@@ -8,6 +8,7 @@ import {
   ShieldCheck,
   UserRound,
   Users,
+  AppWindow,
 } from "lucide-react";
 
 import {
@@ -49,6 +50,7 @@ export function AppSidebar() {
     { title: t("nav.users"), url: "/admin/access-control/users", icon: Users },
     { title: t("nav.roles"), url: "/admin/access-control/roles", icon: ShieldCheck },
     { title: t("nav.perms"), url: "/admin/access-control/permissions", icon: KeyRound },
+    { title: t("nav.clients"), url: "/admin/access-control/clients", icon: AppWindow },
   ];
 
   const isActive = (url: string) => path === url || path.startsWith(url + "/");

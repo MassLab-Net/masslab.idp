@@ -16,28 +16,33 @@ internal sealed class TenantAdminApplicationService : ITenantAdminQueries, ITena
     private readonly ICurrentTenant _tenant;
     private readonly ISecretService _secrets;
     private readonly IAuditService _audit;
+    private readonly OpenIddictClientService _clientService;
 
     public TenantAdminApplicationService(
         ApplicationDbContext db,
         UserManager<ApplicationUser> userManager,
         ICurrentTenant tenant,
         ISecretService secrets,
-        IAuditService audit)
+        IAuditService audit,
+        OpenIddictClientService clientService)
     {
         _db = db;
         _userManager = userManager;
         _tenant = tenant;
         _secrets = secrets;
         _audit = audit;
+        _clientService = clientService;
     }
 
     public async Task<TenantAdminDashboardDto> GetDashboardAsync(CancellationToken cancellationToken = default)
     {
+        var clients = await _clientService.GetAllAsync(cancellationToken);
+        
         return new TenantAdminDashboardDto(
             await _db.Users.CountAsync(cancellationToken),
             await _db.TenantRoles.CountAsync(cancellationToken),
             await _db.TenantPermissions.CountAsync(cancellationToken),
-            await _db.ClientApplications.CountAsync(cancellationToken),
+            clients.Count,
             await _db.ExternalLoginProviders.CountAsync(cancellationToken),
             await _db.UserSessions.CountAsync(cancellationToken),
             await _db.AuditLogs
@@ -218,22 +223,9 @@ internal sealed class TenantAdminApplicationService : ITenantAdminQueries, ITena
     }
 
     public async Task<IReadOnlyCollection<ClientApplicationDto>> GetClientsAsync(CancellationToken cancellationToken = default)
-        => await _db.ClientApplications
-            .Include(x => x.RedirectUris)
-            .OrderBy(x => x.Name)
-            .Select(x => new ClientApplicationDto(
-                x.Id,
-                x.Name,
-                x.ClientId,
-                x.Type.ToString(),
-                x.Enabled,
-                x.AllowedFlows,
-                x.AllowedScopes,
-                x.RedirectUris
-                    .OrderBy(uri => uri.Uri)
-                    .Select(uri => uri.Uri)
-                    .ToArray()))
-            .ToListAsync(cancellationToken);
+    {
+        return await _clientService.GetAllAsync(cancellationToken);
+    }
 
     public async Task<IReadOnlyCollection<ExternalLoginProviderDto>> GetProvidersAsync(CancellationToken cancellationToken = default)
         => await _db.ExternalLoginProviders
@@ -612,35 +604,57 @@ internal sealed class TenantAdminApplicationService : ITenantAdminQueries, ITena
         return CommandResult.Success();
     }
 
-    public async Task<CreateClientResult> CreateClientAsync(string name, string clientId, ClientType type, string redirectUri, string scopes, string flows, CancellationToken cancellationToken = default)
+    public async Task<CreateClientResult> CreateClientAsync(string name, string clientId, ClientType type, string[] redirectUris, string[] postLogoutRedirectUris, string scopes, string flows, CancellationToken cancellationToken = default)
     {
-        if (!_tenant.Id.HasValue)
+        var result = await _clientService.CreateAsync(name, clientId, type, redirectUris, postLogoutRedirectUris, scopes, flows, cancellationToken);
+        
+        if (result.Succeeded)
         {
-            return CreateClientResult.Failure("Tenant is required.");
+            await _audit.WriteAsync("client.created", AuditResult.Success, "client", clientId, cancellationToken: cancellationToken);
+        }
+        
+        return result;
+    }
+
+    public async Task<CommandResult> EditClientAsync(Guid id, string name, ClientType type, string[] redirectUris, string[] postLogoutRedirectUris, string scopes, string flows, bool enabled, CancellationToken cancellationToken = default)
+    {
+        // We need to find clientId by id first
+        var clients = await _clientService.GetAllAsync(cancellationToken);
+        var client = clients.FirstOrDefault(c => c.Id == id.ToString());
+        
+        if (client is null)
+        {
+            return CommandResult.Missing();
         }
 
-        var plainSecret = type is ClientType.Service or ClientType.Web ? _secrets.GenerateSecret() : null;
-        var client = new ClientApplication
+        var result = await _clientService.UpdateAsync(client.ClientId, name, type, redirectUris, postLogoutRedirectUris, scopes, flows, enabled, cancellationToken);
+        
+        if (result.Succeeded)
         {
-            TenantId = _tenant.Id.Value,
-            Name = name,
-            ClientId = clientId,
-            Type = type,
-            SecretHash = plainSecret is null ? null : _secrets.HashSecret(plainSecret),
-            AllowedScopes = scopes,
-            AllowedFlows = flows,
-            RefreshTokensEnabled = flows.Contains("refresh_token", StringComparison.OrdinalIgnoreCase)
-        };
+            await _audit.WriteAsync("client.updated", AuditResult.Success, "client", id.ToString(), cancellationToken: cancellationToken);
+        }
+        
+        return result;
+    }
 
-        _db.ClientApplications.Add(client);
-        if (!string.IsNullOrWhiteSpace(redirectUri))
+    public async Task<CommandResult> DeleteClientAsync(Guid id, CancellationToken cancellationToken = default)
+    {
+        var clients = await _clientService.GetAllAsync(cancellationToken);
+        var client = clients.FirstOrDefault(c => c.Id == id.ToString());
+        
+        if (client is null)
         {
-            _db.ClientRedirectUris.Add(new ClientRedirectUri { TenantId = _tenant.Id.Value, ClientApplication = client, Uri = redirectUri });
+            return CommandResult.Missing();
         }
 
-        await _db.SaveChangesAsync(cancellationToken);
-        await _audit.WriteAsync("client.created", AuditResult.Success, "client", client.Id.ToString(), cancellationToken: cancellationToken);
-        return CreateClientResult.Success(client.ClientId, plainSecret);
+        var result = await _clientService.DeleteAsync(client.ClientId, cancellationToken);
+        
+        if (result.Succeeded)
+        {
+            await _audit.WriteAsync("client.deleted", AuditResult.Success, "client", id.ToString(), cancellationToken: cancellationToken);
+        }
+        
+        return result;
     }
 
     public async Task<CommandResult> CreateProviderAsync(string displayName, string authority, string clientId, string clientSecret, string scopes, bool autoProvisionUsers, CancellationToken cancellationToken = default)

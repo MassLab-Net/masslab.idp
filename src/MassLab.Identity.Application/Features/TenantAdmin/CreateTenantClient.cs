@@ -5,7 +5,7 @@ using MediatR;
 
 namespace MassLab.Identity.Application.Features;
 
-public sealed record CreateTenantClientCommand(string Name, string ClientId, ClientType Type, string RedirectUri, string Scopes, string Flows) : IRequest<CreateClientResult>;
+public sealed record CreateTenantClientCommand(string Name, string ClientId, ClientType Type, string[] RedirectUris, string[] PostLogoutRedirectUris, string Scopes, string Flows) : IRequest<CreateClientResult>;
 
 public sealed class CreateTenantClientCommandHandler : IRequestHandler<CreateTenantClientCommand, CreateClientResult>
 {
@@ -14,5 +14,5 @@ public sealed class CreateTenantClientCommandHandler : IRequestHandler<CreateTen
     public CreateTenantClientCommandHandler(ITenantAdminCommands commands) => _commands = commands;
 
     public Task<CreateClientResult> Handle(CreateTenantClientCommand request, CancellationToken cancellationToken)
-        => _commands.CreateClientAsync(request.Name, request.ClientId, request.Type, request.RedirectUri, request.Scopes, request.Flows, cancellationToken);
+        => _commands.CreateClientAsync(request.Name, request.ClientId, request.Type, request.RedirectUris, request.PostLogoutRedirectUris, request.Scopes, request.Flows, cancellationToken);
 }

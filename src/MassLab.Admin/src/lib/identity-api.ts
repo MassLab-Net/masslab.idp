@@ -45,6 +45,7 @@ export type ClientApplicationDto = {
   allowedFlows: string;
   allowedScopes: string;
   redirectUris: string[];
+  postLogoutRedirectUris: string[];
 };
 
 export type ExternalLoginProviderDto = {

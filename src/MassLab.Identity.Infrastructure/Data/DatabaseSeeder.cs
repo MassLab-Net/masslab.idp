@@ -1,3 +1,4 @@
+using System.Text.Json;
 using MassLab.Identity.Domain;
 using MassLab.Identity.Infrastructure.Services;
 using Microsoft.AspNetCore.Identity;
@@ -29,6 +30,7 @@ public static class DatabaseSeeder
         var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
         var userManager = scope.ServiceProvider.GetRequiredService<UserManager<ApplicationUser>>();
         var secretService = scope.ServiceProvider.GetRequiredService<ISecretService>();
+        var applicationManager = scope.ServiceProvider.GetRequiredService<IOpenIddictApplicationManager>();
 
         await db.Database.MigrateAsync(cancellationToken);
 
@@ -94,20 +96,42 @@ public static class DatabaseSeeder
 
         if (!await db.ClientApplications.IgnoreQueryFilters().AnyAsync(x => x.TenantId == tenant.Id && x.ClientId == "demo-web", cancellationToken))
         {
-            var client = new ClientApplication
+            // Create demo-web client using OpenIddict
+            var existingClient = await applicationManager.FindByClientIdAsync("demo-web", cancellationToken);
+            if (existingClient is null)
             {
-                TenantId = tenant.Id,
-                Name = "Demo Web",
-                ClientId = "demo-web",
-                Type = ClientType.Web,
-                SecretHash = secretService.HashSecret("demo-secret"),
-                AllowedFlows = $"{GrantTypes.AuthorizationCode},{GrantTypes.RefreshToken}",
-                AllowedScopes = $"{Scopes.OpenId},{Scopes.Profile},{Scopes.Email}",
-                RefreshTokensEnabled = true
-            };
-            db.ClientApplications.Add(client);
-            db.ClientRedirectUris.Add(new ClientRedirectUri { TenantId = tenant.Id, ClientApplication = client, Uri = "https://localhost:5003/signin-oidc" });
-            db.ClientRedirectUris.Add(new ClientRedirectUri { TenantId = tenant.Id, ClientApplication = client, Uri = "https://localhost:5003/signout-callback-oidc", IsPostLogout = true });
+                var descriptor = new OpenIddictApplicationDescriptor
+                {
+                    ClientId = "demo-web",
+                    ClientSecret = "demo-secret",
+                    DisplayName = "Demo Web",
+                    ClientType = ClientTypes.Confidential,
+                    ConsentType = ConsentTypes.Implicit
+                };
+
+                // Store tenant ID in properties
+                descriptor.Properties[nameof(TenantEntity.TenantId)] = JsonSerializer.SerializeToElement(tenant.Id);
+                descriptor.Properties["Type"] = JsonSerializer.SerializeToElement(ClientType.Web.ToString());
+                descriptor.Properties["Enabled"] = JsonSerializer.SerializeToElement(true);
+
+                // Redirect URIs
+                descriptor.RedirectUris.Add(new Uri("https://localhost:5003/signin-oidc"));
+                descriptor.PostLogoutRedirectUris.Add(new Uri("https://localhost:5003/signout-callback-oidc"));
+
+                // Permissions
+                descriptor.Permissions.Add(Permissions.GrantTypes.AuthorizationCode);
+                descriptor.Permissions.Add(Permissions.GrantTypes.RefreshToken);
+                descriptor.Permissions.Add(Permissions.ResponseTypes.Code);
+                descriptor.Permissions.Add(Permissions.Endpoints.Authorization);
+                descriptor.Permissions.Add(Permissions.Endpoints.Token);
+                descriptor.Permissions.Add(Permissions.Endpoints.Revocation);
+                descriptor.Permissions.Add(Permissions.Endpoints.Introspection);
+                descriptor.Permissions.Add($"{Permissions.Prefixes.Scope}{Scopes.OpenId}");
+                descriptor.Permissions.Add($"{Permissions.Prefixes.Scope}{Scopes.Profile}");
+                descriptor.Permissions.Add($"{Permissions.Prefixes.Scope}{Scopes.Email}");
+
+                await applicationManager.CreateAsync(descriptor, cancellationToken);
+            }
         }
 
         if (!await db.TenantSmtpSettings.IgnoreQueryFilters().AnyAsync(x => x.TenantId == tenant.Id, cancellationToken))

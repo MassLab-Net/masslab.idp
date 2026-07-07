@@ -270,6 +270,34 @@ var Activity = createLucideIcon("activity", [["path", {
 * This source code is licensed under the ISC license.
 * See the LICENSE file in the root directory of this source tree.
 */
+var AppWindow = createLucideIcon("app-window", [
+	["rect", {
+		x: "2",
+		y: "4",
+		width: "20",
+		height: "16",
+		rx: "2",
+		key: "izxlao"
+	}],
+	["path", {
+		d: "M10 4v4",
+		key: "pp8u80"
+	}],
+	["path", {
+		d: "M2 8h20",
+		key: "d11cs7"
+	}],
+	["path", {
+		d: "M6 4v4",
+		key: "1svtjw"
+	}]
+]);
+/**
+* @license lucide-react v0.575.0 - ISC
+*
+* This source code is licensed under the ISC license.
+* See the LICENSE file in the root directory of this source tree.
+*/
 var ArrowLeft = createLucideIcon("arrow-left", [["path", {
 	d: "m12 19-7-7 7-7",
 	key: "1l729n"
@@ -1227,4 +1255,4 @@ var Zap = createLucideIcon("zap", [["path", {
 	key: "1xq2db"
 }]]);
 //#endregion
-export { TriangleAlert as $, ExternalLink as A, ChevronRight as B, LayoutDashboard as C, FileText as D, Globe as E, Code as F, Book as G, Check as H, Clock3 as I, ArrowUpDown as J, Bell as K, Circle as L, CreditCard as M, Copy as N, Eye as O, Cookie as P, UserRound as Q, CircleDollarSign as R, Lock as S, KeyRound as T, Camera as U, ChevronDown as V, Building2 as W, ArrowLeft as X, ArrowRight as Y, Activity as Z, RefreshCw as _, UserPlus as a, CircleCheck as at, Mail as b, Tag as c, Shield as d, PanelLeft as et, ShieldCheck as f, Scale as g, Search as h, User as i, CircleX as it, Database as j, EyeOff as k, SlidersHorizontal as l, Settings as m, X as n, Layers as nt, UserCheck as o, ShieldAlert as p, ArrowUpRight as q, Users as r, Ellipsis as rt, Truck as s, Zap as t, LoaderCircle as tt, ShoppingCart as u, Plus as v, Key as w, LogOut as x, Package as y, ChevronUp as z };
+export { UserRound as $, ExternalLink as A, ChevronRight as B, LayoutDashboard as C, FileText as D, Globe as E, Code as F, Book as G, Check as H, Clock3 as I, ArrowUpDown as J, Bell as K, Circle as L, CreditCard as M, Copy as N, Eye as O, Cookie as P, Activity as Q, CircleDollarSign as R, Lock as S, KeyRound as T, Camera as U, ChevronDown as V, Building2 as W, ArrowLeft as X, ArrowRight as Y, AppWindow as Z, RefreshCw as _, UserPlus as a, CircleX as at, Mail as b, Tag as c, Shield as d, TriangleAlert as et, ShieldCheck as f, Scale as g, Search as h, User as i, Ellipsis as it, Database as j, EyeOff as k, SlidersHorizontal as l, Settings as m, X as n, LoaderCircle as nt, UserCheck as o, CircleCheck as ot, ShieldAlert as p, ArrowUpRight as q, Users as r, Layers as rt, Truck as s, Zap as t, PanelLeft as tt, ShoppingCart as u, Plus as v, Key as w, LogOut as x, Package as y, ChevronUp as z };

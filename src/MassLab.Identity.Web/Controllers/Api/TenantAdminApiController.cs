@@ -109,9 +109,17 @@ public sealed class TenantAdminApiController : ControllerBase
     [HttpPost("clients")]
     public async Task<IActionResult> CreateClient(CreateTenantClientInput input)
     {
-        var result = await _sender.Send(new CreateTenantClientCommand(input.Name, input.ClientId, input.Type, input.RedirectUri, input.Scopes, input.Flows));
+        var result = await _sender.Send(new CreateTenantClientCommand(input.Name, input.ClientId, input.Type, input.RedirectUris, input.PostLogoutRedirectUris, input.Scopes, input.Flows));
         return result.Succeeded ? Ok(result) : BadRequest(result);
     }
+
+    [HttpPost("clients/{id:guid}/edit")]
+    public async Task<IActionResult> EditClient(Guid id, EditTenantClientInput input)
+        => ToActionResult(await _sender.Send(new EditTenantClientCommand(id, input.Name, input.Type, input.RedirectUris, input.PostLogoutRedirectUris, input.Scopes, input.Flows, input.Enabled)));
+
+    [HttpPost("clients/{id:guid}/delete")]
+    public async Task<IActionResult> DeleteClient(Guid id)
+        => ToActionResult(await _sender.Send(new DeleteTenantClientCommand(id)));
 
     [HttpGet("providers")]
     public async Task<ActionResult<IReadOnlyCollection<ExternalLoginProviderDto>>> GetProviders()

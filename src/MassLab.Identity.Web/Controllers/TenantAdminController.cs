@@ -246,7 +246,7 @@ public sealed class TenantAdminController : Controller
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> CreateClient(CreateTenantClientInput input)
     {
-        var result = await _sender.Send(new CreateTenantClientCommand(input.Name, input.ClientId, input.Type, input.RedirectUri, input.Scopes, input.Flows));
+        var result = await _sender.Send(new CreateTenantClientCommand(input.Name, input.ClientId, input.Type, input.RedirectUris, input.PostLogoutRedirectUris, input.Scopes, input.Flows));
         if (!result.Succeeded)
         {
             return BadRequest(result.Errors);

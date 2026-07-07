@@ -31,28 +31,61 @@ public sealed class TenantResolutionMiddleware
         var headerTenantSlug = context.Request.Headers["X-Tenant-Slug"].FirstOrDefault();
         var headerTenantId = context.Request.Headers["X-Tenant-Id"].FirstOrDefault();
         Domain.Tenant? tenant = null;
+        var requestedTenantWasExplicit = false;
 
         if (!string.IsNullOrWhiteSpace(localhostTenant))
         {
+            requestedTenantWasExplicit = true;
             tenant = await db.Tenants.IgnoreQueryFilters().FirstOrDefaultAsync(x => x.Slug == localhostTenant);
         }
 
         if (tenant is null && !string.IsNullOrWhiteSpace(formTenant))
         {
+            requestedTenantWasExplicit = true;
             tenant = await db.Tenants.IgnoreQueryFilters().FirstOrDefaultAsync(x => x.Slug == formTenant);
         }
 
         if (tenant is null && !string.IsNullOrWhiteSpace(headerTenantSlug))
         {
+            requestedTenantWasExplicit = true;
             tenant = await db.Tenants.IgnoreQueryFilters().FirstOrDefaultAsync(x => x.Slug == headerTenantSlug);
         }
 
         if (tenant is null && Guid.TryParse(headerTenantId, out var parsedTenantIdFromHeader))
         {
+            requestedTenantWasExplicit = true;
             tenant = await db.Tenants.IgnoreQueryFilters().FirstOrDefaultAsync(x => x.Id == parsedTenantIdFromHeader);
         }
 
         tenant ??= await ResolveByHostAsync(db, host, configuredRoot);
+
+        if (context.User.Identity?.IsAuthenticated == true)
+        {
+            var isSystemAdmin = string.Equals(
+                context.User.FindFirstValue("system_admin"),
+                "true",
+                StringComparison.OrdinalIgnoreCase);
+
+            var tenantIdClaim = context.User.FindFirstValue("tenant_id");
+            var hasTenantClaim = Guid.TryParse(tenantIdClaim, out var claimedTenantId);
+
+            if (!isSystemAdmin && hasTenantClaim)
+            {
+                if (tenant is not null && tenant.Id != claimedTenantId)
+                {
+                    context.Response.StatusCode = StatusCodes.Status403Forbidden;
+                    return;
+                }
+
+                if (requestedTenantWasExplicit && tenant is null)
+                {
+                    context.Response.StatusCode = StatusCodes.Status403Forbidden;
+                    return;
+                }
+
+                tenant ??= await db.Tenants.IgnoreQueryFilters().FirstOrDefaultAsync(x => x.Id == claimedTenantId);
+            }
+        }
 
         if (tenant is null)
         {

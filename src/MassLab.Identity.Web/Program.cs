@@ -8,6 +8,7 @@ using MassLab.Identity.Infrastructure.Data;
 using MassLab.Identity.Web.Options;
 using Microsoft.AspNetCore.RateLimiting;
 using OpenIddict.Abstractions;
+using OpenIddict.Server;
 
 var builder = WebApplication.CreateBuilder(args);
 var isDevelopment = builder.Environment.IsDevelopment();
@@ -66,6 +67,15 @@ builder.Services.AddOpenIddict()
             OpenIddictConstants.Scopes.Profile,
             OpenIddictConstants.Scopes.Email,
             "permissions");
+
+        options.AddEventHandler<OpenIddictServerEvents.ValidateAuthorizationRequestContext>(builder =>
+            builder.UseScopedHandler<OpenIddictTenantClientGuard>());
+        options.AddEventHandler<OpenIddictServerEvents.ValidateTokenRequestContext>(builder =>
+            builder.UseScopedHandler<OpenIddictTenantClientGuard>());
+        options.AddEventHandler<OpenIddictServerEvents.ValidateIntrospectionRequestContext>(builder =>
+            builder.UseScopedHandler<OpenIddictTenantClientGuard>());
+        options.AddEventHandler<OpenIddictServerEvents.ValidateRevocationRequestContext>(builder =>
+            builder.UseScopedHandler<OpenIddictTenantClientGuard>());
 
         options.AddDevelopmentEncryptionCertificate();
         options.AddDevelopmentSigningCertificate();
@@ -136,7 +146,11 @@ builder.Services.AddSession(options =>
     options.Cookie.HttpOnly = true;
     options.IdleTimeout = TimeSpan.FromHours(8);
 });
-builder.Services.AddControllersWithViews();
+builder.Services.AddControllersWithViews()
+    .AddJsonOptions(options =>
+    {
+        options.JsonSerializerOptions.Converters.Add(new System.Text.Json.Serialization.JsonStringEnumConverter());
+    });
 
 var app = builder.Build();
 

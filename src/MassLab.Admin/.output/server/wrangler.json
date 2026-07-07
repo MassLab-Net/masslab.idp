@@ -1,9 +1,9 @@
 {
-  "compatibility_date": "2026-07-05",
+  "compatibility_date": "2026-07-07",
   "main": "index.mjs",
   "assets": {
     "binding": "ASSETS",
-    "directory": "../public"
+    "directory": "..\\public"
   },
   "name": "masslab-net-masslab-idp-src-masslab-admin",
   "compatibility_flags": [

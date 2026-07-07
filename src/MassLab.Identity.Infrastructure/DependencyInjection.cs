@@ -30,6 +30,7 @@ public static class DependencyInjection
         services.AddScoped<ISystemAdminQueries, SystemAdminApplicationService>();
         services.AddScoped<ISystemAdminCommands, SystemAdminApplicationService>();
         services.AddScoped<IOpenIdQueries, OpenIdApplicationService>();
+        services.AddScoped<OpenIddictClientService>();
 
         services.AddDbContext<ApplicationDbContext>(options =>
         {
