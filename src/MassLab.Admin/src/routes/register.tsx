@@ -19,6 +19,7 @@ import { beginLogin } from "@/lib/oidc";
 import { useI18n } from "@/lib/i18n";
 import { Flag } from "@/components/flag";
 import { toast } from "sonner";
+import { DEFAULT_TENANT_SLUG } from "@/lib/default-tenant";
 
 export const Route = createFileRoute("/register")({
   head: () => ({
@@ -32,10 +33,12 @@ export const Route = createFileRoute("/register")({
 
 function RegisterPage() {
   const { t, lang, setLang } = useI18n();
+  const search = typeof window === "undefined" ? null : new URLSearchParams(window.location.search);
+  const initialTenant = search?.get("tenant")?.trim() || DEFAULT_TENANT_SLUG;
 
   const [fullName, setFullName] = useState("");
   const [email, setEmail] = useState("");
-  const [org, setOrg] = useState("");
+  const [org, setOrg] = useState(initialTenant);
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [showPw, setShowPw] = useState(false);
@@ -62,14 +65,14 @@ function RegisterPage() {
 
     setLoading(true);
     toast.info("Redirecting to MassLab Identity...");
-    beginLogin({ organizationSlug: org.trim() || undefined, returnTo: "/admin/dashboard" });
+    beginLogin({ organizationSlug: org.trim() || DEFAULT_TENANT_SLUG, returnTo: "/admin/dashboard" });
   };
 
   const submitSocial = async (kind: "google" | "entra") => {
     if (!org.trim()) { setErrors({ org: t("reg.errOrg") }); return; }
     setLoading(true);
     toast.info(kind === "google" ? "Continuing with Google in MassLab Identity..." : "Continuing with Microsoft Entra ID in MassLab Identity...");
-    beginLogin({ organizationSlug: org.trim() || undefined, returnTo: "/admin/dashboard" });
+    beginLogin({ organizationSlug: org.trim() || DEFAULT_TENANT_SLUG, returnTo: "/admin/dashboard" });
   };
 
   return (

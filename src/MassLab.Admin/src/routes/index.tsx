@@ -17,6 +17,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { useI18n } from "@/lib/i18n";
 import { SiteHeader } from "@/components/site-header";
 import { SiteFooter } from "@/components/site-footer";
+import { DEFAULT_TENANT_SLUG } from "@/lib/default-tenant";
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -31,7 +32,7 @@ export const Route = createFileRoute("/")({
 function HomePage() {
   const { t } = useI18n();
 
-  const startLogin = () => window.location.assign("/login");
+  const startLogin = () => window.location.assign(`/login?tenant=${DEFAULT_TENANT_SLUG}`);
 
   return (
     <div className="relative min-h-screen overflow-hidden bg-background">

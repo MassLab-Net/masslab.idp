@@ -6,6 +6,7 @@ import { AppSidebar } from "@/components/app-sidebar";
 import { AppHeader } from "@/components/app-header";
 import { useAuth } from "@/lib/auth";
 import { isLogoutInProgress } from "@/lib/auth-storage";
+import { DEFAULT_TENANT_SLUG } from "@/lib/default-tenant";
 
 export const Route = createFileRoute("/admin")({
   component: AdminLayout,
@@ -27,7 +28,7 @@ function AdminLayout() {
     }
 
     startedRef.current = true;
-    window.location.replace("/login");
+    window.location.replace(`/login?tenant=${DEFAULT_TENANT_SLUG}`);
   }, [ready, session]);
 
   if (!ready || !session) {

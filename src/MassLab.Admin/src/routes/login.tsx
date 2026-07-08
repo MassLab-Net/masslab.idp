@@ -19,6 +19,7 @@ import { beginLogin } from "@/lib/oidc";
 import { useI18n } from "@/lib/i18n";
 import { Flag } from "@/components/flag";
 import { toast } from "sonner";
+import { DEFAULT_TENANT_SLUG } from "@/lib/default-tenant";
 
 export const Route = createFileRoute("/login")({
   head: () => ({
@@ -32,10 +33,12 @@ export const Route = createFileRoute("/login")({
 
 function LoginPage() {
   const { t, lang, setLang } = useI18n();
+  const search = typeof window === "undefined" ? null : new URLSearchParams(window.location.search);
+  const initialTenant = search?.get("tenant")?.trim() || DEFAULT_TENANT_SLUG;
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [showPw, setShowPw] = useState(false);
-  const [org, setOrg] = useState("");
+  const [org, setOrg] = useState(initialTenant);
   const [loading, setLoading] = useState<null | "pw" | "google" | "entra">(null);
   const [callbackError, setCallbackError] = useState<string | null>(null);
 
@@ -45,7 +48,7 @@ function LoginPage() {
     toast.info(kind === "pw" ? "Redirecting to MassLab Identity..." : "Continuing with MassLab Identity...");
 
     try {
-      await beginLogin({ organizationSlug: org.trim() || undefined, returnTo: "/admin/dashboard" });
+      await beginLogin({ organizationSlug: org.trim() || DEFAULT_TENANT_SLUG, returnTo: "/admin/dashboard" });
     } catch (reason: unknown) {
       const message = reason instanceof Error ? reason.message : "Unable to start sign-in.";
       setLoading(null);

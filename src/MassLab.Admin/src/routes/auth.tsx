@@ -6,6 +6,7 @@ import { Logo } from "@/components/logo";
 import { Button } from "@/components/ui/button";
 import { getStoredSession, persistSession } from "@/lib/auth-storage";
 import { completeLogin, isRedirectingToInteractiveLoginError } from "@/lib/oidc";
+import { DEFAULT_TENANT_SLUG } from "@/lib/default-tenant";
 
 export const Route = createFileRoute("/auth")({
   head: () => ({
@@ -32,7 +33,7 @@ function AuthPage() {
         return;
       }
 
-      window.location.replace("/login");
+      window.location.replace(`/login?tenant=${DEFAULT_TENANT_SLUG}`);
       return;
     }
 
