@@ -35,7 +35,10 @@ public sealed class AccountController : Controller
         return View(new LoginInput
         {
             ReturnUrl = normalizedReturnUrl,
-            Tenant = tenant ?? Request.Query["tenant"].FirstOrDefault() ?? string.Empty
+            Tenant = tenant
+                ?? Request.PathBase.Value?.Trim('/').ToLowerInvariant()
+                ?? Request.Query["tenant"].FirstOrDefault()
+                ?? string.Empty
         });
     }
 
@@ -158,9 +161,18 @@ public sealed class AccountController : Controller
             return null;
         }
 
+        var path = returnUrl.Split('?', '#')[0];
+        var segments = path.Split('/', StringSplitOptions.RemoveEmptyEntries);
+        var offset = segments.Length > 0 &&
+                     !segments[0].Equals("account", StringComparison.OrdinalIgnoreCase) &&
+                     !segments[0].Equals("connect", StringComparison.OrdinalIgnoreCase)
+            ? 1
+            : 0;
+        var normalizedPath = "/" + string.Join('/', segments.Skip(offset));
+
         foreach (var prefix in InvalidReturnUrlPrefixes)
         {
-            if (returnUrl.StartsWith(prefix, StringComparison.OrdinalIgnoreCase))
+            if (normalizedPath.StartsWith(prefix, StringComparison.OrdinalIgnoreCase))
             {
                 return null;
             }

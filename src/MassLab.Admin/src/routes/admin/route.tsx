@@ -6,7 +6,6 @@ import { AppSidebar } from "@/components/app-sidebar";
 import { AppHeader } from "@/components/app-header";
 import { useAuth } from "@/lib/auth";
 import { isLogoutInProgress } from "@/lib/auth-storage";
-import { beginLogin } from "@/lib/oidc";
 
 export const Route = createFileRoute("/admin")({
   component: AdminLayout,
@@ -28,12 +27,7 @@ function AdminLayout() {
     }
 
     startedRef.current = true;
-    const returnTo = `${window.location.pathname}${window.location.search}${window.location.hash}`;
-
-    void beginLogin({ returnTo }).catch((reason: unknown) => {
-      startedRef.current = false;
-      setLoginError(reason instanceof Error ? reason.message : "Unable to start sign-in.");
-    });
+    window.location.replace("/login");
   }, [ready, session]);
 
   if (!ready || !session) {

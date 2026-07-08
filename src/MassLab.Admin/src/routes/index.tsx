@@ -10,7 +10,6 @@ import {
   CheckCircle2,
   Globe,
 } from "lucide-react";
-import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -18,7 +17,6 @@ import { Card, CardContent } from "@/components/ui/card";
 import { useI18n } from "@/lib/i18n";
 import { SiteHeader } from "@/components/site-header";
 import { SiteFooter } from "@/components/site-footer";
-import { beginLogin } from "@/lib/oidc";
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -33,13 +31,7 @@ export const Route = createFileRoute("/")({
 function HomePage() {
   const { t } = useI18n();
 
-  const startLogin = async () => {
-    try {
-      await beginLogin({ returnTo: "/admin/dashboard" });
-    } catch (reason: unknown) {
-      toast.error(reason instanceof Error ? reason.message : "Unable to start sign-in.");
-    }
-  };
+  const startLogin = () => window.location.assign("/login");
 
   return (
     <div className="relative min-h-screen overflow-hidden bg-background">

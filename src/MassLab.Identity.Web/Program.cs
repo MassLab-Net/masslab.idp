@@ -45,6 +45,20 @@ builder.Services.ConfigureApplicationCookie(options =>
     options.Cookie.Name = "masslab.identity.sso";
     options.Cookie.HttpOnly = true;
     options.SlidingExpiration = true;
+    options.Events.OnSigningIn = context =>
+    {
+        context.CookieOptions.Path = context.HttpContext.Request.PathBase.HasValue
+            ? context.HttpContext.Request.PathBase.Value
+            : "/";
+        return Task.CompletedTask;
+    };
+    options.Events.OnSigningOut = context =>
+    {
+        context.CookieOptions.Path = context.HttpContext.Request.PathBase.HasValue
+            ? context.HttpContext.Request.PathBase.Value
+            : "/";
+        return Task.CompletedTask;
+    };
 });
 
 builder.Services.AddOpenIddict()
@@ -167,6 +181,8 @@ if (!app.Environment.IsDevelopment())
 }
 
 app.UseStaticFiles();
+app.UseMiddleware<MassLab.Identity.Infrastructure.Multitenancy.TenantPathBaseMiddleware>();
+app.UseMiddleware<MassLab.Identity.Infrastructure.OpenIddictTenantClientIdMappingMiddleware>();
 app.UseRouting();
 app.UseCors("AdminSpa");
 app.UseRateLimiter();

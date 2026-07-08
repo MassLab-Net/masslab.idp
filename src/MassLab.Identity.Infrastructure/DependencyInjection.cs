@@ -22,6 +22,7 @@ public static class DependencyInjection
         services.AddScoped<IRbacService, RbacService>();
         services.AddScoped<IEmailService, EmailService>();
         services.AddScoped<ITotpService, TotpService>();
+        services.AddSingleton<TenantClientIdFormatter>();
 
         services.AddScoped<IAccountQueries, AccountApplicationService>();
         services.AddScoped<IAccountCommands, AccountApplicationService>();
@@ -31,6 +32,7 @@ public static class DependencyInjection
         services.AddScoped<ISystemAdminCommands, SystemAdminApplicationService>();
         services.AddScoped<IOpenIdQueries, OpenIdApplicationService>();
         services.AddScoped<OpenIddictClientService>();
+        services.AddScoped<OpenIddictAdminSpaClientProvisioningService>();
 
         services.AddDbContext<ApplicationDbContext>(options =>
         {

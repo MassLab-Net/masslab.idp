@@ -31,6 +31,7 @@ public static class DatabaseSeeder
         var userManager = scope.ServiceProvider.GetRequiredService<UserManager<ApplicationUser>>();
         var secretService = scope.ServiceProvider.GetRequiredService<ISecretService>();
         var applicationManager = scope.ServiceProvider.GetRequiredService<IOpenIddictApplicationManager>();
+        var formatter = scope.ServiceProvider.GetRequiredService<TenantClientIdFormatter>();
 
         await db.Database.MigrateAsync(cancellationToken);
 
@@ -97,12 +98,14 @@ public static class DatabaseSeeder
         if (!await db.ClientApplications.IgnoreQueryFilters().AnyAsync(x => x.TenantId == tenant.Id && x.ClientId == "demo-web", cancellationToken))
         {
             // Create demo-web client using OpenIddict
-            var existingClient = await applicationManager.FindByClientIdAsync("demo-web", cancellationToken);
+            var logicalClientId = formatter.NormalizeLogicalClientId("demo-web");
+            var physicalClientId = formatter.FormatPhysicalClientId(tenant.Id, logicalClientId);
+            var existingClient = await applicationManager.FindByClientIdAsync(physicalClientId, cancellationToken);
             if (existingClient is null)
             {
                 var descriptor = new OpenIddictApplicationDescriptor
                 {
-                    ClientId = "demo-web",
+                    ClientId = physicalClientId,
                     ClientSecret = "demo-secret",
                     DisplayName = "Demo Web",
                     ClientType = ClientTypes.Confidential,
@@ -111,6 +114,7 @@ public static class DatabaseSeeder
 
                 // Store tenant ID in properties
                 descriptor.Properties[nameof(TenantEntity.TenantId)] = JsonSerializer.SerializeToElement(tenant.Id);
+                descriptor.Properties[TenantClientIdFormatter.LogicalClientIdPropertyName] = JsonSerializer.SerializeToElement(logicalClientId);
                 descriptor.Properties["Type"] = JsonSerializer.SerializeToElement(ClientType.Web.ToString());
                 descriptor.Properties["Enabled"] = JsonSerializer.SerializeToElement(true);
 

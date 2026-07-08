@@ -1,11 +1,9 @@
 import { Link } from "@tanstack/react-router";
-import { toast } from "sonner";
 
 import { Logo } from "@/components/logo";
 import { Button } from "@/components/ui/button";
 import { useI18n } from "@/lib/i18n";
 import { Flag } from "@/components/flag";
-import { beginLogin } from "@/lib/oidc";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -17,14 +15,7 @@ import {
 
 export function SiteHeader({ showAuth = true }: { showAuth?: boolean }) {
   const { t, lang, setLang } = useI18n();
-
-  const startLogin = async () => {
-    try {
-      await beginLogin({ returnTo: "/admin/dashboard" });
-    } catch (reason: unknown) {
-      toast.error(reason instanceof Error ? reason.message : "Unable to start sign-in.");
-    }
-  };
+  const startLogin = () => window.location.assign("/login");
 
   return (
     <header className="sticky top-0 z-50 border-b border-border/50 bg-background/80 backdrop-blur-lg">

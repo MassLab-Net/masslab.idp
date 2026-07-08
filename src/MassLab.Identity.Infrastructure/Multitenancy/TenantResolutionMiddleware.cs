@@ -30,10 +30,10 @@ public sealed class TenantResolutionMiddleware
             : null;
         var headerTenantSlug = context.Request.Headers["X-Tenant-Slug"].FirstOrDefault();
         var headerTenantId = context.Request.Headers["X-Tenant-Id"].FirstOrDefault();
-        Domain.Tenant? tenant = null;
-        var requestedTenantWasExplicit = false;
+        Domain.Tenant? tenant = TenantRequestContext.GetResolvedTenant(context);
+        var requestedTenantWasExplicit = tenant is not null;
 
-        if (!string.IsNullOrWhiteSpace(localhostTenant))
+        if (tenant is null && !string.IsNullOrWhiteSpace(localhostTenant))
         {
             requestedTenantWasExplicit = true;
             tenant = await db.Tenants.IgnoreQueryFilters().FirstOrDefaultAsync(x => x.Slug == localhostTenant);

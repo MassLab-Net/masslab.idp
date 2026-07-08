@@ -4,7 +4,7 @@ type PendingLogin = {
   state: string;
   codeVerifier: string;
   identityBaseUrl: string;
-  organizationSlug?: string;
+  organizationSlug: string;
   returnTo: string;
   mode: LoginMode;
   silentAttempted: boolean;
@@ -46,7 +46,12 @@ export async function beginLogin(input: { organizationSlug?: string; returnTo?: 
   }
 
   const mode = configuredLoginMode;
-  const identityBaseUrl = resolveIdentityBaseUrl(input.organizationSlug);
+  const organizationSlug = normalizeSlug(input.organizationSlug);
+  if (!organizationSlug) {
+    throw new Error("A tenant slug is required to start the sign-in flow.");
+  }
+
+  const identityBaseUrl = resolveIdentityBaseUrl();
   const state = randomString(32);
   const codeVerifier = randomString(64);
   const returnTo = input.returnTo ?? "/admin/dashboard";
@@ -56,7 +61,7 @@ export async function beginLogin(input: { organizationSlug?: string; returnTo?: 
     state,
     codeVerifier,
     identityBaseUrl,
-    organizationSlug: normalizeSlug(input.organizationSlug),
+    organizationSlug,
     returnTo,
     mode,
     silentAttempted: mode === "silent-first",
@@ -96,8 +101,17 @@ export async function completeLogin(callbackUrl: string): Promise<{ session: Aut
     throw new Error("Identity callback is invalid or has expired.");
   }
 
-  const tokenResponse = await exchangeCodeForToken(pending.identityBaseUrl, code, pending.codeVerifier);
-  const userInfo = await getUserInfo(pending.identityBaseUrl, tokenResponse.access_token);
+  const tokenResponse = await exchangeCodeForToken(
+    pending.identityBaseUrl,
+    pending.organizationSlug,
+    code,
+    pending.codeVerifier,
+  );
+  const userInfo = await getUserInfo(
+    pending.identityBaseUrl,
+    pending.organizationSlug,
+    tokenResponse.access_token,
+  );
 
   clearPendingLogin();
 
@@ -116,7 +130,12 @@ export async function completeLogin(callbackUrl: string): Promise<{ session: Aut
 }
 
 export function buildLogoutUrl(session: AuthSession) {
-  const url = new URL("/connect/logout", session.identityBaseUrl);
+  const organizationSlug = normalizeSlug(session.organizationSlug);
+  if (!organizationSlug) {
+    throw new Error("The current session is missing its tenant slug.");
+  }
+
+  const url = buildTenantEndpointUrl(session.identityBaseUrl, organizationSlug, "/connect/logout");
   url.searchParams.set("post_logout_redirect_uri", new URL("/logout-complete", window.location.origin).toString());
   if (session.idToken) {
     url.searchParams.set("id_token_hint", session.idToken);
@@ -129,21 +148,9 @@ export function isRedirectingToInteractiveLoginError(reason: unknown) {
   return reason instanceof Error && reason.message === REDIRECTING_TO_INTERACTIVE_LOGIN;
 }
 
-export function resolveIdentityBaseUrl(organizationSlug?: string) {
+export function resolveIdentityBaseUrl() {
   const base = new URL(defaultIdentityRootUrl);
-  const slug = normalizeSlug(organizationSlug);
-  if (!slug) {
-    return base.origin;
-  }
-
-  const hostname =
-    base.hostname === "localhost"
-      ? `${slug}.localhost`
-      : base.hostname === "127.0.0.1"
-        ? "127.0.0.1"
-        : `${slug}.${base.hostname}`;
-
-  return `${base.protocol}//${hostname}${base.port ? `:${base.port}` : ""}`;
+  return base.origin;
 }
 
 function getRedirectUri() {
@@ -151,7 +158,7 @@ function getRedirectUri() {
 }
 
 function buildAuthorizeUrl(login: PendingLogin, codeChallenge: string, promptNone: boolean) {
-  const authorizeUrl = new URL("/connect/authorize", login.identityBaseUrl);
+  const authorizeUrl = buildTenantEndpointUrl(login.identityBaseUrl, login.organizationSlug, "/connect/authorize");
   authorizeUrl.searchParams.set("client_id", clientId);
   authorizeUrl.searchParams.set("redirect_uri", getRedirectUri());
   authorizeUrl.searchParams.set("response_type", "code");
@@ -167,7 +174,12 @@ function buildAuthorizeUrl(login: PendingLogin, codeChallenge: string, promptNon
   return authorizeUrl.toString();
 }
 
-async function exchangeCodeForToken(identityBaseUrl: string, code: string, codeVerifier: string) {
+async function exchangeCodeForToken(
+  identityBaseUrl: string,
+  organizationSlug: string,
+  code: string,
+  codeVerifier: string,
+) {
   const body = new URLSearchParams({
     grant_type: "authorization_code",
     client_id: clientId,
@@ -176,7 +188,7 @@ async function exchangeCodeForToken(identityBaseUrl: string, code: string, codeV
     redirect_uri: getRedirectUri(),
   });
 
-  const response = await fetch(new URL("/connect/token", identityBaseUrl), {
+  const response = await fetch(buildTenantEndpointUrl(identityBaseUrl, organizationSlug, "/connect/token"), {
     method: "POST",
     headers: {
       "Content-Type": "application/x-www-form-urlencoded",
@@ -192,8 +204,8 @@ async function exchangeCodeForToken(identityBaseUrl: string, code: string, codeV
   return (await response.json()) as TokenResponse;
 }
 
-async function getUserInfo(identityBaseUrl: string, accessToken: string) {
-  const response = await fetch(new URL("/connect/userinfo", identityBaseUrl), {
+async function getUserInfo(identityBaseUrl: string, organizationSlug: string, accessToken: string) {
+  const response = await fetch(buildTenantEndpointUrl(identityBaseUrl, organizationSlug, "/connect/userinfo"), {
     headers: {
       Authorization: `Bearer ${accessToken}`,
     },
@@ -248,6 +260,15 @@ function clearPendingLogin() {
 
 function normalizeSlug(value?: string) {
   return value?.trim().toLowerCase() || undefined;
+}
+
+function buildTenantEndpointUrl(identityBaseUrl: string, organizationSlug: string, path: string) {
+  const normalizedSlug = normalizeSlug(organizationSlug);
+  if (!normalizedSlug) {
+    throw new Error("A tenant slug is required to build identity endpoints.");
+  }
+
+  return new URL(`/${normalizedSlug}${path}`, identityBaseUrl);
 }
 
 function randomString(length: number) {

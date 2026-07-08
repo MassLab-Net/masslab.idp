@@ -17,21 +17,18 @@
 
                 <form asp-action="Login" method="post" class="masslab-login__form">
                     <input type="hidden" asp-for="ReturnUrl" />
+                    <input type="hidden" asp-for="Tenant" />
 
                     <div class="masslab-login__heading">
                         <h1 data-i18n="title">Sign in to MassLab IAM</h1>
                         <p data-i18n="subtitle">Use your MassLab Identity account to continue to the admin workspace.</p>
+                        @if (!string.IsNullOrWhiteSpace(Model.Tenant))
+                        {
+                            <p class="text-muted"><code>@Model.Tenant</code></p>
+                        }
                     </div>
 
                     <div asp-validation-summary="All" class="masslab-login__validation @(ViewData.ModelState.IsValid ? "validation-summary-valid" : "validation-summary-errors")"></div>
-
-                    <div class="form-group masslab-login__field">
-                        <label asp-for="Tenant" data-i18n="tenantLabel">Tenant</label>
-                        <div class="masslab-login__input-wrap">
-                            <span class="fa fa-building masslab-login__input-icon" aria-hidden="true"></span>
-                            <input asp-for="Tenant" class="form-control masslab-login__input" placeholder="demo" autocomplete="organization" data-i18n-placeholder="tenantPlaceholder" />
-                        </div>
-                    </div>
 
                     <div class="form-group masslab-login__field">
                         <label asp-for="Email" data-i18n="usernameLabel">Username</label>

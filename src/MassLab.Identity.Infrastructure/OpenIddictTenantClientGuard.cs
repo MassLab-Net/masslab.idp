@@ -39,18 +39,6 @@ public sealed class OpenIddictTenantClientGuard :
         if (!TenantMatchesCurrentRequest(clientTenantId.Value))
         {
             context.Reject(Errors.InvalidClient, InvalidTenantMessage);
-            return;
-        }
-
-        var userTenantId = context.Transaction.Principal?.FindFirstValue("tenant_id");
-        if (string.IsNullOrWhiteSpace(userTenantId))
-        {
-            return;
-        }
-
-        if (!TenantMatchesUser(clientTenantId.Value, userTenantId))
-        {
-            context.Reject(Errors.InvalidClient, InvalidTenantMessage);
         }
     }
 

@@ -34,15 +34,18 @@ internal sealed class OpenIddictClientService
     private readonly IOpenIddictApplicationManager _manager;
     private readonly ICurrentTenant _tenant;
     private readonly ISecretService _secrets;
+    private readonly TenantClientIdFormatter _formatter;
 
     public OpenIddictClientService(
         IOpenIddictApplicationManager manager,
         ICurrentTenant tenant,
-        ISecretService secrets)
+        ISecretService secrets,
+        TenantClientIdFormatter formatter)
     {
         _manager = manager;
         _tenant = tenant;
         _secrets = secrets;
+        _formatter = formatter;
     }
 
     public async Task<IReadOnlyList<ClientApplicationDto>> GetAllAsync(CancellationToken cancellationToken = default)
@@ -89,12 +92,13 @@ internal sealed class OpenIddictClientService
         }
 
         name = name.Trim();
-        clientId = clientId.Trim();
+        clientId = _formatter.NormalizeLogicalClientId(clientId);
         redirectUris = NormalizeUris(redirectUris);
         postLogoutRedirectUris = NormalizeUris(postLogoutRedirectUris);
+        var physicalClientId = _formatter.FormatPhysicalClientId(_tenant.Id.Value, clientId);
 
         // Check if client already exists
-        var existing = await _manager.FindByClientIdAsync(clientId, cancellationToken);
+        var existing = await _manager.FindByClientIdAsync(physicalClientId, cancellationToken);
         if (existing is not null)
         {
             return CreateClientResult.Failure($"Client '{clientId}' already exists.");
@@ -104,7 +108,7 @@ internal sealed class OpenIddictClientService
         
         var descriptor = new OpenIddictApplicationDescriptor
         {
-            ClientId = clientId,
+            ClientId = physicalClientId,
             DisplayName = name,
             ClientType = type == ClientType.Spa ? ClientTypes.Public : ClientTypes.Confidential,
             ConsentType = ConsentTypes.Implicit
@@ -117,6 +121,7 @@ internal sealed class OpenIddictClientService
 
         // Store tenant metadata in Properties
         descriptor.Properties[nameof(TenantEntity.TenantId)] = JsonSerializer.SerializeToElement(_tenant.Id.Value);
+        descriptor.Properties[TenantClientIdFormatter.LogicalClientIdPropertyName] = JsonSerializer.SerializeToElement(clientId);
         descriptor.Properties["Type"] = JsonSerializer.SerializeToElement(type.ToString());
         descriptor.Properties["Enabled"] = JsonSerializer.SerializeToElement(true);
 
@@ -136,9 +141,7 @@ internal sealed class OpenIddictClientService
         SetPermissionsFromFlows(descriptor, flows);
         SetPermissionsFromScopes(descriptor, scopes);
 
-        var application = await _manager.CreateAsync(descriptor, cancellationToken);
-        var id = await _manager.GetIdAsync(application, cancellationToken);
-        
+        await _manager.CreateAsync(descriptor, cancellationToken);
         return CreateClientResult.Success(clientId, plainSecret);
     }
 
@@ -165,11 +168,12 @@ internal sealed class OpenIddictClientService
         }
 
         name = name.Trim();
-        clientId = clientId.Trim();
+        clientId = _formatter.NormalizeLogicalClientId(clientId);
         redirectUris = NormalizeUris(redirectUris);
         postLogoutRedirectUris = NormalizeUris(postLogoutRedirectUris);
+        var physicalClientId = _formatter.FormatPhysicalClientId(_tenant.Id.Value, clientId);
 
-        var application = await _manager.FindByClientIdAsync(clientId, cancellationToken);
+        var application = await _manager.FindByClientIdAsync(physicalClientId, cancellationToken);
         if (application is null)
         {
             return CommandResult.Missing();
@@ -189,8 +193,10 @@ internal sealed class OpenIddictClientService
         descriptor.ClientType = type == ClientType.Spa ? ClientTypes.Public : ClientTypes.Confidential;
 
         // Update properties
+        descriptor.ClientId = physicalClientId;
         descriptor.Properties["Type"] = JsonSerializer.SerializeToElement(type.ToString());
         descriptor.Properties["Enabled"] = JsonSerializer.SerializeToElement(enabled);
+        descriptor.Properties[TenantClientIdFormatter.LogicalClientIdPropertyName] = JsonSerializer.SerializeToElement(clientId);
 
         // Update redirect URIs
         descriptor.RedirectUris.Clear();
@@ -222,7 +228,8 @@ internal sealed class OpenIddictClientService
             return CommandResult.Failure("Tenant is required.");
         }
 
-        var application = await _manager.FindByClientIdAsync(clientId, cancellationToken);
+        var physicalClientId = _formatter.FormatPhysicalClientId(_tenant.Id.Value, _formatter.NormalizeLogicalClientId(clientId));
+        var application = await _manager.FindByClientIdAsync(physicalClientId, cancellationToken);
         if (application is null)
         {
             return CommandResult.Missing();
@@ -255,9 +262,10 @@ internal sealed class OpenIddictClientService
     private async Task<ClientApplicationDto> MapToDtoAsync(object application, CancellationToken cancellationToken)
     {
         var id = await _manager.GetIdAsync(application, cancellationToken) ?? string.Empty;
-        var clientId = await _manager.GetClientIdAsync(application, cancellationToken) ?? string.Empty;
-        var displayName = await _manager.GetDisplayNameAsync(application, cancellationToken) ?? clientId;
+        var physicalClientId = await _manager.GetClientIdAsync(application, cancellationToken) ?? string.Empty;
         var properties = await _manager.GetPropertiesAsync(application, cancellationToken);
+        var clientId = _formatter.GetLogicalClientId(properties, physicalClientId);
+        var displayName = await _manager.GetDisplayNameAsync(application, cancellationToken) ?? clientId;
         var permissions = await _manager.GetPermissionsAsync(application, cancellationToken);
         var redirectUris = await _manager.GetRedirectUrisAsync(application, cancellationToken);
         var postLogoutRedirectUris = await _manager.GetPostLogoutRedirectUrisAsync(application, cancellationToken);

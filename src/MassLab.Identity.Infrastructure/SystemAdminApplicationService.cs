@@ -9,10 +9,14 @@ namespace MassLab.Identity.Infrastructure;
 internal sealed class SystemAdminApplicationService : ISystemAdminQueries, ISystemAdminCommands
 {
     private readonly ApplicationDbContext _db;
+    private readonly OpenIddictAdminSpaClientProvisioningService _adminSpaClientProvisioner;
 
-    public SystemAdminApplicationService(ApplicationDbContext db)
+    public SystemAdminApplicationService(
+        ApplicationDbContext db,
+        OpenIddictAdminSpaClientProvisioningService adminSpaClientProvisioner)
     {
         _db = db;
+        _adminSpaClientProvisioner = adminSpaClientProvisioner;
     }
 
     public async Task<IReadOnlyCollection<SystemTenantDto>> GetTenantsAsync(CancellationToken cancellationToken = default)
@@ -38,6 +42,7 @@ internal sealed class SystemAdminApplicationService : ISystemAdminQueries, ISyst
         _db.TenantDomains.Add(new TenantDomain { TenantId = tenant.Id, HostName = hostName, IsPrimary = true });
         _db.TenantDefaultPolicies.Add(new TenantDefaultPolicy { TenantId = tenant.Id });
         await _db.SaveChangesAsync(cancellationToken);
+        await _adminSpaClientProvisioner.EnsureConfiguredAsync(tenant, cancellationToken);
     }
 
     public async Task<CommandResult> ToggleTenantAsync(Guid id, CancellationToken cancellationToken = default)
