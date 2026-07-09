@@ -22,7 +22,7 @@ public sealed class TenantPathBaseMiddleware
     public async Task InvokeAsync(HttpContext context, ApplicationDbContext db)
     {
         var path = context.Request.Path;
-        if (!TryExtractTenantPrefix(path, out var tenantSlug, out var rewrittenPath))
+        if (!TryExtractTenantPrefix(path, out var tenantSlug, out var rewrittenPath, out var tenantAwareRoot))
         {
             await _next(context);
             return;
@@ -39,16 +39,25 @@ public sealed class TenantPathBaseMiddleware
         }
 
         TenantRequestContext.SetResolvedTenant(context, tenant);
-        context.Request.PathBase = context.Request.PathBase.Add($"/{tenantSlug}");
+        if (tenantAwareRoot.Equals("account", StringComparison.OrdinalIgnoreCase))
+        {
+            context.Request.PathBase = context.Request.PathBase.Add($"/{tenantSlug}");
+        }
+
         context.Request.Path = rewrittenPath;
 
         await _next(context);
     }
 
-    private static bool TryExtractTenantPrefix(PathString path, out string tenantSlug, out PathString rewrittenPath)
+    private static bool TryExtractTenantPrefix(
+        PathString path,
+        out string tenantSlug,
+        out PathString rewrittenPath,
+        out string tenantAwareRoot)
     {
         tenantSlug = string.Empty;
         rewrittenPath = path;
+        tenantAwareRoot = string.Empty;
 
         var value = path.Value;
         if (string.IsNullOrWhiteSpace(value) || value == "/")
@@ -63,6 +72,7 @@ public sealed class TenantPathBaseMiddleware
         }
 
         tenantSlug = segments[0].Trim().ToLowerInvariant();
+        tenantAwareRoot = segments[1].Trim().ToLowerInvariant();
         rewrittenPath = new PathString("/" + string.Join('/', segments.Skip(1)));
         return !string.IsNullOrWhiteSpace(tenantSlug);
     }

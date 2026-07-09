@@ -5,7 +5,7 @@ import { Loader2, ShieldCheck, ArrowRight } from "lucide-react";
 import { Logo } from "@/components/logo";
 import { Button } from "@/components/ui/button";
 import { getStoredSession, persistSession } from "@/lib/auth-storage";
-import { completeLogin, isRedirectingToInteractiveLoginError } from "@/lib/oidc";
+import { beginLogin, completeLogin, isRedirectingToInteractiveLoginError } from "@/lib/oidc";
 import { DEFAULT_TENANT_SLUG } from "@/lib/default-tenant";
 
 export const Route = createFileRoute("/auth")({
@@ -33,7 +33,15 @@ function AuthPage() {
         return;
       }
 
-      window.location.replace(`/login?tenant=${DEFAULT_TENANT_SLUG}`);
+      void beginLogin({
+        organizationSlug: DEFAULT_TENANT_SLUG,
+        returnTo: "/admin/dashboard",
+      }).catch((reason: unknown) => {
+        setLoading(false);
+        setCallbackError(
+          reason instanceof Error ? reason.message : "Unable to start sign-in.",
+        );
+      });
       return;
     }
 

@@ -48,7 +48,11 @@ function LoginPage() {
     toast.info(kind === "pw" ? "Redirecting to MassLab Identity..." : "Continuing with MassLab Identity...");
 
     try {
-      await beginLogin({ organizationSlug: org.trim() || DEFAULT_TENANT_SLUG, returnTo: "/admin/dashboard" });
+      await beginLogin({
+        organizationSlug: org.trim() || DEFAULT_TENANT_SLUG,
+        returnTo: "/admin/dashboard",
+        mode: "redirect",
+      });
     } catch (reason: unknown) {
       const message = reason instanceof Error ? reason.message : "Unable to start sign-in.";
       setLoading(null);

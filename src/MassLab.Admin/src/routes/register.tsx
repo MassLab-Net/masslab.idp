@@ -65,14 +65,22 @@ function RegisterPage() {
 
     setLoading(true);
     toast.info("Redirecting to MassLab Identity...");
-    beginLogin({ organizationSlug: org.trim() || DEFAULT_TENANT_SLUG, returnTo: "/admin/dashboard" });
+    beginLogin({
+      organizationSlug: org.trim() || DEFAULT_TENANT_SLUG,
+      returnTo: "/admin/dashboard",
+      mode: "redirect",
+    });
   };
 
   const submitSocial = async (kind: "google" | "entra") => {
     if (!org.trim()) { setErrors({ org: t("reg.errOrg") }); return; }
     setLoading(true);
     toast.info(kind === "google" ? "Continuing with Google in MassLab Identity..." : "Continuing with Microsoft Entra ID in MassLab Identity...");
-    beginLogin({ organizationSlug: org.trim() || DEFAULT_TENANT_SLUG, returnTo: "/admin/dashboard" });
+    beginLogin({
+      organizationSlug: org.trim() || DEFAULT_TENANT_SLUG,
+      returnTo: "/admin/dashboard",
+      mode: "redirect",
+    });
   };
 
   return (

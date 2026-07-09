@@ -40,12 +40,16 @@ const clientId = import.meta.env.VITE_IDENTITY_CLIENT_ID ?? "masslab-admin-spa";
 const requestedScope = import.meta.env.VITE_IDENTITY_SCOPE ?? "openid profile email permissions";
 const configuredLoginMode = normalizeLoginMode(import.meta.env.VITE_IDENTITY_LOGIN_MODE);
 
-export async function beginLogin(input: { organizationSlug?: string; returnTo?: string }) {
+export async function beginLogin(input: {
+  organizationSlug?: string;
+  returnTo?: string;
+  mode?: LoginMode;
+}) {
   if (typeof window === "undefined") {
     throw new Error("OIDC login can only start in the browser.");
   }
 
-  const mode = configuredLoginMode;
+  const mode = input.mode ?? configuredLoginMode;
   const organizationSlug = normalizeSlug(input.organizationSlug);
   if (!organizationSlug) {
     throw new Error("A tenant slug is required to start the sign-in flow.");

@@ -60,6 +60,13 @@ builder.Services.ConfigureApplicationCookie(options =>
         return Task.CompletedTask;
     };
 });
+builder.Services.AddAntiforgery(options =>
+{
+    options.Cookie.Name = "masslab.identity.antiforgery";
+    options.Cookie.Path = "/";
+    options.Cookie.HttpOnly = true;
+    options.Cookie.SameSite = SameSiteMode.Lax;
+});
 
 builder.Services.AddOpenIddict()
     .AddCore(options => options.UseEntityFrameworkCore().UseDbContext<ApplicationDbContext>())
@@ -180,8 +187,8 @@ if (!app.Environment.IsDevelopment())
     app.UseHttpsRedirection();
 }
 
-app.UseStaticFiles();
 app.UseMiddleware<MassLab.Identity.Infrastructure.Multitenancy.TenantPathBaseMiddleware>();
+app.UseStaticFiles();
 app.UseMiddleware<MassLab.Identity.Infrastructure.OpenIddictTenantClientIdMappingMiddleware>();
 app.UseRouting();
 app.UseCors("AdminSpa");

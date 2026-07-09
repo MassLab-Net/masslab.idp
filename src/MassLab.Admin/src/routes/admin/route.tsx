@@ -7,6 +7,7 @@ import { AppHeader } from "@/components/app-header";
 import { useAuth } from "@/lib/auth";
 import { isLogoutInProgress } from "@/lib/auth-storage";
 import { DEFAULT_TENANT_SLUG } from "@/lib/default-tenant";
+import { beginLogin } from "@/lib/oidc";
 
 export const Route = createFileRoute("/admin")({
   component: AdminLayout,
@@ -28,7 +29,15 @@ function AdminLayout() {
     }
 
     startedRef.current = true;
-    window.location.replace(`/login?tenant=${DEFAULT_TENANT_SLUG}`);
+    void beginLogin({
+      organizationSlug: DEFAULT_TENANT_SLUG,
+      returnTo: window.location.pathname + window.location.search,
+    }).catch((reason: unknown) => {
+      setLoginError(
+        reason instanceof Error ? reason.message : "Unable to start sign-in.",
+      );
+      startedRef.current = false;
+    });
   }, [ready, session]);
 
   if (!ready || !session) {

@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { useI18n } from "@/lib/i18n";
 import { Flag } from "@/components/flag";
 import { DEFAULT_TENANT_SLUG } from "@/lib/default-tenant";
+import { beginLogin } from "@/lib/oidc";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -16,7 +17,13 @@ import {
 
 export function SiteHeader({ showAuth = true }: { showAuth?: boolean }) {
   const { t, lang, setLang } = useI18n();
-  const startLogin = () => window.location.assign(`/login?tenant=${DEFAULT_TENANT_SLUG}`);
+  const startLogin = async () => {
+    await beginLogin({
+      organizationSlug: DEFAULT_TENANT_SLUG,
+      returnTo: "/admin/dashboard",
+      mode: "redirect",
+    });
+  };
 
   return (
     <header className="sticky top-0 z-50 border-b border-border/50 bg-background/80 backdrop-blur-lg">

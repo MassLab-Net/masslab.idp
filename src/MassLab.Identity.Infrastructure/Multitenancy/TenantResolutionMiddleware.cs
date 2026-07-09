@@ -1,9 +1,13 @@
 using MassLab.Identity.Infrastructure.Data;
 using Microsoft.EntityFrameworkCore;
 using System.Security.Claims;
+using Microsoft.AspNetCore.Authentication.Cookies;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.WebUtilities;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Options;
 
 namespace MassLab.Identity.Infrastructure.Multitenancy;
 
@@ -73,6 +77,19 @@ public sealed class TenantResolutionMiddleware
             {
                 if (tenant is not null && tenant.Id != claimedTenantId)
                 {
+                    if (TryResetAuthenticationForTenantLogin(context))
+                    {
+                        context.User = new ClaimsPrincipal(new ClaimsIdentity());
+                        currentTenant.Set(tenant.Id, tenant.Slug, tenant.Status);
+                        await _next(context);
+                        return;
+                    }
+
+                    if (await TryRedirectToTenantLoginAsync(context))
+                    {
+                        return;
+                    }
+
                     context.Response.StatusCode = StatusCodes.Status403Forbidden;
                     return;
                 }
@@ -102,6 +119,72 @@ public sealed class TenantResolutionMiddleware
         }
 
         await _next(context);
+    }
+
+    private static async Task<bool> TryRedirectToTenantLoginAsync(HttpContext context)
+    {
+        if (!HttpMethods.IsGet(context.Request.Method) ||
+            !context.Request.Path.StartsWithSegments("/connect/authorize", StringComparison.OrdinalIgnoreCase))
+        {
+            return false;
+        }
+
+        ClearIdentityCookie(context);
+
+        var tenantPrefix = GetTenantPrefix(context);
+        var returnUrl = $"{tenantPrefix}{context.Request.Path}{context.Request.QueryString}";
+        var loginPath = $"{tenantPrefix}/account/login";
+        var redirectUrl = QueryHelpers.AddQueryString(loginPath, "returnUrl", returnUrl);
+        context.Response.Redirect(redirectUrl);
+        return true;
+    }
+
+    private static bool TryResetAuthenticationForTenantLogin(HttpContext context)
+    {
+        if (!context.Request.Path.StartsWithSegments("/account/login", StringComparison.OrdinalIgnoreCase))
+        {
+            return false;
+        }
+
+        ClearIdentityCookie(context);
+        return true;
+    }
+
+    private static void ClearIdentityCookie(HttpContext context)
+    {
+        var optionsMonitor = context.RequestServices.GetRequiredService<IOptionsMonitor<CookieAuthenticationOptions>>();
+        var cookieOptions = optionsMonitor.Get(IdentityConstants.ApplicationScheme);
+        var cookieName = cookieOptions.Cookie.Name;
+        if (string.IsNullOrWhiteSpace(cookieName))
+        {
+            return;
+        }
+
+        context.Response.Cookies.Delete(cookieName, new CookieOptions
+        {
+            Path = "/"
+        });
+
+        if (context.Request.PathBase.HasValue)
+        {
+            context.Response.Cookies.Delete(cookieName, new CookieOptions
+            {
+                Path = context.Request.PathBase.Value
+            });
+        }
+    }
+
+    private static string GetTenantPrefix(HttpContext context)
+    {
+        if (context.Request.PathBase.HasValue)
+        {
+            return context.Request.PathBase.Value!;
+        }
+
+        var tenantSlug = TenantRequestContext.GetRouteTenantSlug(context);
+        return string.IsNullOrWhiteSpace(tenantSlug)
+            ? string.Empty
+            : $"/{tenantSlug}";
     }
 
     private static async Task<Domain.Tenant?> ResolveByHostAsync(ApplicationDbContext db, string host, string? rootDomain)
