@@ -3,6 +3,7 @@ using MassLab.Identity.Infrastructure.Multitenancy;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Http.Features;
 using Microsoft.AspNetCore.Http.Extensions;
+using Microsoft.AspNetCore.WebUtilities;
 using Microsoft.Extensions.Primitives;
 
 namespace MassLab.Identity.Infrastructure;
@@ -46,7 +47,7 @@ public sealed class OpenIddictTenantClientIdMappingMiddleware
             {
                 var values = form.ToDictionary(pair => pair.Key, pair => pair.Value, StringComparer.Ordinal);
                 values["client_id"] = buildPhysicalClientId(formClientId[0]!);
-                context.Features.Set<IFormFeature>(new FormFeature(new FormCollection(values)));
+                RewriteFormBody(context, values);
             }
         }
 
@@ -95,5 +96,20 @@ public sealed class OpenIddictTenantClientIdMappingMiddleware
         {
             // Ignore malformed basic headers and let OpenIddict reject them downstream.
         }
+    }
+
+    private static void RewriteFormBody(HttpContext context, Dictionary<string, StringValues> values)
+    {
+        context.Features.Set<IFormFeature>(new FormFeature(new FormCollection(values)));
+
+        var body = new FormUrlEncodedContent(values
+                .SelectMany(pair => pair.Value.Select(value => new KeyValuePair<string, string>(pair.Key, value ?? string.Empty))))
+            .ReadAsStringAsync()
+            .GetAwaiter()
+            .GetResult();
+
+        var bytes = Encoding.UTF8.GetBytes(body);
+        context.Request.Body = new MemoryStream(bytes);
+        context.Request.ContentLength = bytes.Length;
     }
 }
