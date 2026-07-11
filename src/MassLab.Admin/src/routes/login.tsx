@@ -34,7 +34,7 @@ export const Route = createFileRoute("/login")({
 function LoginPage() {
   const { t, lang, setLang } = useI18n();
   const search = typeof window === "undefined" ? null : new URLSearchParams(window.location.search);
-  const initialTenant = search?.get("tenant")?.trim() || DEFAULT_TENANT_SLUG;
+  const initialTenant = search?.get("tenant")?.trim() || DEFAULT_TENANT_SLUG || "";
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [showPw, setShowPw] = useState(false);

@@ -4,7 +4,7 @@ type PendingLogin = {
   state: string;
   codeVerifier: string;
   identityBaseUrl: string;
-  organizationSlug: string;
+  organizationSlug?: string;
   returnTo: string;
   mode: LoginMode;
   silentAttempted: boolean;
@@ -51,10 +51,6 @@ export async function beginLogin(input: {
 
   const mode = input.mode ?? configuredLoginMode;
   const organizationSlug = normalizeSlug(input.organizationSlug);
-  if (!organizationSlug) {
-    throw new Error("A tenant slug is required to start the sign-in flow.");
-  }
-
   const identityBaseUrl = resolveIdentityBaseUrl();
   const state = randomString(32);
   const codeVerifier = randomString(64);
@@ -135,10 +131,6 @@ export async function completeLogin(callbackUrl: string): Promise<{ session: Aut
 
 export function buildLogoutUrl(session: AuthSession) {
   const organizationSlug = normalizeSlug(session.organizationSlug);
-  if (!organizationSlug) {
-    throw new Error("The current session is missing its tenant slug.");
-  }
-
   const url = buildTenantEndpointUrl(session.identityBaseUrl, organizationSlug, "/connect/logout");
   url.searchParams.set("post_logout_redirect_uri", new URL("/logout-complete", window.location.origin).toString());
   if (session.idToken) {
@@ -180,7 +172,7 @@ function buildAuthorizeUrl(login: PendingLogin, codeChallenge: string, promptNon
 
 async function exchangeCodeForToken(
   identityBaseUrl: string,
-  organizationSlug: string,
+  organizationSlug: string | undefined,
   code: string,
   codeVerifier: string,
 ) {
@@ -208,7 +200,7 @@ async function exchangeCodeForToken(
   return (await response.json()) as TokenResponse;
 }
 
-async function getUserInfo(identityBaseUrl: string, organizationSlug: string, accessToken: string) {
+async function getUserInfo(identityBaseUrl: string, organizationSlug: string | undefined, accessToken: string) {
   const response = await fetch(buildTenantEndpointUrl(identityBaseUrl, organizationSlug, "/connect/userinfo"), {
     headers: {
       Authorization: `Bearer ${accessToken}`,
@@ -266,13 +258,9 @@ function normalizeSlug(value?: string) {
   return value?.trim().toLowerCase() || undefined;
 }
 
-function buildTenantEndpointUrl(identityBaseUrl: string, organizationSlug: string, path: string) {
+function buildTenantEndpointUrl(identityBaseUrl: string, organizationSlug: string | undefined, path: string) {
   const normalizedSlug = normalizeSlug(organizationSlug);
-  if (!normalizedSlug) {
-    throw new Error("A tenant slug is required to build identity endpoints.");
-  }
-
-  return new URL(`/${normalizedSlug}${path}`, identityBaseUrl);
+  return new URL(normalizedSlug ? `/${normalizedSlug}${path}` : path, identityBaseUrl);
 }
 
 function randomString(length: number) {
