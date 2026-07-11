@@ -59,6 +59,16 @@ builder.Services.ConfigureApplicationCookie(options =>
             : "/";
         return Task.CompletedTask;
     };
+    options.Events.OnRedirectToLogin = context =>
+    {
+        context.Response.Redirect(ApplyCurrentPathBase(context.RedirectUri, context.Request.PathBase));
+        return Task.CompletedTask;
+    };
+    options.Events.OnRedirectToAccessDenied = context =>
+    {
+        context.Response.Redirect(ApplyCurrentPathBase(context.RedirectUri, context.Request.PathBase));
+        return Task.CompletedTask;
+    };
 });
 builder.Services.AddAntiforgery(options =>
 {
@@ -214,5 +224,38 @@ if (app.Configuration.GetValue("Database:SeedOnStartup", false))
 await OpenIddictAdminSpaClientSeeder.EnsureConfiguredAsync(app.Services);
 
 app.Run();
+
+static string ApplyCurrentPathBase(string redirectUri, PathString pathBase)
+{
+    if (!pathBase.HasValue)
+    {
+        return redirectUri;
+    }
+
+    var prefix = pathBase.Value!;
+    if (Uri.TryCreate(redirectUri, UriKind.Absolute, out var absoluteUri))
+    {
+        if (absoluteUri.AbsolutePath.StartsWith(prefix, StringComparison.OrdinalIgnoreCase))
+        {
+            return redirectUri;
+        }
+
+        var builder = new UriBuilder(absoluteUri)
+        {
+            Path = $"{prefix}{absoluteUri.AbsolutePath}"
+        };
+
+        return builder.Uri.ToString();
+    }
+
+    if (redirectUri.StartsWith(prefix, StringComparison.OrdinalIgnoreCase))
+    {
+        return redirectUri;
+    }
+
+    return redirectUri.StartsWith("/", StringComparison.Ordinal)
+        ? $"{prefix}{redirectUri}"
+        : $"{prefix}/{redirectUri}";
+}
 
 public partial class Program;
