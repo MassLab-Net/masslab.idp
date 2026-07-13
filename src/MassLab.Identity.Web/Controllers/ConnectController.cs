@@ -2,24 +2,34 @@ using System.Security.Claims;
 using OpenIddict.Validation.AspNetCore;
 using Microsoft.AspNetCore;
 using Microsoft.AspNetCore.Authentication;
+using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using MassLab.Identity.Application.Features;
+using MassLab.Identity.Application.Abstractions;
 using MediatR;
 using OpenIddict.Abstractions;
 using OpenIddict.Server.AspNetCore;
+using Microsoft.Extensions.Options;
 using static OpenIddict.Abstractions.OpenIddictConstants;
 
 namespace MassLab.Identity.Web.Controllers;
 
 public sealed class ConnectController : Controller
 {
-    private readonly ISender _sender;
+    private static readonly string[] LegacyCookieNames =
+    [
+        "masslab.identity.sso"
+    ];
 
-    public ConnectController(ISender sender)
+    private readonly ISender _sender;
+    private readonly ICurrentTenantAccessor _currentTenant;
+
+    public ConnectController(ISender sender, ICurrentTenantAccessor currentTenant)
     {
         _sender = sender;
+        _currentTenant = currentTenant;
     }
 
     [HttpGet("~/connect/authorize")]
@@ -30,6 +40,7 @@ public sealed class ConnectController : Controller
         var request = HttpContext.GetOpenIddictServerRequest()
             ?? throw new InvalidOperationException("OpenID Connect request is not available.");
         var scopes = request.GetScopes().ToHashSet(StringComparer.Ordinal);
+        var effectiveTenantId = ResolveEffectiveTenantId();
 
         var identity = new ClaimsIdentity(
             OpenIddictServerAspNetCoreDefaults.AuthenticationScheme,
@@ -43,10 +54,14 @@ public sealed class ConnectController : Controller
         }
 
         identity.SetClaim(Claims.Subject, subject);
+        if (!string.IsNullOrWhiteSpace(effectiveTenantId))
+        {
+            identity.SetClaim("tenant_id", effectiveTenantId);
+        }
 
         foreach (var claim in User.Claims)
         {
-            if (claim.Type == Claims.Subject)
+            if (claim.Type == Claims.Subject || claim.Type == "tenant_id")
             {
                 continue;
             }
@@ -85,7 +100,49 @@ public sealed class ConnectController : Controller
     public async Task<IActionResult> LogoutEndpoint()
     {
         await HttpContext.SignOutAsync(IdentityConstants.ApplicationScheme);
+        ClearIdentityCookies();
         return SignOut(OpenIddictServerAspNetCoreDefaults.AuthenticationScheme);
+    }
+
+    private void ClearIdentityCookies()
+    {
+        var optionsMonitor = HttpContext.RequestServices.GetRequiredService<IOptionsMonitor<CookieAuthenticationOptions>>();
+        var cookieOptions = optionsMonitor.Get(IdentityConstants.ApplicationScheme);
+        var cookieName = cookieOptions.Cookie.Name;
+        if (string.IsNullOrWhiteSpace(cookieName))
+        {
+            return;
+        }
+
+        foreach (var name in EnumerateCookieNames(cookieName))
+        {
+            Response.Cookies.Delete(name, new CookieOptions
+            {
+                Path = "/"
+            });
+
+            var tenantSlug = _currentTenant.Slug;
+            if (!string.IsNullOrWhiteSpace(tenantSlug))
+            {
+                Response.Cookies.Delete(name, new CookieOptions
+                {
+                    Path = $"/{tenantSlug}"
+                });
+            }
+        }
+    }
+
+    private static IEnumerable<string> EnumerateCookieNames(string currentCookieName)
+    {
+        yield return currentCookieName;
+
+        foreach (var legacyCookieName in LegacyCookieNames)
+        {
+            if (!string.Equals(legacyCookieName, currentCookieName, StringComparison.Ordinal))
+            {
+                yield return legacyCookieName;
+            }
+        }
     }
 
     private static IEnumerable<string> GetDestinations(Claim claim, ISet<string> scopes)
@@ -120,5 +177,15 @@ public sealed class ConnectController : Controller
             default:
                 return [Destinations.AccessToken];
         }
+    }
+
+    private string? ResolveEffectiveTenantId()
+    {
+        if (_currentTenant.Id.HasValue)
+        {
+            return _currentTenant.Id.Value.ToString();
+        }
+
+        return User.FindFirstValue("tenant_id");
     }
 }

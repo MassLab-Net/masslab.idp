@@ -42,23 +42,10 @@ builder.Services.ConfigureApplicationCookie(options =>
     options.LoginPath = "/account/login";
     options.LogoutPath = "/account/logout";
     options.AccessDeniedPath = "/account/access-denied";
-    options.Cookie.Name = "masslab.identity.sso";
+    options.Cookie.Name = "masslab.identity.sso.v2";
+    options.Cookie.Path = "/";
     options.Cookie.HttpOnly = true;
     options.SlidingExpiration = true;
-    options.Events.OnSigningIn = context =>
-    {
-        context.CookieOptions.Path = context.HttpContext.Request.PathBase.HasValue
-            ? context.HttpContext.Request.PathBase.Value
-            : "/";
-        return Task.CompletedTask;
-    };
-    options.Events.OnSigningOut = context =>
-    {
-        context.CookieOptions.Path = context.HttpContext.Request.PathBase.HasValue
-            ? context.HttpContext.Request.PathBase.Value
-            : "/";
-        return Task.CompletedTask;
-    };
     options.Events.OnRedirectToLogin = context =>
     {
         context.Response.Redirect(ApplyCurrentPathBase(context.RedirectUri, context.Request.PathBase));

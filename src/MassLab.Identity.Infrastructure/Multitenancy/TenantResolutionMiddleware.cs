@@ -13,6 +13,11 @@ namespace MassLab.Identity.Infrastructure.Multitenancy;
 
 public sealed class TenantResolutionMiddleware
 {
+    private static readonly string[] LegacyCookieNames =
+    [
+        "masslab.identity.sso"
+    ];
+
     private readonly RequestDelegate _next;
 
     public TenantResolutionMiddleware(RequestDelegate next)
@@ -29,7 +34,9 @@ public sealed class TenantResolutionMiddleware
             .ToLowerInvariant();
 
         var localhostTenant = context.Request.Query["tenant"].FirstOrDefault();
-        var formTenant = context.Request.HasFormContentType
+        var shouldReadFormTenant = context.Request.HasFormContentType &&
+                                   !context.Request.Path.StartsWithSegments("/connect", StringComparison.OrdinalIgnoreCase);
+        var formTenant = shouldReadFormTenant
             ? context.Request.Form["Tenant"].FirstOrDefault() ?? context.Request.Form["tenant"].FirstOrDefault()
             : null;
         var headerTenantSlug = context.Request.Headers["X-Tenant-Slug"].FirstOrDefault();
@@ -116,6 +123,7 @@ public sealed class TenantResolutionMiddleware
         if (tenant is not null)
         {
             currentTenant.Set(tenant.Id, tenant.Slug, tenant.Status);
+            CleanupLegacyTenantScopedCookie(context, tenant.Slug);
         }
 
         await _next(context);
@@ -160,17 +168,57 @@ public sealed class TenantResolutionMiddleware
             return;
         }
 
-        context.Response.Cookies.Delete(cookieName, new CookieOptions
+        foreach (var name in EnumerateCookieNames(cookieName))
         {
-            Path = "/"
-        });
-
-        if (context.Request.PathBase.HasValue)
-        {
-            context.Response.Cookies.Delete(cookieName, new CookieOptions
+            context.Response.Cookies.Delete(name, new CookieOptions
             {
-                Path = context.Request.PathBase.Value
+                Path = "/"
             });
+
+            if (context.Request.PathBase.HasValue)
+            {
+                context.Response.Cookies.Delete(name, new CookieOptions
+                {
+                    Path = context.Request.PathBase.Value
+                });
+            }
+        }
+    }
+
+    private static void CleanupLegacyTenantScopedCookie(HttpContext context, string? tenantSlug)
+    {
+        if (string.IsNullOrWhiteSpace(tenantSlug))
+        {
+            return;
+        }
+
+        var optionsMonitor = context.RequestServices.GetRequiredService<IOptionsMonitor<CookieAuthenticationOptions>>();
+        var cookieOptions = optionsMonitor.Get(IdentityConstants.ApplicationScheme);
+        var cookieName = cookieOptions.Cookie.Name;
+        if (string.IsNullOrWhiteSpace(cookieName))
+        {
+            return;
+        }
+
+        foreach (var name in EnumerateCookieNames(cookieName))
+        {
+            context.Response.Cookies.Delete(name, new CookieOptions
+            {
+                Path = $"/{tenantSlug}"
+            });
+        }
+    }
+
+    private static IEnumerable<string> EnumerateCookieNames(string currentCookieName)
+    {
+        yield return currentCookieName;
+
+        foreach (var legacyCookieName in LegacyCookieNames)
+        {
+            if (!string.Equals(legacyCookieName, currentCookieName, StringComparison.Ordinal))
+            {
+                yield return legacyCookieName;
+            }
         }
     }
 

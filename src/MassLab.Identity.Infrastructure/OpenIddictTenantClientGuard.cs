@@ -2,6 +2,7 @@ using System.Security.Claims;
 using System.Text.Json;
 using MassLab.Identity.Application.Abstractions;
 using MassLab.Identity.Domain;
+using Microsoft.Extensions.Logging;
 using OpenIddict.Abstractions;
 using OpenIddict.Server;
 using static OpenIddict.Abstractions.OpenIddictConstants;
@@ -19,13 +20,16 @@ public sealed class OpenIddictTenantClientGuard :
 
     private readonly IOpenIddictApplicationManager _applications;
     private readonly ICurrentTenantAccessor _currentTenant;
+    private readonly ILogger<OpenIddictTenantClientGuard> _logger;
 
     public OpenIddictTenantClientGuard(
         IOpenIddictApplicationManager applications,
-        ICurrentTenantAccessor currentTenant)
+        ICurrentTenantAccessor currentTenant,
+        ILogger<OpenIddictTenantClientGuard> logger)
     {
         _applications = applications;
         _currentTenant = currentTenant;
+        _logger = logger;
     }
 
     public async ValueTask HandleAsync(OpenIddictServerEvents.ValidateAuthorizationRequestContext context)
@@ -59,6 +63,14 @@ public sealed class OpenIddictTenantClientGuard :
 
         var principal = context.AuthorizationCodePrincipal ?? context.RefreshTokenPrincipal;
         var userTenantId = principal?.FindFirstValue("tenant_id");
+        _logger.LogInformation(
+            "OpenIddict token validation: currentTenantId={CurrentTenantId}, currentTenantSlug={CurrentTenantSlug}, clientId={ClientId}, clientTenantId={ClientTenantId}, userTenantId={UserTenantId}, grantType={GrantType}",
+            _currentTenant.Id,
+            _currentTenant.Slug,
+            clientId,
+            clientTenantId,
+            userTenantId,
+            context.Request?.GrantType);
         if (string.IsNullOrWhiteSpace(userTenantId))
         {
             return;
@@ -66,6 +78,12 @@ public sealed class OpenIddictTenantClientGuard :
 
         if (!TenantMatchesUser(clientTenantId.Value, userTenantId))
         {
+            _logger.LogWarning(
+                "OpenIddict token validation rejected due to tenant mismatch: currentTenantId={CurrentTenantId}, clientId={ClientId}, clientTenantId={ClientTenantId}, userTenantId={UserTenantId}",
+                _currentTenant.Id,
+                clientId,
+                clientTenantId,
+                userTenantId);
             context.Reject(Errors.InvalidClient, InvalidTenantMessage);
         }
     }
@@ -101,6 +119,11 @@ public sealed class OpenIddictTenantClientGuard :
         var application = await _applications.FindByClientIdAsync(clientId, cancellationToken);
         if (application is null)
         {
+            _logger.LogWarning(
+                "OpenIddict client lookup returned null: clientId={ClientId}, currentTenantId={CurrentTenantId}, currentTenantSlug={CurrentTenantSlug}",
+                clientId,
+                _currentTenant.Id,
+                _currentTenant.Slug);
             return null;
         }
 
@@ -113,9 +136,21 @@ public sealed class OpenIddictTenantClientGuard :
         var tenantId = await GetTenantIdAsync(application, cancellationToken);
         if (!tenantId.HasValue)
         {
+            _logger.LogWarning(
+                "OpenIddict client has no tenant property: clientId={ClientId}, currentTenantId={CurrentTenantId}, currentTenantSlug={CurrentTenantSlug}",
+                clientId,
+                _currentTenant.Id,
+                _currentTenant.Slug);
             context.Reject(Errors.InvalidClient, InvalidTenantMessage);
             return null;
         }
+
+        _logger.LogInformation(
+            "OpenIddict client validated: clientId={ClientId}, clientTenantId={ClientTenantId}, currentTenantId={CurrentTenantId}, currentTenantSlug={CurrentTenantSlug}",
+            clientId,
+            tenantId,
+            _currentTenant.Id,
+            _currentTenant.Slug);
 
         return tenantId.Value;
     }
