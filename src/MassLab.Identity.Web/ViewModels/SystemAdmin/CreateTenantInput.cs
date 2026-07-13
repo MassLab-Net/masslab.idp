@@ -5,4 +5,7 @@ public sealed class CreateTenantInput
     public string Name { get; set; } = string.Empty;
     public string Slug { get; set; } = string.Empty;
     public string HostName { get; set; } = string.Empty;
+    public string RootEmail { get; set; } = string.Empty;
+    public string RootDisplayName { get; set; } = string.Empty;
+    public string? RootPassword { get; set; }
 }

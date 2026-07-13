@@ -95,47 +95,44 @@ public static class DatabaseSeeder
             db.UserRoleAssignments.Add(new UserRoleAssignment { TenantId = tenant.Id, UserId = tenantAdmin.Id, RoleId = adminRole.Id });
         }
 
-        if (!await db.ClientApplications.IgnoreQueryFilters().AnyAsync(x => x.TenantId == tenant.Id && x.ClientId == "demo-web", cancellationToken))
+        // Client registrations are stored in OpenIddict. Do not depend on legacy custom client tables.
+        var logicalClientId = formatter.NormalizeLogicalClientId("demo-web");
+        var physicalClientId = formatter.FormatPhysicalClientId(tenant.Id, logicalClientId);
+        var existingClient = await applicationManager.FindByClientIdAsync(physicalClientId, cancellationToken);
+        if (existingClient is null)
         {
-            // Create demo-web client using OpenIddict
-            var logicalClientId = formatter.NormalizeLogicalClientId("demo-web");
-            var physicalClientId = formatter.FormatPhysicalClientId(tenant.Id, logicalClientId);
-            var existingClient = await applicationManager.FindByClientIdAsync(physicalClientId, cancellationToken);
-            if (existingClient is null)
+            var descriptor = new OpenIddictApplicationDescriptor
             {
-                var descriptor = new OpenIddictApplicationDescriptor
-                {
-                    ClientId = physicalClientId,
-                    ClientSecret = "demo-secret",
-                    DisplayName = "Demo Web",
-                    ClientType = ClientTypes.Confidential,
-                    ConsentType = ConsentTypes.Implicit
-                };
+                ClientId = physicalClientId,
+                ClientSecret = "demo-secret",
+                DisplayName = "Demo Web",
+                ClientType = ClientTypes.Confidential,
+                ConsentType = ConsentTypes.Implicit
+            };
 
-                // Store tenant ID in properties
-                descriptor.Properties[nameof(TenantEntity.TenantId)] = JsonSerializer.SerializeToElement(tenant.Id);
-                descriptor.Properties[TenantClientIdFormatter.LogicalClientIdPropertyName] = JsonSerializer.SerializeToElement(logicalClientId);
-                descriptor.Properties["Type"] = JsonSerializer.SerializeToElement(ClientType.Web.ToString());
-                descriptor.Properties["Enabled"] = JsonSerializer.SerializeToElement(true);
+            // Store tenant ID in properties
+            descriptor.Properties[nameof(TenantEntity.TenantId)] = JsonSerializer.SerializeToElement(tenant.Id);
+            descriptor.Properties[TenantClientIdFormatter.LogicalClientIdPropertyName] = JsonSerializer.SerializeToElement(logicalClientId);
+            descriptor.Properties["Type"] = JsonSerializer.SerializeToElement(ClientType.Web.ToString());
+            descriptor.Properties["Enabled"] = JsonSerializer.SerializeToElement(true);
 
-                // Redirect URIs
-                descriptor.RedirectUris.Add(new Uri("https://localhost:5003/signin-oidc"));
-                descriptor.PostLogoutRedirectUris.Add(new Uri("https://localhost:5003/signout-callback-oidc"));
+            // Redirect URIs
+            descriptor.RedirectUris.Add(new Uri("https://localhost:5003/signin-oidc"));
+            descriptor.PostLogoutRedirectUris.Add(new Uri("https://localhost:5003/signout-callback-oidc"));
 
-                // Permissions
-                descriptor.Permissions.Add(Permissions.GrantTypes.AuthorizationCode);
-                descriptor.Permissions.Add(Permissions.GrantTypes.RefreshToken);
-                descriptor.Permissions.Add(Permissions.ResponseTypes.Code);
-                descriptor.Permissions.Add(Permissions.Endpoints.Authorization);
-                descriptor.Permissions.Add(Permissions.Endpoints.Token);
-                descriptor.Permissions.Add(Permissions.Endpoints.Revocation);
-                descriptor.Permissions.Add(Permissions.Endpoints.Introspection);
-                descriptor.Permissions.Add($"{Permissions.Prefixes.Scope}{Scopes.OpenId}");
-                descriptor.Permissions.Add($"{Permissions.Prefixes.Scope}{Scopes.Profile}");
-                descriptor.Permissions.Add($"{Permissions.Prefixes.Scope}{Scopes.Email}");
+            // Permissions
+            descriptor.Permissions.Add(Permissions.GrantTypes.AuthorizationCode);
+            descriptor.Permissions.Add(Permissions.GrantTypes.RefreshToken);
+            descriptor.Permissions.Add(Permissions.ResponseTypes.Code);
+            descriptor.Permissions.Add(Permissions.Endpoints.Authorization);
+            descriptor.Permissions.Add(Permissions.Endpoints.Token);
+            descriptor.Permissions.Add(Permissions.Endpoints.Revocation);
+            descriptor.Permissions.Add(Permissions.Endpoints.Introspection);
+            descriptor.Permissions.Add($"{Permissions.Prefixes.Scope}{Scopes.OpenId}");
+            descriptor.Permissions.Add($"{Permissions.Prefixes.Scope}{Scopes.Profile}");
+            descriptor.Permissions.Add($"{Permissions.Prefixes.Scope}{Scopes.Email}");
 
-                await applicationManager.CreateAsync(descriptor, cancellationToken);
-            }
+            await applicationManager.CreateAsync(descriptor, cancellationToken);
         }
 
         if (!await db.TenantSmtpSettings.IgnoreQueryFilters().AnyAsync(x => x.TenantId == tenant.Id, cancellationToken))

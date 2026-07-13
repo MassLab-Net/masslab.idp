@@ -419,11 +419,11 @@ const en = {
   "org.col.created": "Created",
   "org.settings": "Settings",
   "org.impersonate": "Impersonate admin",
-  "org.deleteTitle": "Delete organization?",
+  "org.deleteTitle": "Archive organization?",
   "org.deleteDesc":
-    "This action cannot be undone. The organization will be removed from the tenant:",
+    "This performs a soft delete and cannot be reversed from the current UI. The organization will be archived:",
   "org.created": "Organization created",
-  "org.deleted": "Organization deleted",
+  "org.deleted": "Organization archived",
 
   // Users
   "users.title": "User Management",
@@ -1112,11 +1112,11 @@ const vi: Partial<Record<keyof typeof en, string>> = {
   "org.col.created": "Tạo lúc",
   "org.settings": "Cài đặt",
   "org.impersonate": "Mạo danh quản trị",
-  "org.deleteTitle": "Xóa tổ chức?",
+  "org.deleteTitle": "Lưu trữ tổ chức?",
   "org.deleteDesc":
-    "Thao tác này không thể hoàn tác. Tổ chức sẽ bị xóa khỏi tenant:",
+    "Đây là soft delete và hiện không thể khôi phục từ UI. Tổ chức sẽ được lưu trữ:",
   "org.created": "Đã tạo tổ chức",
-  "org.deleted": "Đã xóa tổ chức",
+  "org.deleted": "Đã lưu trữ tổ chức",
 
   // Users
   "users.title": "Quản lý người dùng",

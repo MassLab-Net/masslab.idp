@@ -27,13 +27,22 @@ public sealed class SystemAdminApiController : ControllerBase
     [HttpPost("tenants")]
     public async Task<IActionResult> CreateTenant(CreateTenantInput input)
     {
-        await _sender.Send(new CreateTenantCommand(input.Name, input.Slug, input.HostName));
-        return NoContent();
+        return ToActionResult(await _sender.Send(new CreateTenantCommand(
+            input.Name,
+            input.Slug,
+            input.HostName,
+            input.RootEmail,
+            input.RootDisplayName,
+            input.RootPassword)));
     }
 
     [HttpPost("tenants/{id:guid}/toggle")]
     public async Task<IActionResult> ToggleTenant(Guid id)
         => ToActionResult(await _sender.Send(new ToggleTenantCommand(id)));
+
+    [HttpDelete("tenants/{id:guid}")]
+    public async Task<IActionResult> DeleteTenant(Guid id)
+        => ToActionResult(await _sender.Send(new DeleteTenantCommand(id)));
 
     private ActionResult ToActionResult(CommandResult result)
     {
@@ -42,6 +51,16 @@ public sealed class SystemAdminApiController : ControllerBase
             return NotFound(result);
         }
 
+        if (!result.Succeeded)
+        {
+            return BadRequest(result);
+        }
+
+        return Ok(result);
+    }
+
+    private ActionResult ToActionResult(CreateTenantResult result)
+    {
         if (!result.Succeeded)
         {
             return BadRequest(result);

@@ -26,7 +26,22 @@ public sealed class SystemAdminController : Controller
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> CreateTenant(CreateTenantInput input)
     {
-        await _sender.Send(new CreateTenantCommand(input.Name, input.Slug, input.HostName));
+        var result = await _sender.Send(new CreateTenantCommand(
+            input.Name,
+            input.Slug,
+            input.HostName,
+            input.RootEmail,
+            input.RootDisplayName,
+            input.RootPassword));
+        if (!result.Succeeded)
+        {
+            TempData["CreateTenantError"] = string.Join(" ", result.Errors ?? []);
+            return RedirectToAction(nameof(Index));
+        }
+
+        TempData["CreateTenantRootEmail"] = result.RootEmail;
+        TempData["CreateTenantRootPassword"] = result.RootPassword;
+        TempData["CreateTenantPasswordGenerated"] = result.PasswordGenerated;
         return RedirectToAction(nameof(Index));
     }
 
@@ -38,6 +53,24 @@ public sealed class SystemAdminController : Controller
         if (result.NotFound)
         {
             return NotFound();
+        }
+
+        return RedirectToAction(nameof(Index));
+    }
+
+    [HttpPost("tenants/{id:guid}/delete")]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> DeleteTenant(Guid id)
+    {
+        var result = await _sender.Send(new DeleteTenantCommand(id));
+        if (result.NotFound)
+        {
+            return NotFound();
+        }
+
+        if (!result.Succeeded)
+        {
+            TempData["CreateTenantError"] = string.Join(" ", result.Errors ?? []);
         }
 
         return RedirectToAction(nameof(Index));

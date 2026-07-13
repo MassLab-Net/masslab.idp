@@ -116,6 +116,14 @@ export type CreateClientResult = CommandResult & {
   clientSecret?: string;
 };
 
+export type CreateTenantResult = {
+  succeeded: boolean;
+  rootEmail?: string;
+  rootPassword?: string;
+  passwordGenerated?: boolean;
+  errors?: string[];
+};
+
 export async function identityFetch<T>(
   session: AuthSession,
   path: string,

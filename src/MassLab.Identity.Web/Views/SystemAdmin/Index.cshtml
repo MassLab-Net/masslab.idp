@@ -1,6 +1,62 @@
 @model IReadOnlyCollection<SystemTenantDto>
 @{
     ViewData["Title"] = "Organizations";
+    var createdRootEmail = TempData["CreateTenantRootEmail"] as string;
+    var createdRootPassword = TempData["CreateTenantRootPassword"] as string;
+    var createTenantError = TempData["CreateTenantError"] as string;
+    var passwordGenerated = TempData["CreateTenantPasswordGenerated"] is bool generated && generated;
+}
+
+@if (!string.IsNullOrWhiteSpace(createTenantError))
+{
+    <div class="alert alert-danger">@createTenantError</div>
+}
+
+@if (!string.IsNullOrWhiteSpace(createdRootEmail) && !string.IsNullOrWhiteSpace(createdRootPassword))
+{
+    <div class="alert alert-success">
+        <strong>Tenant created.</strong>
+        Root account: <code id="created-root-email">@createdRootEmail</code>
+        Password:
+        <code id="created-root-password" data-password-value="@createdRootPassword" data-password-masked="true">••••••••••••</code>
+        @if (passwordGenerated)
+        {
+            <span class="ml-2 badge badge-warning">Generated</span>
+        }
+        <button
+            type="button"
+            class="btn btn-sm btn-outline-success ml-3"
+            data-copy-credentials
+            data-root-email="@createdRootEmail"
+            data-root-password="@createdRootPassword">
+            <i class="fa fa-copy"></i>
+            <span>Copy credentials</span>
+        </button>
+        <button
+            type="button"
+            class="btn btn-sm btn-outline-secondary ml-2"
+            data-copy-email
+            data-copy-value="@createdRootEmail">
+            <i class="fa fa-envelope-o"></i>
+            <span>Copy email</span>
+        </button>
+        <button
+            type="button"
+            class="btn btn-sm btn-outline-secondary ml-2"
+            data-copy-password
+            data-copy-value="@createdRootPassword">
+            <i class="fa fa-key"></i>
+            <span>Copy password</span>
+        </button>
+        <button
+            type="button"
+            class="btn btn-sm btn-outline-secondary ml-2"
+            data-toggle-password
+            data-password-target="created-root-password">
+            <i class="fa fa-eye"></i>
+            <span>Show password</span>
+        </button>
+    </div>
 }
 
 <div class="card card-primary">
@@ -23,12 +79,107 @@
                     <input name="hostName" class="form-control" />
                 </div>
             </div>
+            <div class="form-row">
+                <div class="form-group col-md-4">
+                    <label>Root email</label>
+                    <input name="rootEmail" type="email" class="form-control" />
+                </div>
+                <div class="form-group col-md-4">
+                    <label>Root display name</label>
+                    <input name="rootDisplayName" class="form-control" />
+                </div>
+                <div class="form-group col-md-4">
+                    <label>Root password</label>
+                    <input name="rootPassword" type="password" class="form-control" />
+                    <small class="form-text text-muted">Leave blank to auto-generate a strong password.</small>
+                </div>
+            </div>
         </div>
         <div class="card-footer">
             <button type="submit" class="btn btn-primary"><i class="fa fa-plus"></i> Create organization</button>
         </div>
     </form>
 </div>
+
+@section Scripts {
+    <script>
+        (() => {
+            const registerCopyButton = (selector, getPayload, successLabel, resetLabel) => {
+                const button = document.querySelector(selector);
+                if (!button) {
+                    return;
+                }
+
+                button.addEventListener("click", async () => {
+                    const label = button.querySelector("span");
+
+                    try {
+                        await navigator.clipboard.writeText(getPayload(button));
+                        if (label) {
+                            label.textContent = successLabel;
+                        }
+                    } catch {
+                        if (label) {
+                            label.textContent = "Copy failed";
+                        }
+                    }
+
+                    window.setTimeout(() => {
+                        if (label) {
+                            label.textContent = resetLabel;
+                        }
+                    }, 2000);
+                });
+            };
+
+            registerCopyButton(
+                "[data-copy-credentials]",
+                (button) => `Email: ${button.getAttribute("data-root-email") ?? ""}\nPassword: ${button.getAttribute("data-root-password") ?? ""}`,
+                "Copied",
+                "Copy credentials");
+
+            registerCopyButton(
+                "[data-copy-email]",
+                (button) => button.getAttribute("data-copy-value") ?? "",
+                "Email copied",
+                "Copy email");
+
+            registerCopyButton(
+                "[data-copy-password]",
+                (button) => button.getAttribute("data-copy-value") ?? "",
+                "Password copied",
+                "Copy password");
+
+            const toggleButton = document.querySelector("[data-toggle-password]");
+            if (!toggleButton) {
+                return;
+            }
+
+            toggleButton.addEventListener("click", () => {
+                const targetId = toggleButton.getAttribute("data-password-target");
+                const target = targetId ? document.getElementById(targetId) : null;
+                const label = toggleButton.querySelector("span");
+                const icon = toggleButton.querySelector("i");
+                if (!target) {
+                    return;
+                }
+
+                const passwordValue = target.getAttribute("data-password-value") ?? "";
+                const isMasked = target.getAttribute("data-password-masked") !== "false";
+                target.textContent = isMasked ? passwordValue : "••••••••••••";
+                target.setAttribute("data-password-masked", isMasked ? "false" : "true");
+
+                if (label) {
+                    label.textContent = isMasked ? "Hide password" : "Show password";
+                }
+
+                if (icon) {
+                    icon.className = isMasked ? "fa fa-eye-slash" : "fa fa-eye";
+                }
+            });
+        })();
+    </script>
+}
 
 <div class="card">
     <div class="card-header">

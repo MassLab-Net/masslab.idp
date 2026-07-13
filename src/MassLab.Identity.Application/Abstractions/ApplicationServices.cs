@@ -179,8 +179,9 @@ public interface ISystemAdminQueries
 
 public interface ISystemAdminCommands
 {
-    Task CreateTenantAsync(string name, string slug, string hostName, CancellationToken cancellationToken = default);
+    Task<CreateTenantResult> CreateTenantAsync(string name, string slug, string hostName, string rootEmail, string rootDisplayName, string? rootPassword, CancellationToken cancellationToken = default);
     Task<CommandResult> ToggleTenantAsync(Guid id, CancellationToken cancellationToken = default);
+    Task<CommandResult> DeleteTenantAsync(Guid id, CancellationToken cancellationToken = default);
 }
 
 public sealed record OpenIdUserInfoDto(

@@ -19,3 +19,20 @@ public sealed record LoginResult(bool Succeeded, string? ErrorMessage = null)
 }
 
 public sealed record VerifyEmailResult(bool Found, bool Succeeded);
+
+public sealed record CreateTenantResult(
+    bool Succeeded,
+    string? RootEmail = null,
+    string? RootPassword = null,
+    bool PasswordGenerated = false,
+    IReadOnlyCollection<string>? Errors = null)
+{
+    public static CreateTenantResult Success(string rootEmail, string rootPassword, bool passwordGenerated)
+        => new(true, rootEmail, rootPassword, passwordGenerated);
+
+    public static CreateTenantResult Failure(params string[] errors)
+        => new(false, Errors: errors);
+
+    public static CreateTenantResult Failure(IEnumerable<string> errors)
+        => new(false, Errors: errors.ToArray());
+}
