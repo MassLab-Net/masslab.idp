@@ -112,7 +112,8 @@ builder.Services.AddOpenIddict()
         var aspNetCore = options.UseAspNetCore()
             .EnableAuthorizationEndpointPassthrough()
             .EnableEndSessionEndpointPassthrough()
-            .EnableUserInfoEndpointPassthrough();
+            .EnableUserInfoEndpointPassthrough()
+            .EnableStatusCodePagesIntegration();
 
         if (isDevelopment)
         {
@@ -187,6 +188,7 @@ if (!app.Environment.IsDevelopment())
 app.UseMiddleware<MassLab.Identity.Infrastructure.Multitenancy.TenantPathBaseMiddleware>();
 app.UseStaticFiles();
 app.UseMiddleware<MassLab.Identity.Infrastructure.OpenIddictTenantClientIdMappingMiddleware>();
+app.UseStatusCodePagesWithReExecute("/account/oidc-error");
 app.UseRouting();
 app.UseCors("AdminSpa");
 app.UseRateLimiter();

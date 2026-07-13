@@ -1,0 +1,96 @@
+@model OidcErrorViewModel
+@{
+    Layout = "_AuthLayout";
+    ViewData["Title"] = "Authorization Error";
+}
+
+<div class="masslab-auth-card-page">
+    <div class="masslab-auth-card masslab-auth-card--center">
+        <div class="masslab-auth-card__icon masslab-auth-card__icon--danger">
+            <i class="fa fa-exclamation-circle"></i>
+        </div>
+        <div class="masslab-auth-card__header">
+            <h1 data-i18n="title">Authorization request failed</h1>
+            <p data-i18n="description">The identity service could not continue this sign-in request. Review the details below and update the client or tenant configuration.</p>
+
+            <div class="mt-3 text-left text-muted small">
+                @if (!string.IsNullOrWhiteSpace(Model.Tenant))
+                {
+                    <div><strong data-i18n="tenantLabel">Tenant:</strong> <code>@Model.Tenant</code></div>
+                }
+                @if (!string.IsNullOrWhiteSpace(Model.Error))
+                {
+                    <div><strong data-i18n="errorLabel">Error:</strong> <code>@Model.Error</code></div>
+                }
+                @if (!string.IsNullOrWhiteSpace(Model.ErrorDescription))
+                {
+                    <div><strong data-i18n="messageLabel">Message:</strong> @Model.ErrorDescription</div>
+                }
+                @if (Model.StatusCode > 0)
+                {
+                    <div><strong data-i18n="statusLabel">Status:</strong> <code>@Model.StatusCode</code></div>
+                }
+            </div>
+
+            @if (!string.IsNullOrWhiteSpace(Model.ErrorUri))
+            {
+                <p class="mt-3 mb-0">
+                    <a href="@Model.ErrorUri" target="_blank" rel="noreferrer noopener" class="masslab-login__link" data-i18n="docsLink">View error documentation</a>
+                </p>
+            }
+        </div>
+
+        <a asp-controller="Home" asp-action="Index" class="btn masslab-login__submit" data-i18n="backHome">Back to home</a>
+
+        <div class="masslab-login__locale-switcher mt-3">
+            <button type="button" class="masslab-login__locale-btn is-active" data-locale="en">English</button>
+            <button type="button" class="masslab-login__locale-btn" data-locale="vi">Tiếng Việt</button>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        (() => {
+            const translations = {
+                en: {
+                    title: "Authorization request failed",
+                    description: "The identity service could not continue this sign-in request. Review the details below and update the client or tenant configuration.",
+                    tenantLabel: "Tenant:",
+                    errorLabel: "Error:",
+                    messageLabel: "Message:",
+                    statusLabel: "Status:",
+                    docsLink: "View error documentation",
+                    backHome: "Back to home"
+                },
+                vi: {
+                    title: "Yeu cau xac thuc that bai",
+                    description: "Dich vu identity khong the tiep tuc yeu cau dang nhap nay. Hay kiem tra cac thong tin ben duoi va cap nhat cau hinh client hoac tenant.",
+                    tenantLabel: "Tenant:",
+                    errorLabel: "Loi:",
+                    messageLabel: "Thong diep:",
+                    statusLabel: "Trang thai:",
+                    docsLink: "Xem tai lieu loi",
+                    backHome: "Quay ve trang chu"
+                }
+            };
+
+            const applyLocale = (locale) => {
+                const values = translations[locale] ?? translations.en;
+                document.querySelectorAll("[data-i18n]").forEach((node) => {
+                    const key = node.getAttribute("data-i18n");
+                    if (key && values[key]) {
+                        node.textContent = values[key];
+                    }
+                });
+                document.querySelectorAll("[data-locale]").forEach((button) => {
+                    button.classList.toggle("is-active", button.getAttribute("data-locale") === locale);
+                });
+            };
+
+            document.querySelectorAll("[data-locale]").forEach((button) => {
+                button.addEventListener("click", () => applyLocale(button.getAttribute("data-locale")));
+            });
+        })();
+    </script>
+}

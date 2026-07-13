@@ -3,8 +3,18 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.RateLimiting;
 using MassLab.Identity.Application.Common;
 using MassLab.Identity.Application.Features;
+using MassLab.Identity.Application.Abstractions;
+using MassLab.Identity.Domain;
+using MassLab.Identity.Infrastructure;
 using MassLab.Identity.Web.ViewModels.Account;
 using MediatR;
+using Microsoft.AspNetCore;
+using Microsoft.AspNetCore.Diagnostics;
+using Microsoft.AspNetCore.WebUtilities;
+using OpenIddict.Abstractions;
+using OpenIddict.Server.AspNetCore;
+using System.Text.Json;
+using static OpenIddict.Abstractions.OpenIddictConstants;
 
 namespace MassLab.Identity.Web.Controllers;
 
@@ -12,21 +22,44 @@ namespace MassLab.Identity.Web.Controllers;
 public sealed class AccountController : Controller
 {
     private readonly ISender _sender;
+    private readonly IOpenIddictApplicationManager _applications;
+    private readonly ICurrentTenantAccessor _currentTenant;
+    private readonly TenantClientIdFormatter _formatter;
     private static readonly string[] InvalidReturnUrlPrefixes =
     [
         "/account/logout",
         "/connect/logout"
     ];
 
-    public AccountController(ISender sender)
+    public AccountController(
+        ISender sender,
+        IOpenIddictApplicationManager applications,
+        ICurrentTenantAccessor currentTenant,
+        TenantClientIdFormatter formatter)
     {
         _sender = sender;
+        _applications = applications;
+        _currentTenant = currentTenant;
+        _formatter = formatter;
     }
 
     [HttpGet("login")]
-    public IActionResult Login(string? returnUrl = null, string? tenant = null)
+    public async Task<IActionResult> Login(string? returnUrl = null, string? tenant = null)
     {
         var normalizedReturnUrl = NormalizeReturnUrl(returnUrl);
+        var authorizeClientId = GetAuthorizeClientId(normalizedReturnUrl);
+        if (!await IsValidAuthorizeReturnUrlAsync(normalizedReturnUrl, HttpContext.RequestAborted))
+        {
+            return View("InvalidClient", new InvalidClientViewModel
+            {
+                Tenant = tenant
+                    ?? Request.PathBase.Value?.Trim('/').ToLowerInvariant()
+                    ?? Request.Query["tenant"].FirstOrDefault()
+                    ?? _currentTenant.Slug,
+                ClientId = authorizeClientId
+            });
+        }
+
         if (User.Identity?.IsAuthenticated == true)
         {
             return LocalRedirect(normalizedReturnUrl ?? "/");
@@ -47,6 +80,16 @@ public sealed class AccountController : Controller
     [EnableRateLimiting("login")]
     public async Task<IActionResult> Login(LoginInput input)
     {
+        var authorizeClientId = GetAuthorizeClientId(input.ReturnUrl);
+        if (!await IsValidAuthorizeReturnUrlAsync(input.ReturnUrl, HttpContext.RequestAborted))
+        {
+            return View("InvalidClient", new InvalidClientViewModel
+            {
+                Tenant = input.Tenant ?? _currentTenant.Slug,
+                ClientId = authorizeClientId
+            });
+        }
+
         var result = await _sender.Send(new LoginCommand(input.Email, input.Password, input.RememberMe));
         if (!result.Succeeded)
         {
@@ -141,6 +184,26 @@ public sealed class AccountController : Controller
     [HttpGet("access-denied")]
     public IActionResult AccessDenied() => View();
 
+    [AllowAnonymous]
+    [HttpGet("oidc-error")]
+    public IActionResult OidcError()
+    {
+        var response = HttpContext.GetOpenIddictServerResponse();
+        var statusCodeFeature = HttpContext.Features.Get<IStatusCodeReExecuteFeature>();
+        var tenant = Request.PathBase.Value?.Trim('/').ToLowerInvariant() ?? _currentTenant.Slug;
+        var statusCode = statusCodeFeature?.OriginalStatusCode ?? HttpContext.Response.StatusCode;
+        Response.StatusCode = statusCode;
+
+        return View(new OidcErrorViewModel
+        {
+            StatusCode = statusCode,
+            Tenant = string.IsNullOrWhiteSpace(tenant) ? null : tenant,
+            Error = response?.Error,
+            ErrorDescription = response?.ErrorDescription,
+            ErrorUri = response?.ErrorUri
+        });
+    }
+
     private void AddErrors(CommandResult result)
     {
         foreach (var error in result.Errors ?? Array.Empty<string>())
@@ -180,4 +243,75 @@ public sealed class AccountController : Controller
 
         return returnUrl;
     }
+
+    private async Task<bool> IsValidAuthorizeReturnUrlAsync(string? returnUrl, CancellationToken cancellationToken)
+    {
+        var clientId = GetAuthorizeClientId(returnUrl);
+        if (string.IsNullOrWhiteSpace(clientId))
+        {
+            return true;
+        }
+
+        var lookupClientId = _currentTenant.Id.HasValue
+            ? _formatter.FormatPhysicalClientId(_currentTenant.Id.Value, _formatter.NormalizeLogicalClientId(clientId))
+            : clientId;
+
+        var application = await _applications.FindByClientIdAsync(lookupClientId, cancellationToken);
+        if (application is null)
+        {
+            return false;
+        }
+
+        var properties = await _applications.GetPropertiesAsync(application, cancellationToken);
+        if (!IsEnabled(properties))
+        {
+            return false;
+        }
+
+        if (!_currentTenant.Id.HasValue)
+        {
+            return true;
+        }
+
+        return properties.TryGetValue(nameof(TenantEntity.TenantId), out var tenantElement) &&
+               tenantElement.ValueKind == JsonValueKind.String &&
+               Guid.TryParse(tenantElement.GetString(), out var tenantId) &&
+               tenantId == _currentTenant.Id.Value;
+    }
+
+    private static string? GetAuthorizeClientId(string? returnUrl)
+    {
+        if (string.IsNullOrWhiteSpace(returnUrl))
+        {
+            return null;
+        }
+
+        if (!Uri.TryCreate($"https://local{returnUrl}", UriKind.Absolute, out var uri))
+        {
+            return null;
+        }
+
+        var path = uri.AbsolutePath;
+        if (!path.Contains("/connect/authorize", StringComparison.OrdinalIgnoreCase))
+        {
+            return null;
+        }
+
+        var query = QueryHelpers.ParseQuery(uri.Query);
+        if (!query.TryGetValue(Parameters.ClientId, out var clientIdValues) || string.IsNullOrWhiteSpace(clientIdValues[0]))
+        {
+            return null;
+        }
+
+        return clientIdValues[0]!;
+    }
+
+    private static bool IsEnabled(IReadOnlyDictionary<string, JsonElement> properties)
+        => properties.TryGetValue("Enabled", out var element) && element.ValueKind switch
+        {
+            JsonValueKind.True => true,
+            JsonValueKind.False => false,
+            JsonValueKind.String => bool.TryParse(element.GetString(), out var value) && value,
+            _ => false
+        };
 }

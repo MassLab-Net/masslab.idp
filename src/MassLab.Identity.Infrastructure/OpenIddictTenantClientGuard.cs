@@ -17,6 +17,7 @@ public sealed class OpenIddictTenantClientGuard :
 {
     private const string DisabledClientMessage = "The client application is disabled.";
     private const string InvalidTenantMessage = "The client application is not allowed for this tenant.";
+    private const string InvalidClientMessage = "The client application is invalid.";
 
     private readonly IOpenIddictApplicationManager _applications;
     private readonly ICurrentTenantAccessor _currentTenant;
@@ -124,6 +125,7 @@ public sealed class OpenIddictTenantClientGuard :
                 clientId,
                 _currentTenant.Id,
                 _currentTenant.Slug);
+            context.Reject(Errors.InvalidClient, InvalidClientMessage);
             return null;
         }
 

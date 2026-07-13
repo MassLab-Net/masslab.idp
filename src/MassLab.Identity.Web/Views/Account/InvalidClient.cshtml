@@ -1,0 +1,75 @@
+@model InvalidClientViewModel
+@{
+    Layout = "_AuthLayout";
+    ViewData["Title"] = "Invalid Client";
+}
+
+<div class="masslab-auth-card-page">
+    <div class="masslab-auth-card masslab-auth-card--center">
+        <div class="masslab-auth-card__icon masslab-auth-card__icon--danger">
+            <i class="fa fa-exclamation-triangle"></i>
+        </div>
+        <div class="masslab-auth-card__header">
+            <h1 data-i18n="title">Application is not available for this tenant</h1>
+            <p data-i18n="description">This sign-in request uses a client application that is not configured or not enabled for the current tenant.</p>
+            @if (!string.IsNullOrWhiteSpace(Model.Tenant) || !string.IsNullOrWhiteSpace(Model.ClientId))
+            {
+                <div class="mt-3 text-muted">
+                    @if (!string.IsNullOrWhiteSpace(Model.Tenant))
+                    {
+                        <div><strong data-i18n="tenantLabel">Tenant:</strong> <code>@Model.Tenant</code></div>
+                    }
+                    @if (!string.IsNullOrWhiteSpace(Model.ClientId))
+                    {
+                        <div><strong data-i18n="clientLabel">Client:</strong> <code>@Model.ClientId</code></div>
+                    }
+                </div>
+            }
+        </div>
+        <a asp-controller="Home" asp-action="Index" class="btn masslab-login__submit" data-i18n="backHome">Back to home</a>
+        <div class="masslab-login__locale-switcher mt-3">
+            <button type="button" class="masslab-login__locale-btn is-active" data-locale="en">English</button>
+            <button type="button" class="masslab-login__locale-btn" data-locale="vi">Tiếng Việt</button>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        (() => {
+            const translations = {
+                en: {
+                    title: "Application is not available for this tenant",
+                    description: "This sign-in request uses a client application that is not configured or not enabled for the current tenant.",
+                    tenantLabel: "Tenant:",
+                    clientLabel: "Client:",
+                    backHome: "Back to home"
+                },
+                vi: {
+                    title: "Ứng dụng không khả dụng cho tenant này",
+                    description: "Yêu cầu đăng nhập này đang dùng một client application chưa được cấu hình hoặc chưa được bật cho tenant hiện tại.",
+                    tenantLabel: "Tenant:",
+                    clientLabel: "Client:",
+                    backHome: "Quay về trang chủ"
+                }
+            };
+
+            const applyLocale = (locale) => {
+                const values = translations[locale] ?? translations.en;
+                document.querySelectorAll("[data-i18n]").forEach((node) => {
+                    const key = node.getAttribute("data-i18n");
+                    if (key && values[key]) {
+                        node.textContent = values[key];
+                    }
+                });
+                document.querySelectorAll("[data-locale]").forEach((button) => {
+                    button.classList.toggle("is-active", button.getAttribute("data-locale") === locale);
+                });
+            };
+
+            document.querySelectorAll("[data-locale]").forEach((button) => {
+                button.addEventListener("click", () => applyLocale(button.getAttribute("data-locale")));
+            });
+        })();
+    </script>
+}
