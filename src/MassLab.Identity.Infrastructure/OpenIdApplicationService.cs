@@ -43,6 +43,7 @@ internal sealed class OpenIdApplicationService : IOpenIdQueries
             tenantName,
             string.Equals(principal.FindFirstValue("system_admin"), "true", StringComparison.OrdinalIgnoreCase),
             string.Equals(principal.FindFirstValue("tenant_admin"), "true", StringComparison.OrdinalIgnoreCase),
+            string.Equals(principal.FindFirstValue("remember_me"), "true", StringComparison.OrdinalIgnoreCase),
             permissions);
     }
 }

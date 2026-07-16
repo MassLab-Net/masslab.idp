@@ -7,36 +7,43 @@ const LOGOUT_SUPPRESSION_WINDOW_MS = 10000;
 export function getStoredSession(): AuthSession | null {
   if (typeof window === "undefined") return null;
 
-  try {
-    const raw = localStorage.getItem(KEY);
-    if (!raw) return null;
+  return readStoredSession(localStorage) ?? readStoredSession(sessionStorage);
+}
 
+function readStoredSession(storage: Storage): AuthSession | null {
+  try {
+    const raw = storage.getItem(KEY);
+    if (!raw) return null;
     const session = JSON.parse(raw) as AuthSession;
     if (!session?.accessToken || !session?.user || !session?.identityBaseUrl) {
-      clearStoredSession();
+      storage.removeItem(KEY);
       return null;
     }
 
     if (session.expiresAt <= Date.now()) {
-      clearStoredSession();
+      storage.removeItem(KEY);
       return null;
     }
 
     return session;
   } catch {
-    clearStoredSession();
+    storage.removeItem(KEY);
     return null;
   }
 }
 
 export function persistSession(session: AuthSession) {
   if (typeof window === "undefined") return;
-  localStorage.setItem(KEY, JSON.stringify(session));
+  const storage = session.rememberMe ? localStorage : sessionStorage;
+  const otherStorage = session.rememberMe ? sessionStorage : localStorage;
+  otherStorage.removeItem(KEY);
+  storage.setItem(KEY, JSON.stringify(session));
 }
 
 export function clearStoredSession() {
   if (typeof window === "undefined") return;
   localStorage.removeItem(KEY);
+  sessionStorage.removeItem(KEY);
 }
 
 export function markLogoutInProgress() {

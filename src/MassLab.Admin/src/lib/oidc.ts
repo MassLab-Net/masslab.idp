@@ -27,6 +27,7 @@ type UserInfoResponse = {
   tenant_name?: string;
   system_admin?: boolean;
   tenant_admin?: boolean;
+  remember_me?: boolean;
   permissions?: string[];
 };
 
@@ -124,6 +125,7 @@ export async function completeLogin(callbackUrl: string): Promise<{ session: Aut
       expiresAt: Date.now() + tokenResponse.expires_in * 1000,
       identityBaseUrl: pending.identityBaseUrl,
       organizationSlug: pending.organizationSlug,
+      rememberMe: !!userInfo.remember_me,
       user: mapUser(userInfo, pending.organizationSlug),
     },
   };

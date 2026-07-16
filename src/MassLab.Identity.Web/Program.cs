@@ -46,6 +46,7 @@ builder.Services.ConfigureApplicationCookie(options =>
     options.Cookie.Name = "masslab.identity.sso.v2";
     options.Cookie.Path = "/";
     options.Cookie.HttpOnly = true;
+    options.ExpireTimeSpan = TimeSpan.FromDays(30);
     options.SlidingExpiration = true;
     options.Events.OnRedirectToLogin = context =>
     {

@@ -5,6 +5,7 @@ using MassLab.Identity.Infrastructure.Data;
 using MassLab.Identity.Domain;
 using MassLab.Identity.Infrastructure.Multitenancy;
 using MassLab.Identity.Infrastructure.Services;
+using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Routing;
@@ -74,6 +75,11 @@ internal sealed class AccountApplicationService : IAccountQueries, IAccountComma
             await _audit.WriteAsync("login.failed", AuditResult.Failure, "user", user.Id.ToString(), cancellationToken: cancellationToken);
             return LoginResult.Failure("Invalid login attempt.");
         }
+
+        await _signInManager.SignInWithClaimsAsync(
+            user,
+            new AuthenticationProperties { IsPersistent = rememberMe },
+            [new Claim("remember_me", rememberMe ? "true" : "false")]);
 
         var httpContext = _httpContextAccessor.HttpContext;
         _db.UserSessions.Add(new UserSession

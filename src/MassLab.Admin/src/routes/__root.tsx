@@ -114,7 +114,7 @@ function RootShell({ children }: { children: ReactNode }) {
           dangerouslySetInnerHTML={{
             __html: `
               try {
-                const raw = window.localStorage.getItem("masslab.iam.session.v2");
+                const raw = window.localStorage.getItem("masslab.iam.session.v2") || window.sessionStorage.getItem("masslab.iam.session.v2");
                 if (raw) {
                   const session = JSON.parse(raw);
                   if (session && session.accessToken && session.user && session.identityBaseUrl && session.expiresAt > Date.now()) {

@@ -20,4 +20,5 @@ export type AuthSession = {
   expiresAt: number;
   identityBaseUrl: string;
   organizationSlug?: string;
+  rememberMe?: boolean;
 };

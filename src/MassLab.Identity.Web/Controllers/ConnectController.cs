@@ -92,6 +92,7 @@ public sealed class ConnectController : Controller
             tenant_name = result.TenantName,
             system_admin = result.IsSystemAdmin,
             tenant_admin = result.IsTenantAdmin,
+            remember_me = result.RememberMe,
             permissions = result.Permissions
         });
     }
@@ -167,6 +168,7 @@ public sealed class ConnectController : Controller
             case "tenant_id":
             case "system_admin":
             case "tenant_admin":
+            case "remember_me":
                 return [Destinations.AccessToken];
             case "permission":
                 return scopes.Contains("permissions")

@@ -192,6 +192,7 @@ public sealed record OpenIdUserInfoDto(
     string? TenantName,
     bool IsSystemAdmin,
     bool IsTenantAdmin,
+    bool RememberMe,
     IReadOnlyCollection<string> Permissions);
 
 public interface IOpenIdQueries
