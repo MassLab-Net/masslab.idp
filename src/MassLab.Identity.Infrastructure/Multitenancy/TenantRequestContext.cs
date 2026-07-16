@@ -3,7 +3,7 @@ using Microsoft.AspNetCore.Http;
 
 namespace MassLab.Identity.Infrastructure.Multitenancy;
 
-internal static class TenantRequestContext
+public static class TenantRequestContext
 {
     private const string ResolvedTenantKey = "__MassLab.ResolvedTenant";
     private const string RouteTenantSlugKey = "__MassLab.RouteTenantSlug";

@@ -5,6 +5,7 @@ using MassLab.Common.Observability.Extensions;
 using MassLab.Identity.Application;
 using MassLab.Identity.Infrastructure;
 using MassLab.Identity.Infrastructure.Data;
+using MassLab.Identity.Infrastructure.Multitenancy;
 using MassLab.Identity.Web.Options;
 using Microsoft.AspNetCore.RateLimiting;
 using OpenIddict.Abstractions;
@@ -48,12 +49,12 @@ builder.Services.ConfigureApplicationCookie(options =>
     options.SlidingExpiration = true;
     options.Events.OnRedirectToLogin = context =>
     {
-        context.Response.Redirect(ApplyCurrentPathBase(context.RedirectUri, context.Request.PathBase));
+        context.Response.Redirect(ApplyCurrentTenantPrefix(context.RedirectUri, context.HttpContext));
         return Task.CompletedTask;
     };
     options.Events.OnRedirectToAccessDenied = context =>
     {
-        context.Response.Redirect(ApplyCurrentPathBase(context.RedirectUri, context.Request.PathBase));
+        context.Response.Redirect(ApplyCurrentTenantPrefix(context.RedirectUri, context.HttpContext));
         return Task.CompletedTask;
     };
 });
@@ -214,14 +215,14 @@ await OpenIddictAdminSpaClientSeeder.EnsureConfiguredAsync(app.Services);
 
 app.Run();
 
-static string ApplyCurrentPathBase(string redirectUri, PathString pathBase)
+static string ApplyCurrentTenantPrefix(string redirectUri, HttpContext httpContext)
 {
-    if (!pathBase.HasValue)
+    var prefix = GetTenantPrefix(httpContext);
+    if (string.IsNullOrWhiteSpace(prefix))
     {
         return redirectUri;
     }
 
-    var prefix = pathBase.Value!;
     if (Uri.TryCreate(redirectUri, UriKind.Absolute, out var absoluteUri))
     {
         if (absoluteUri.AbsolutePath.StartsWith(prefix, StringComparison.OrdinalIgnoreCase))
@@ -245,6 +246,17 @@ static string ApplyCurrentPathBase(string redirectUri, PathString pathBase)
     return redirectUri.StartsWith("/", StringComparison.Ordinal)
         ? $"{prefix}{redirectUri}"
         : $"{prefix}/{redirectUri}";
+}
+
+static string? GetTenantPrefix(HttpContext httpContext)
+{
+    if (httpContext.Request.PathBase.HasValue)
+    {
+        return httpContext.Request.PathBase.Value!;
+    }
+
+    var tenantSlug = TenantRequestContext.GetRouteTenantSlug(httpContext);
+    return string.IsNullOrWhiteSpace(tenantSlug) ? null : $"/{tenantSlug}";
 }
 
 public partial class Program;

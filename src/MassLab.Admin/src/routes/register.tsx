@@ -33,12 +33,10 @@ export const Route = createFileRoute("/register")({
 
 function RegisterPage() {
   const { t, lang, setLang } = useI18n();
-  const search = typeof window === "undefined" ? null : new URLSearchParams(window.location.search);
-  const initialTenant = search?.get("tenant")?.trim() || DEFAULT_TENANT_SLUG || "";
 
   const [fullName, setFullName] = useState("");
   const [email, setEmail] = useState("");
-  const [org, setOrg] = useState(initialTenant);
+  const [org, setOrg] = useState(DEFAULT_TENANT_SLUG || "");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [showPw, setShowPw] = useState(false);

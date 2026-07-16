@@ -15,7 +15,7 @@ namespace MassLab.Identity.Tests;
 public sealed class TenantResolutionMiddlewareTests
 {
     [Fact]
-    public async Task InvokeAsync_rejects_explicit_mismatched_tenant_for_authenticated_tenant_user()
+    public async Task InvokeAsync_ignores_legacy_query_tenant_for_authenticated_tenant_user()
     {
         var currentTenant = new CurrentTenant();
         await using var db = CreateDbContext(currentTenant);
@@ -41,9 +41,10 @@ public sealed class TenantResolutionMiddlewareTests
 
         await middleware.InvokeAsync(context, db, currentTenant);
 
-        Assert.Equal(StatusCodes.Status403Forbidden, context.Response.StatusCode);
-        Assert.False(nextCalled);
-        Assert.False(currentTenant.IsAvailable);
+        Assert.True(nextCalled);
+        Assert.Equal(firstTenant.Id, currentTenant.Id);
+        Assert.Equal("first", currentTenant.Slug);
+        Assert.Equal(TenantStatus.Active, currentTenant.Status);
     }
 
     [Fact]

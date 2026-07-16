@@ -33,12 +33,10 @@ export const Route = createFileRoute("/login")({
 
 function LoginPage() {
   const { t, lang, setLang } = useI18n();
-  const search = typeof window === "undefined" ? null : new URLSearchParams(window.location.search);
-  const initialTenant = search?.get("tenant")?.trim() || DEFAULT_TENANT_SLUG || "";
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [showPw, setShowPw] = useState(false);
-  const [org, setOrg] = useState(initialTenant);
+  const [org, setOrg] = useState(DEFAULT_TENANT_SLUG || "");
   const [loading, setLoading] = useState<null | "pw" | "google" | "entra">(null);
   const [callbackError, setCallbackError] = useState<string | null>(null);
 

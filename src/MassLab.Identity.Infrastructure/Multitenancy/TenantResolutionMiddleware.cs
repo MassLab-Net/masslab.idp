@@ -33,28 +33,10 @@ public sealed class TenantResolutionMiddleware
             .GetValue<string>("Multitenancy:RootDomain")?
             .ToLowerInvariant();
 
-        var localhostTenant = context.Request.Query["tenant"].FirstOrDefault();
-        var shouldReadFormTenant = context.Request.HasFormContentType &&
-                                   !context.Request.Path.StartsWithSegments("/connect", StringComparison.OrdinalIgnoreCase);
-        var formTenant = shouldReadFormTenant
-            ? context.Request.Form["Tenant"].FirstOrDefault() ?? context.Request.Form["tenant"].FirstOrDefault()
-            : null;
         var headerTenantSlug = context.Request.Headers["X-Tenant-Slug"].FirstOrDefault();
         var headerTenantId = context.Request.Headers["X-Tenant-Id"].FirstOrDefault();
         Domain.Tenant? tenant = TenantRequestContext.GetResolvedTenant(context);
         var requestedTenantWasExplicit = tenant is not null;
-
-        if (tenant is null && !string.IsNullOrWhiteSpace(localhostTenant))
-        {
-            requestedTenantWasExplicit = true;
-            tenant = await db.Tenants.IgnoreQueryFilters().FirstOrDefaultAsync(x => x.Slug == localhostTenant);
-        }
-
-        if (tenant is null && !string.IsNullOrWhiteSpace(formTenant))
-        {
-            requestedTenantWasExplicit = true;
-            tenant = await db.Tenants.IgnoreQueryFilters().FirstOrDefaultAsync(x => x.Slug == formTenant);
-        }
 
         if (tenant is null && !string.IsNullOrWhiteSpace(headerTenantSlug))
         {

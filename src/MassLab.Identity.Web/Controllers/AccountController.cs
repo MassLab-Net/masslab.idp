@@ -44,7 +44,7 @@ public sealed class AccountController : Controller
     }
 
     [HttpGet("login")]
-    public async Task<IActionResult> Login(string? returnUrl = null, string? tenant = null)
+    public async Task<IActionResult> Login(string? returnUrl = null)
     {
         var normalizedReturnUrl = NormalizeReturnUrl(returnUrl);
         var authorizeClientId = GetAuthorizeClientId(normalizedReturnUrl);
@@ -52,10 +52,7 @@ public sealed class AccountController : Controller
         {
             return View("InvalidClient", new InvalidClientViewModel
             {
-                Tenant = tenant
-                    ?? Request.PathBase.Value?.Trim('/').ToLowerInvariant()
-                    ?? Request.Query["tenant"].FirstOrDefault()
-                    ?? _currentTenant.Slug,
+                Tenant = Request.PathBase.Value?.Trim('/').ToLowerInvariant() ?? _currentTenant.Slug,
                 ClientId = authorizeClientId
             });
         }
@@ -67,11 +64,7 @@ public sealed class AccountController : Controller
 
         return View(new LoginInput
         {
-            ReturnUrl = normalizedReturnUrl,
-            Tenant = tenant
-                ?? Request.PathBase.Value?.Trim('/').ToLowerInvariant()
-                ?? Request.Query["tenant"].FirstOrDefault()
-                ?? string.Empty
+            ReturnUrl = normalizedReturnUrl
         });
     }
 
@@ -85,7 +78,7 @@ public sealed class AccountController : Controller
         {
             return View("InvalidClient", new InvalidClientViewModel
             {
-                Tenant = input.Tenant ?? _currentTenant.Slug,
+                Tenant = Request.PathBase.Value?.Trim('/').ToLowerInvariant() ?? _currentTenant.Slug,
                 ClientId = authorizeClientId
             });
         }
