@@ -11,6 +11,10 @@
     <PackageReference Include="MassLab.Common.Authorization" Version="1.0.4" />
     <PackageReference Include="MassLab.Common.Logging.Serilog" Version="1.0.4" />
     <PackageReference Include="MassLab.Common.Observability" Version="1.0.4" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Design" Version="10.0.8">
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+      <PrivateAssets>all</PrivateAssets>
+    </PackageReference>
     <PackageReference Include="OpenIddict.AspNetCore" Version="7.5.0" />
   </ItemGroup>
 
