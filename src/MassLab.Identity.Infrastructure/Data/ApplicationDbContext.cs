@@ -30,6 +30,7 @@ public sealed class ApplicationDbContext : IdentityDbContext<ApplicationUser, Mi
     public DbSet<UserSession> UserSessions => Set<UserSession>();
     public DbSet<AuditLog> AuditLogs => Set<AuditLog>();
     public DbSet<TenantSmtpSettings> TenantSmtpSettings => Set<TenantSmtpSettings>();
+    public DbSet<OutboxMessage> OutboxMessages => Set<OutboxMessage>();
 
     protected override void OnModelCreating(ModelBuilder builder)
     {
@@ -57,6 +58,7 @@ public sealed class ApplicationDbContext : IdentityDbContext<ApplicationUser, Mi
         {
             entity.HasIndex(x => new { x.TenantId, x.NormalizedEmail });
             entity.HasIndex(x => new { x.TenantId, x.NormalizedUserName });
+            entity.HasAlternateKey(x => new { x.TenantId, x.Id });
             entity.HasQueryFilter(x => !_currentTenant.Id.HasValue || x.TenantId == _currentTenant.Id);
         });
 
@@ -69,16 +71,19 @@ public sealed class ApplicationDbContext : IdentityDbContext<ApplicationUser, Mi
         builder.Entity<UserSession>().HasQueryFilter(x => !_currentTenant.Id.HasValue || x.TenantId == _currentTenant.Id);
         builder.Entity<AuditLog>().HasQueryFilter(x => !_currentTenant.Id.HasValue || x.TenantId == _currentTenant.Id);
         builder.Entity<TenantSmtpSettings>().HasQueryFilter(x => !_currentTenant.Id.HasValue || x.TenantId == _currentTenant.Id);
+        builder.Entity<OutboxMessage>().HasQueryFilter(x => !_currentTenant.Id.HasValue || x.TenantId == _currentTenant.Id);
 
         builder.Entity<TenantRole>(entity =>
         {
             entity.HasIndex(x => new { x.TenantId, x.Name }).IsUnique();
+            entity.HasAlternateKey(x => new { x.TenantId, x.Id });
             entity.Property(x => x.Name).HasMaxLength(150);
         });
 
         builder.Entity<TenantPermission>(entity =>
         {
             entity.HasIndex(x => new { x.TenantId, x.Name }).IsUnique();
+            entity.HasAlternateKey(x => new { x.TenantId, x.Id });
             entity.Property(x => x.Name).HasMaxLength(200);
         });
 
@@ -86,18 +91,48 @@ public sealed class ApplicationDbContext : IdentityDbContext<ApplicationUser, Mi
         {
             entity.HasKey(x => new { x.UserId, x.RoleId });
             entity.HasQueryFilter(x => !_currentTenant.Id.HasValue || x.TenantId == _currentTenant.Id);
+            entity.HasOne(x => x.Role).WithMany(x => x.UserAssignments)
+                .HasForeignKey(x => new { x.TenantId, x.RoleId })
+                .HasPrincipalKey(x => new { x.TenantId, x.Id })
+                .OnDelete(DeleteBehavior.Cascade);
+            entity.HasOne(x => x.User).WithMany(x => x.RoleAssignments)
+                .HasForeignKey(x => new { x.TenantId, x.UserId })
+                .HasPrincipalKey(x => new { x.TenantId, x.Id })
+                .OnDelete(DeleteBehavior.Cascade);
         });
 
         builder.Entity<UserPermissionAssignment>(entity =>
         {
             entity.HasKey(x => new { x.UserId, x.PermissionId });
             entity.HasQueryFilter(x => !_currentTenant.Id.HasValue || x.TenantId == _currentTenant.Id);
+            entity.HasOne(x => x.Permission).WithMany()
+                .HasForeignKey(x => new { x.TenantId, x.PermissionId })
+                .HasPrincipalKey(x => new { x.TenantId, x.Id })
+                .OnDelete(DeleteBehavior.Cascade);
+            entity.HasOne(x => x.User).WithMany(x => x.PermissionAssignments)
+                .HasForeignKey(x => new { x.TenantId, x.UserId })
+                .HasPrincipalKey(x => new { x.TenantId, x.Id })
+                .OnDelete(DeleteBehavior.Cascade);
         });
 
         builder.Entity<RolePermissionAssignment>(entity =>
         {
             entity.HasKey(x => new { x.RoleId, x.PermissionId });
             entity.HasQueryFilter(x => !_currentTenant.Id.HasValue || x.TenantId == _currentTenant.Id);
+            entity.HasOne(x => x.Role).WithMany(x => x.PermissionAssignments)
+                .HasForeignKey(x => new { x.TenantId, x.RoleId })
+                .HasPrincipalKey(x => new { x.TenantId, x.Id })
+                .OnDelete(DeleteBehavior.Cascade);
+            entity.HasOne(x => x.Permission).WithMany()
+                .HasForeignKey(x => new { x.TenantId, x.PermissionId })
+                .HasPrincipalKey(x => new { x.TenantId, x.Id })
+                .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        builder.Entity<OutboxMessage>(entity =>
+        {
+            entity.HasIndex(x => new { x.ProcessedAt, x.NextAttemptAt });
+            entity.Property(x => x.Type).HasMaxLength(200);
         });
 
         builder.Entity<ClientApplication>(entity =>

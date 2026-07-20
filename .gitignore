@@ -24,6 +24,7 @@ TestResults/
 # Logs
 *.log
 logs/
+.keys/
 
 # Local configuration and secrets
 src/MassLab.Identity.Web/appsettings.Development.json

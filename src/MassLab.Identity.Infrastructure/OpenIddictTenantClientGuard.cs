@@ -1,8 +1,10 @@
 using System.Security.Claims;
 using System.Text.Json;
 using MassLab.Identity.Application.Abstractions;
+using MassLab.Identity.Infrastructure.Data;
 using MassLab.Identity.Domain;
 using Microsoft.Extensions.Logging;
+using Microsoft.EntityFrameworkCore;
 using OpenIddict.Abstractions;
 using OpenIddict.Server;
 using static OpenIddict.Abstractions.OpenIddictConstants;
@@ -22,15 +24,18 @@ public sealed class OpenIddictTenantClientGuard :
     private readonly IOpenIddictApplicationManager _applications;
     private readonly ICurrentTenantAccessor _currentTenant;
     private readonly ILogger<OpenIddictTenantClientGuard> _logger;
+    private readonly ApplicationDbContext _db;
 
     public OpenIddictTenantClientGuard(
         IOpenIddictApplicationManager applications,
         ICurrentTenantAccessor currentTenant,
-        ILogger<OpenIddictTenantClientGuard> logger)
+        ILogger<OpenIddictTenantClientGuard> logger,
+        ApplicationDbContext db)
     {
         _applications = applications;
         _currentTenant = currentTenant;
         _logger = logger;
+        _db = db;
     }
 
     public async ValueTask HandleAsync(OpenIddictServerEvents.ValidateAuthorizationRequestContext context)
@@ -86,7 +91,10 @@ public sealed class OpenIddictTenantClientGuard :
                 clientTenantId,
                 userTenantId);
             context.Reject(Errors.InvalidClient, InvalidTenantMessage);
+            return;
         }
+
+        await RejectStaleAuthorizationAsync(principal, context, context.CancellationToken);
     }
 
     public async ValueTask HandleAsync(OpenIddictServerEvents.ValidateIntrospectionRequestContext context)
@@ -190,4 +198,26 @@ public sealed class OpenIddictTenantClientGuard :
     private static bool TenantMatchesUser(Guid clientTenantId, string userTenantId)
         => Guid.TryParse(userTenantId, out var parsedUserTenantId) &&
            clientTenantId == parsedUserTenantId;
+
+    private async Task RejectStaleAuthorizationAsync(
+        ClaimsPrincipal? principal,
+        OpenIddictServerEvents.BaseValidatingContext context,
+        CancellationToken cancellationToken)
+    {
+        var subject = principal?.FindFirstValue(Claims.Subject) ?? principal?.FindFirstValue(ClaimTypes.NameIdentifier);
+        var version = principal?.FindFirstValue("authorization_version");
+        if (!Guid.TryParse(subject, out var userId) || !int.TryParse(version, out var tokenVersion))
+        {
+            return;
+        }
+
+        var currentVersion = await _db.Users.IgnoreQueryFilters()
+            .Where(x => x.Id == userId)
+            .Select(x => (int?)x.AuthorizationVersion)
+            .FirstOrDefaultAsync(cancellationToken);
+        if (!currentVersion.HasValue || currentVersion.Value != tokenVersion)
+        {
+            context.Reject(Errors.InvalidGrant, "The authorization grant is no longer valid.");
+        }
+    }
 }

@@ -8,11 +8,22 @@ using MassLab.Identity.Infrastructure.Data;
 using MassLab.Identity.Infrastructure.Multitenancy;
 using MassLab.Identity.Web.Options;
 using Microsoft.AspNetCore.RateLimiting;
+using Microsoft.AspNetCore.HttpOverrides;
+using Microsoft.AspNetCore.Identity;
+using Microsoft.AspNetCore.Authentication;
+using Microsoft.AspNetCore.DataProtection;
+using Microsoft.EntityFrameworkCore;
 using OpenIddict.Abstractions;
 using OpenIddict.Server;
+using System.Security.Claims;
+using System.Security.Cryptography.X509Certificates;
 
 var builder = WebApplication.CreateBuilder(args);
 var isDevelopment = builder.Environment.IsDevelopment();
+var issuer = builder.Configuration["OpenIddict:Issuer"]
+    ?? throw new InvalidOperationException("OpenIddict:Issuer must be configured.");
+var keyMaterial = builder.Configuration.GetSection("OpenIddict:KeyMaterial").Get<OpenIddictKeyMaterialOptions>() ?? new();
+var dataProtection = builder.Configuration.GetSection("Security:DataProtection").Get<IdentityDataProtectionOptions>() ?? new();
 
 builder.Services.AddSerilogLogging(builder.Configuration);
 builder.Services.AddMassLabApi(builder.Configuration);
@@ -38,6 +49,22 @@ builder.Services.AddCors(options =>
     });
 });
 
+var dataProtectionBuilder = builder.Services.AddDataProtection()
+    .SetApplicationName(dataProtection.ApplicationName);
+if (isDevelopment)
+{
+    dataProtectionBuilder.PersistKeysToFileSystem(new DirectoryInfo(Path.Combine(builder.Environment.ContentRootPath, ".keys")));
+}
+else
+{
+    if (string.IsNullOrWhiteSpace(dataProtection.KeyRingPath))
+    {
+        throw new InvalidOperationException("Security:DataProtection:KeyRingPath must be configured outside Development.");
+    }
+
+    dataProtectionBuilder.PersistKeysToFileSystem(new DirectoryInfo(dataProtection.KeyRingPath));
+}
+
 builder.Services.ConfigureApplicationCookie(options =>
 {
     options.LoginPath = "/account/login";
@@ -57,6 +84,25 @@ builder.Services.ConfigureApplicationCookie(options =>
     {
         context.Response.Redirect(ApplyCurrentTenantPrefix(context.RedirectUri, context.HttpContext));
         return Task.CompletedTask;
+    };
+    options.Events.OnValidatePrincipal = async context =>
+    {
+        var sessionId = context.Principal?.FindFirstValue("sid");
+        if (!Guid.TryParse(sessionId, out var parsedSessionId))
+        {
+            context.RejectPrincipal();
+            await context.HttpContext.SignOutAsync(IdentityConstants.ApplicationScheme);
+            return;
+        }
+
+        var db = context.HttpContext.RequestServices.GetRequiredService<ApplicationDbContext>();
+        var isActive = await db.UserSessions.IgnoreQueryFilters()
+            .AnyAsync(x => x.Id == parsedSessionId && x.RevokedAt == null, context.HttpContext.RequestAborted);
+        if (!isActive)
+        {
+            context.RejectPrincipal();
+            await context.HttpContext.SignOutAsync(IdentityConstants.ApplicationScheme);
+        }
     };
 });
 builder.Services.AddAntiforgery(options =>
@@ -97,8 +143,17 @@ builder.Services.AddOpenIddict()
         options.AddEventHandler<OpenIddictServerEvents.ValidateRevocationRequestContext>(builder =>
             builder.UseScopedHandler<OpenIddictTenantClientGuard>());
 
-        options.AddDevelopmentEncryptionCertificate();
-        options.AddDevelopmentSigningCertificate();
+        options.SetIssuer(new Uri(issuer, UriKind.Absolute));
+        if (isDevelopment)
+        {
+            options.AddDevelopmentEncryptionCertificate();
+            options.AddDevelopmentSigningCertificate();
+        }
+        else
+        {
+            options.AddEncryptionCertificate(LoadCertificate(keyMaterial.EncryptionCertificatePath, keyMaterial.EncryptionCertificatePassword, "encryption"));
+            options.AddSigningCertificate(LoadCertificate(keyMaterial.SigningCertificatePath, keyMaterial.SigningCertificatePassword, "signing"));
+        }
         switch (tokenOptions.AccessTokenFormat)
         {
             case OpenIddictTokenOptions.SignedJwt:
@@ -133,8 +188,7 @@ builder.Services.AddMassLabAuthorization();
 builder.Services.AddAuthorization(options =>
 {
     options.AddPolicy("system-admin", policy => policy.RequireClaim("system_admin", "true"));
-    options.AddPolicy("tenant-admin", policy => policy.RequireAssertion(context =>
-        context.User.HasClaim("tenant_admin", "true") || context.User.HasClaim("system_admin", "true")));
+    options.AddPolicy("tenant-admin", policy => policy.RequireClaim("permission"));
     foreach (var permission in new[]
              {
                  "tenants.manage", "users.manage", "roles.manage", "permissions.manage", "clients.manage",
@@ -160,13 +214,6 @@ builder.Services.AddRateLimiter(options =>
 });
 
 builder.Services.AddHealthChecks().AddDbContextCheck<ApplicationDbContext>("database");
-builder.Services.AddDistributedMemoryCache();
-builder.Services.AddSession(options =>
-{
-    options.Cookie.Name = "masslab.identity.session";
-    options.Cookie.HttpOnly = true;
-    options.IdleTimeout = TimeSpan.FromHours(8);
-});
 builder.Services.AddControllersWithViews()
     .AddJsonOptions(options =>
     {
@@ -179,6 +226,10 @@ app.UseTraceId();
 app.UseRequestLogging();
 app.UseSecurityHeaders();
 app.UseResponseCompression();
+app.UseForwardedHeaders(new ForwardedHeadersOptions
+{
+    ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto | ForwardedHeaders.XForwardedHost
+});
 
 if (!app.Environment.IsDevelopment())
 {
@@ -195,7 +246,6 @@ app.UseRouting();
 app.UseCors("AdminSpa");
 app.UseRateLimiter();
 app.UseMassLabPrometheus();
-app.UseSession();
 app.UseAuthentication();
 app.UseMiddleware<MassLab.Identity.Infrastructure.Multitenancy.TenantResolutionMiddleware>();
 app.UseAuthorization();
@@ -212,7 +262,10 @@ if (app.Configuration.GetValue("Database:SeedOnStartup", false))
     await DatabaseSeeder.SeedAsync(app.Services);
 }
 
-await OpenIddictAdminSpaClientSeeder.EnsureConfiguredAsync(app.Services);
+if (app.Configuration.GetValue("OpenIddict:AdminSpaClient:ProvisionOnStartup", false))
+{
+    await OpenIddictAdminSpaClientSeeder.EnsureConfiguredAsync(app.Services);
+}
 
 app.Run();
 
@@ -258,6 +311,19 @@ static string? GetTenantPrefix(HttpContext httpContext)
 
     var tenantSlug = TenantRequestContext.GetRouteTenantSlug(httpContext);
     return string.IsNullOrWhiteSpace(tenantSlug) ? null : $"/{tenantSlug}";
+}
+
+static X509Certificate2 LoadCertificate(string? path, string? password, string purpose)
+{
+    if (string.IsNullOrWhiteSpace(path) || !File.Exists(path))
+    {
+        throw new InvalidOperationException($"OpenIddict {purpose} certificate path is required and must exist outside Development.");
+    }
+
+    return X509CertificateLoader.LoadPkcs12FromFile(
+        path,
+        password,
+        X509KeyStorageFlags.MachineKeySet | X509KeyStorageFlags.EphemeralKeySet);
 }
 
 public partial class Program;

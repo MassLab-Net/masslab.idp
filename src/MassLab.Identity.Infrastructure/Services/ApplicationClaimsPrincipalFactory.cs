@@ -26,6 +26,7 @@ public sealed class ApplicationClaimsPrincipalFactory : UserClaimsPrincipalFacto
         identity.AddClaim(new Claim("display_name", user.DisplayName));
         identity.AddClaim(new Claim("system_admin", user.IsSystemAdmin ? "true" : "false"));
         identity.AddClaim(new Claim("tenant_admin", user.IsTenantAdmin ? "true" : "false"));
+        identity.AddClaim(new Claim("authorization_version", user.AuthorizationVersion.ToString(System.Globalization.CultureInfo.InvariantCulture)));
 
         foreach (var permission in await _rbacService.GetEffectivePermissionsAsync(user.Id))
         {
@@ -35,4 +36,3 @@ public sealed class ApplicationClaimsPrincipalFactory : UserClaimsPrincipalFacto
         return identity;
     }
 }
-

@@ -36,3 +36,13 @@ public sealed class TenantSmtpSettings : TenantEntity
     public string FromEmail { get; set; } = string.Empty;
     public string FromDisplayName { get; set; } = string.Empty;
 }
+
+public sealed class OutboxMessage : TenantEntity
+{
+    public string Type { get; set; } = string.Empty;
+    public string Payload { get; set; } = string.Empty;
+    public DateTimeOffset? ProcessedAt { get; set; }
+    public int AttemptCount { get; set; }
+    public DateTimeOffset? NextAttemptAt { get; set; }
+    public string? LastError { get; set; }
+}

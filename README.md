@@ -34,6 +34,7 @@ To seed the default system tenant and local demo accounts, run the app once with
 ```bash
 # PowerShell
 $env:Database__SeedOnStartup="true"
+$env:Database__SeedPassword="use-a-secret-password"
 dotnet run --project src/MassLab.Identity.Web/MassLab.Identity.Web.csproj
 ```
 
@@ -50,10 +51,10 @@ Rules for the default system tenant:
 - It cannot be disabled.
 - Only requests scoped to this tenant can manage Organizations.
 
-Seed accounts in the default tenant:
+Development seed accounts in the default tenant use the configured `Database__SeedPassword` (or the local-only fallback):
 
-- System admin: `system@masslab.local` / `MassLab@12345`
-- Tenant admin: `admin@demo.local` / `MassLab@12345`
+- System admin: `system@masslab.local`
+- Tenant admin: `admin@demo.local`
 
 After the first seeded startup, disable seeding again:
 
@@ -68,10 +69,10 @@ Tenants are resolved by subdomain/domain. The default seed creates:
 - Tenant slug: `demo`
 - Host: `demo.localhost`
 
-For localhost testing without DNS setup, use tenant path or query-based resolution:
+For localhost testing without DNS setup, use the tenant path:
 
 - Login/authorize path style: `/demo/connect/authorize`, `/demo/account/login`
-- API/query fallback: `?tenant=demo`
+- Tenant is never resolved from `?tenant=`. `X-Tenant-Slug` and `X-Tenant-Id` are disabled by default and may only be enabled for trusted internal ingress.
 
 ## OIDC Client Example
 
@@ -146,10 +147,15 @@ Examples:
 
 ## Production Checklist
 
-- Replace development signing/encryption certificates with production certificates.
+- Set `OpenIddict:Issuer` to the public HTTPS issuer URL.
+- Set `OpenIddict:KeyMaterial:SigningCertificatePath` and `OpenIddict:KeyMaterial:EncryptionCertificatePath` to mounted PKCS#12 certificates; provide passwords only through secret injection.
+- Set `Security:DataProtection:KeyRingPath` to durable storage shared by every Identity instance.
 - Set `Database:SeedOnStartup` to `false`.
 - Use production PostgreSQL credentials from secret storage.
+- Rotate any database credential that was previously committed to source control.
 - Configure HTTPS and secure cookie settings.
+- Keep `Multitenancy:AllowTenantHeaders=false` unless a trusted internal ingress requires it.
+- Keep `OpenIddict:AdminSpaClient:ProvisionOnStartup=false`; provision clients via the tenant creation workflow or a controlled job.
 - Configure external provider secrets through secret storage.
 - Configure SMTP secrets through secret storage.
 - Enable observability/metrics endpoint according to deployment requirements.

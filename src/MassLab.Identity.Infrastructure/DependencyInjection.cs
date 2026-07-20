@@ -21,6 +21,7 @@ public static class DependencyInjection
         services.AddScoped<IAuditService, AuditService>();
         services.AddScoped<IRbacService, RbacService>();
         services.AddScoped<IEmailService, EmailService>();
+        services.AddHostedService<OutboxEmailWorker>();
         services.AddScoped<ITotpService, TotpService>();
         services.AddSingleton<TenantClientIdFormatter>();
 

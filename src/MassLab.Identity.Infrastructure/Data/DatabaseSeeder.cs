@@ -4,6 +4,8 @@ using MassLab.Identity.Infrastructure.Services;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.Hosting;
 using OpenIddict.Abstractions;
 using static OpenIddict.Abstractions.OpenIddictConstants;
 
@@ -32,6 +34,14 @@ public static class DatabaseSeeder
         var secretService = scope.ServiceProvider.GetRequiredService<ISecretService>();
         var applicationManager = scope.ServiceProvider.GetRequiredService<IOpenIddictApplicationManager>();
         var formatter = scope.ServiceProvider.GetRequiredService<TenantClientIdFormatter>();
+        var configuration = scope.ServiceProvider.GetRequiredService<IConfiguration>();
+        var environment = scope.ServiceProvider.GetRequiredService<IHostEnvironment>();
+        var bootstrapPassword = configuration["Database:SeedPassword"];
+        if (string.IsNullOrWhiteSpace(bootstrapPassword) && !environment.IsDevelopment())
+        {
+            throw new InvalidOperationException("Database:SeedPassword must be supplied from secret injection when seeding outside Development.");
+        }
+        bootstrapPassword ??= "MassLab@12345";
 
         await db.Database.MigrateAsync(cancellationToken);
 
@@ -51,8 +61,8 @@ public static class DatabaseSeeder
             await db.SaveChangesAsync(cancellationToken);
         }
 
-        await EnsureUserAsync(userManager, tenant.Id, "system@masslab.local", "System Admin", isSystemAdmin: true, isTenantAdmin: false, isBootstrapUser: true);
-        var tenantAdmin = await EnsureUserAsync(userManager, tenant.Id, "admin@demo.local", "Demo Tenant Admin", isSystemAdmin: false, isTenantAdmin: true, isBootstrapUser: true);
+        await EnsureUserAsync(userManager, tenant.Id, "system@masslab.local", "System Admin", isSystemAdmin: true, isTenantAdmin: false, isBootstrapUser: true, bootstrapPassword);
+        var tenantAdmin = await EnsureUserAsync(userManager, tenant.Id, "admin@demo.local", "Demo Tenant Admin", isSystemAdmin: false, isTenantAdmin: true, isBootstrapUser: true, bootstrapPassword);
 
         foreach (var definition in SeedPermissions)
         {
@@ -163,7 +173,8 @@ public static class DatabaseSeeder
         string displayName,
         bool isSystemAdmin,
         bool isTenantAdmin,
-        bool isBootstrapUser)
+        bool isBootstrapUser,
+        string bootstrapPassword)
     {
         var user = await userManager.Users.IgnoreQueryFilters().FirstOrDefaultAsync(x => x.Email == email);
         if (user is not null)
@@ -189,7 +200,7 @@ public static class DatabaseSeeder
             IsBootstrapUser = isBootstrapUser
         };
 
-        var result = await userManager.CreateAsync(user, "MassLab@12345");
+        var result = await userManager.CreateAsync(user, bootstrapPassword);
         if (!result.Succeeded)
         {
             throw new InvalidOperationException(string.Join("; ", result.Errors.Select(x => x.Description)));

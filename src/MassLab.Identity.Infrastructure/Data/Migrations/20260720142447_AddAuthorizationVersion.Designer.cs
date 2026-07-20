@@ -3,6 +3,7 @@ using System;
 using MassLab.Identity.Infrastructure.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
@@ -11,9 +12,11 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace MassLab.Identity.Infrastructure.Data.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    partial class ApplicationDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260720142447_AddAuthorizationVersion")]
+    partial class AddAuthorizationVersion
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -648,8 +651,6 @@ namespace MassLab.Identity.Infrastructure.Data.Migrations
 
                     b.HasIndex("TenantId", "PermissionId");
 
-                    b.HasIndex("TenantId", "UserId");
-
                     b.ToTable("UserPermissionAssignments");
                 });
 
@@ -667,8 +668,6 @@ namespace MassLab.Identity.Infrastructure.Data.Migrations
                     b.HasKey("UserId", "RoleId");
 
                     b.HasIndex("TenantId", "RoleId");
-
-                    b.HasIndex("TenantId", "UserId");
 
                     b.ToTable("UserRoleAssignments");
                 });
@@ -1127,16 +1126,15 @@ namespace MassLab.Identity.Infrastructure.Data.Migrations
 
             modelBuilder.Entity("MassLab.Identity.Domain.UserPermissionAssignment", b =>
                 {
-                    b.HasOne("MassLab.Identity.Domain.TenantPermission", "Permission")
-                        .WithMany()
-                        .HasForeignKey("TenantId", "PermissionId")
-                        .HasPrincipalKey("TenantId", "Id")
+                    b.HasOne("MassLab.Identity.Domain.ApplicationUser", "User")
+                        .WithMany("PermissionAssignments")
+                        .HasForeignKey("UserId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
-                    b.HasOne("MassLab.Identity.Domain.ApplicationUser", "User")
-                        .WithMany("PermissionAssignments")
-                        .HasForeignKey("TenantId", "UserId")
+                    b.HasOne("MassLab.Identity.Domain.TenantPermission", "Permission")
+                        .WithMany()
+                        .HasForeignKey("TenantId", "PermissionId")
                         .HasPrincipalKey("TenantId", "Id")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
@@ -1148,16 +1146,15 @@ namespace MassLab.Identity.Infrastructure.Data.Migrations
 
             modelBuilder.Entity("MassLab.Identity.Domain.UserRoleAssignment", b =>
                 {
-                    b.HasOne("MassLab.Identity.Domain.TenantRole", "Role")
-                        .WithMany("UserAssignments")
-                        .HasForeignKey("TenantId", "RoleId")
-                        .HasPrincipalKey("TenantId", "Id")
+                    b.HasOne("MassLab.Identity.Domain.ApplicationUser", "User")
+                        .WithMany("RoleAssignments")
+                        .HasForeignKey("UserId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
-                    b.HasOne("MassLab.Identity.Domain.ApplicationUser", "User")
-                        .WithMany("RoleAssignments")
-                        .HasForeignKey("TenantId", "UserId")
+                    b.HasOne("MassLab.Identity.Domain.TenantRole", "Role")
+                        .WithMany("UserAssignments")
+                        .HasForeignKey("TenantId", "RoleId")
                         .HasPrincipalKey("TenantId", "Id")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();

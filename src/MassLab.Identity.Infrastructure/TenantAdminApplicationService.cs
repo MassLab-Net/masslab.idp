@@ -328,6 +328,7 @@ internal sealed class TenantAdminApplicationService : ITenantAdminQueries, ITena
         }
 
         user.IsEnabled = false;
+        InvalidateAuthorization(user);
         foreach (var session in await _db.UserSessions.Where(x => x.UserId == id && x.RevokedAt == null).ToListAsync(cancellationToken))
         {
             session.RevokedAt = DateTimeOffset.UtcNow;
@@ -367,6 +368,7 @@ internal sealed class TenantAdminApplicationService : ITenantAdminQueries, ITena
         user.DisplayName = displayName;
         user.IsEnabled = isEnabled;
         user.IsTenantAdmin = isTenantAdmin;
+        InvalidateAuthorization(user);
         await _db.SaveChangesAsync(cancellationToken);
         await _audit.WriteAsync("user.updated", AuditResult.Success, "user", id.ToString(), cancellationToken: cancellationToken);
         return CommandResult.Success();
@@ -413,6 +415,8 @@ internal sealed class TenantAdminApplicationService : ITenantAdminQueries, ITena
         {
             _db.UserRoleAssignments.Add(new UserRoleAssignment { TenantId = _tenant.Id.Value, UserId = userId, RoleId = roleId });
         }
+
+        await InvalidateUserAuthorizationAsync(userId, cancellationToken);
 
         await _db.SaveChangesAsync(cancellationToken);
         await _audit.WriteAsync("user_roles.updated", AuditResult.Success, "user", userId.ToString(), cancellationToken: cancellationToken);
@@ -480,6 +484,8 @@ internal sealed class TenantAdminApplicationService : ITenantAdminQueries, ITena
             });
         }
 
+        await InvalidateUserAuthorizationAsync(userId, cancellationToken);
+
         await _db.SaveChangesAsync(cancellationToken);
         await _audit.WriteAsync("user_access.updated", AuditResult.Success, "user", userId.ToString(), cancellationToken: cancellationToken);
         return CommandResult.Success();
@@ -515,6 +521,7 @@ internal sealed class TenantAdminApplicationService : ITenantAdminQueries, ITena
         role.Name = name;
         role.Description = description;
         role.UpdatedAt = DateTimeOffset.UtcNow;
+        await InvalidateRoleUsersAsync(id, cancellationToken);
         await _db.SaveChangesAsync(cancellationToken);
         await _audit.WriteAsync("role.updated", AuditResult.Success, "role", id.ToString(), cancellationToken: cancellationToken);
         return CommandResult.Success();
@@ -536,6 +543,7 @@ internal sealed class TenantAdminApplicationService : ITenantAdminQueries, ITena
         _db.UserRoleAssignments.RemoveRange(_db.UserRoleAssignments.Where(x => x.RoleId == id));
         _db.RolePermissionAssignments.RemoveRange(_db.RolePermissionAssignments.Where(x => x.RoleId == id));
         _db.TenantRoles.Remove(role);
+        await InvalidateRoleUsersAsync(id, cancellationToken);
         await _db.SaveChangesAsync(cancellationToken);
         await _audit.WriteAsync("role.deleted", AuditResult.Success, "role", id.ToString(), cancellationToken: cancellationToken);
         return CommandResult.Success();
@@ -553,6 +561,8 @@ internal sealed class TenantAdminApplicationService : ITenantAdminQueries, ITena
             _db.UserRoleAssignments.Add(new UserRoleAssignment { TenantId = _tenant.Id.Value, UserId = userId, RoleId = roleId });
             await _db.SaveChangesAsync(cancellationToken);
         }
+
+        await InvalidateUserAuthorizationAsync(userId, cancellationToken);
 
         await _audit.WriteAsync("user_role.assigned", AuditResult.Success, "user", userId.ToString(), cancellationToken: cancellationToken);
         return CommandResult.Success();
@@ -601,6 +611,8 @@ internal sealed class TenantAdminApplicationService : ITenantAdminQueries, ITena
             await _db.SaveChangesAsync(cancellationToken);
         }
 
+        await InvalidateRoleUsersAsync(roleId, cancellationToken);
+
         await _audit.WriteAsync("role_permission.assigned", AuditResult.Success, "role", roleId.ToString(), cancellationToken: cancellationToken);
         return CommandResult.Success();
     }
@@ -637,6 +649,8 @@ internal sealed class TenantAdminApplicationService : ITenantAdminQueries, ITena
             _db.RolePermissionAssignments.Add(new RolePermissionAssignment { TenantId = _tenant.Id.Value, RoleId = roleId, PermissionId = permissionId });
         }
 
+        await InvalidateRoleUsersAsync(roleId, cancellationToken);
+
         await _db.SaveChangesAsync(cancellationToken);
         await _audit.WriteAsync("role_permissions.updated", AuditResult.Success, "role", roleId.ToString(), cancellationToken: cancellationToken);
         return CommandResult.Success();
@@ -669,6 +683,7 @@ internal sealed class TenantAdminApplicationService : ITenantAdminQueries, ITena
         permission.Category = category;
         permission.Description = description;
         permission.UpdatedAt = DateTimeOffset.UtcNow;
+        await InvalidatePermissionUsersAsync(id, cancellationToken);
         await _db.SaveChangesAsync(cancellationToken);
         await _audit.WriteAsync("permission.updated", AuditResult.Success, "permission", id.ToString(), cancellationToken: cancellationToken);
         return CommandResult.Success();
@@ -690,6 +705,7 @@ internal sealed class TenantAdminApplicationService : ITenantAdminQueries, ITena
         _db.RolePermissionAssignments.RemoveRange(_db.RolePermissionAssignments.Where(x => x.PermissionId == id));
         _db.UserPermissionAssignments.RemoveRange(_db.UserPermissionAssignments.Where(x => x.PermissionId == id));
         _db.TenantPermissions.Remove(permission);
+        await InvalidatePermissionUsersAsync(id, cancellationToken);
         await _db.SaveChangesAsync(cancellationToken);
         await _audit.WriteAsync("permission.deleted", AuditResult.Success, "permission", id.ToString(), cancellationToken: cancellationToken);
         return CommandResult.Success();
@@ -750,6 +766,50 @@ internal sealed class TenantAdminApplicationService : ITenantAdminQueries, ITena
 
     private static bool IsBootstrapPermission(TenantPermission permission)
         => BootstrapPermissionNames.Contains(permission.Name);
+
+    private async Task InvalidateUserAuthorizationAsync(Guid userId, CancellationToken cancellationToken)
+    {
+        var user = await _db.Users.FirstOrDefaultAsync(x => x.Id == userId, cancellationToken);
+        if (user is not null)
+        {
+            InvalidateAuthorization(user);
+        }
+    }
+
+    private async Task InvalidateRoleUsersAsync(Guid roleId, CancellationToken cancellationToken)
+    {
+        var userIds = await _db.UserRoleAssignments
+            .Where(x => x.RoleId == roleId)
+            .Select(x => x.UserId)
+            .ToListAsync(cancellationToken);
+        foreach (var user in await _db.Users.Where(x => userIds.Contains(x.Id)).ToListAsync(cancellationToken))
+        {
+            InvalidateAuthorization(user);
+        }
+    }
+
+    private async Task InvalidatePermissionUsersAsync(Guid permissionId, CancellationToken cancellationToken)
+    {
+        var roleUserIds = await _db.RolePermissionAssignments
+            .Where(x => x.PermissionId == permissionId)
+            .Join(_db.UserRoleAssignments, rolePermission => rolePermission.RoleId, userRole => userRole.RoleId, (_, userRole) => userRole.UserId)
+            .ToListAsync(cancellationToken);
+        var directUserIds = await _db.UserPermissionAssignments
+            .Where(x => x.PermissionId == permissionId)
+            .Select(x => x.UserId)
+            .ToListAsync(cancellationToken);
+        var userIds = roleUserIds.Concat(directUserIds).Distinct().ToArray();
+        foreach (var user in await _db.Users.Where(x => userIds.Contains(x.Id)).ToListAsync(cancellationToken))
+        {
+            InvalidateAuthorization(user);
+        }
+    }
+
+    private static void InvalidateAuthorization(ApplicationUser user)
+    {
+        user.AuthorizationVersion++;
+        user.SecurityStamp = Guid.NewGuid().ToString("N");
+    }
 
     public async Task<CreateClientResult> CreateClientAsync(string name, string clientId, ClientType type, string[] redirectUris, string[] postLogoutRedirectUris, string scopes, string flows, CancellationToken cancellationToken = default)
     {
@@ -817,7 +877,7 @@ internal sealed class TenantAdminApplicationService : ITenantAdminQueries, ITena
             DisplayName = displayName,
             Authority = authority,
             ClientId = clientId,
-            ClientSecretProtected = string.IsNullOrWhiteSpace(clientSecret) ? null : _secrets.HashSecret(clientSecret),
+            ClientSecretProtected = string.IsNullOrWhiteSpace(clientSecret) ? null : _secrets.Protect(clientSecret),
             Scopes = scopes,
             AutoProvisionUsers = autoProvisionUsers
         };
@@ -844,7 +904,7 @@ internal sealed class TenantAdminApplicationService : ITenantAdminQueries, ITena
         settings.Host = host;
         settings.Port = port;
         settings.Username = username;
-        settings.PasswordProtected = string.IsNullOrWhiteSpace(password) ? settings.PasswordProtected : _secrets.HashSecret(password);
+        settings.PasswordProtected = string.IsNullOrWhiteSpace(password) ? settings.PasswordProtected : _secrets.Protect(password);
         settings.UseTls = useTls;
         settings.FromEmail = fromEmail;
         settings.FromDisplayName = fromDisplayName;

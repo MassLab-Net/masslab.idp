@@ -170,6 +170,8 @@ public sealed class ConnectController : Controller
             case "system_admin":
             case "tenant_admin":
             case "remember_me":
+            case "sid":
+            case "authorization_version":
                 return [Destinations.AccessToken];
             case "permission":
                 return scopes.Contains("permissions")

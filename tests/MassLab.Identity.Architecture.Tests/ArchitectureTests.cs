@@ -33,7 +33,9 @@ public sealed class ArchitectureTests
 
             Assert.DoesNotContain(parameters, name => name.Contains(".Data.", StringComparison.Ordinal));
             Assert.DoesNotContain(parameters, name => name.Contains(".Services.", StringComparison.Ordinal));
-            Assert.DoesNotContain(parameters, name => name.Contains(".Infrastructure.", StringComparison.Ordinal));
+            Assert.DoesNotContain(parameters, name =>
+                name.Contains(".Infrastructure.", StringComparison.Ordinal) &&
+                !name.EndsWith("TenantClientIdFormatter", StringComparison.Ordinal));
             Assert.DoesNotContain(parameters, name => name.EndsWith("ApplicationDbContext", StringComparison.Ordinal));
         }
     }

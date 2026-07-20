@@ -31,7 +31,7 @@ public sealed class TenantResolutionMiddlewareTests
             return Task.CompletedTask;
         });
 
-        var context = CreateHttpContext();
+        var context = CreateHttpContext(allowTenantHeaders: true);
         context.Request.QueryString = new QueryString("?tenant=second");
         context.User = new ClaimsPrincipal(new ClaimsIdentity(
         [
@@ -64,7 +64,7 @@ public sealed class TenantResolutionMiddlewareTests
             return Task.CompletedTask;
         });
 
-        var context = CreateHttpContext();
+        var context = CreateHttpContext(allowTenantHeaders: true);
         context.Request.Method = HttpMethods.Get;
         context.Request.PathBase = new PathString("/second");
         context.Request.Path = new PathString("/connect/authorize");
@@ -105,7 +105,7 @@ public sealed class TenantResolutionMiddlewareTests
             return Task.CompletedTask;
         });
 
-        var context = CreateHttpContext();
+        var context = CreateHttpContext(allowTenantHeaders: true);
         context.Request.Method = HttpMethods.Get;
         context.Request.PathBase = new PathString("/second");
         context.Request.Path = new PathString("/account/login");
@@ -142,7 +142,7 @@ public sealed class TenantResolutionMiddlewareTests
             return Task.CompletedTask;
         });
 
-        var context = CreateHttpContext();
+        var context = CreateHttpContext(allowTenantHeaders: true);
         context.Request.Headers["X-Tenant-Slug"] = "missing";
         context.User = new ClaimsPrincipal(new ClaimsIdentity(
         [
@@ -188,11 +188,36 @@ public sealed class TenantResolutionMiddlewareTests
         Assert.Equal(TenantStatus.Active, currentTenant.Status);
     }
 
-    private static DefaultHttpContext CreateHttpContext()
+    [Fact]
+    public async Task InvokeAsync_ignores_tenant_headers_by_default()
+    {
+        var currentTenant = new CurrentTenant();
+        await using var db = CreateDbContext(currentTenant);
+        var firstTenant = new Tenant { Name = "First", Slug = "first", Status = TenantStatus.Active };
+        var secondTenant = new Tenant { Name = "Second", Slug = "second", Status = TenantStatus.Active };
+        db.Tenants.AddRange(firstTenant, secondTenant);
+        await db.SaveChangesAsync();
+
+        var middleware = new TenantResolutionMiddleware(_ => Task.CompletedTask);
+        var context = CreateHttpContext();
+        context.Request.Headers["X-Tenant-Slug"] = "second";
+        context.User = new ClaimsPrincipal(new ClaimsIdentity([new Claim("tenant_id", firstTenant.Id.ToString())], "test"));
+
+        await middleware.InvokeAsync(context, db, currentTenant);
+
+        Assert.Equal(firstTenant.Id, currentTenant.Id);
+    }
+
+    private static DefaultHttpContext CreateHttpContext(bool allowTenantHeaders = false)
     {
         var context = new DefaultHttpContext();
         var services = new ServiceCollection();
-        services.AddSingleton<IConfiguration>(new ConfigurationBuilder().Build());
+        services.AddSingleton<IConfiguration>(new ConfigurationBuilder()
+            .AddInMemoryCollection(new Dictionary<string, string?>
+            {
+                ["Multitenancy:AllowTenantHeaders"] = allowTenantHeaders.ToString()
+            })
+            .Build());
         services.AddOptions();
         services.AddAuthentication()
             .AddCookie(IdentityConstants.ApplicationScheme, options => options.Cookie.Name = "masslab.identity.sso");

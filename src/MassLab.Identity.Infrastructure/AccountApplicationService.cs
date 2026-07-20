@@ -76,17 +76,22 @@ internal sealed class AccountApplicationService : IAccountQueries, IAccountComma
             return LoginResult.Failure("Invalid login attempt.");
         }
 
+        var sessionId = Guid.NewGuid();
         await _signInManager.SignInWithClaimsAsync(
             user,
             new AuthenticationProperties { IsPersistent = rememberMe },
-            [new Claim("remember_me", rememberMe ? "true" : "false")]);
+            [
+                new Claim("remember_me", rememberMe ? "true" : "false"),
+                new Claim("sid", sessionId.ToString())
+            ]);
 
         var httpContext = _httpContextAccessor.HttpContext;
         _db.UserSessions.Add(new UserSession
         {
+            Id = sessionId,
             TenantId = user.TenantId,
             UserId = user.Id,
-            SessionId = httpContext?.Session.Id ?? string.Empty,
+            SessionId = sessionId.ToString(),
             IpAddress = httpContext?.Connection.RemoteIpAddress?.ToString(),
             UserAgent = httpContext?.Request.Headers.UserAgent.ToString(),
             LastSeenAt = DateTimeOffset.UtcNow

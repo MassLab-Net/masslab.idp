@@ -2,6 +2,7 @@ namespace MassLab.Identity.Infrastructure.Data;
 
 public sealed class OpenIddictAdminSpaClientOptions
 {
+    public bool ProvisionOnStartup { get; set; }
     public bool Enabled { get; set; } = true;
     public string ClientId { get; set; } = "masslab-admin-spa";
     public string DisplayName { get; set; } = "MassLab Admin";

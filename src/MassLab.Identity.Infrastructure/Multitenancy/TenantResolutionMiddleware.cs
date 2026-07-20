@@ -33,8 +33,11 @@ public sealed class TenantResolutionMiddleware
             .GetValue<string>("Multitenancy:RootDomain")?
             .ToLowerInvariant();
 
-        var headerTenantSlug = context.Request.Headers["X-Tenant-Slug"].FirstOrDefault();
-        var headerTenantId = context.Request.Headers["X-Tenant-Id"].FirstOrDefault();
+        var allowTenantHeaders = context.RequestServices
+            .GetRequiredService<IConfiguration>()
+            .GetValue("Multitenancy:AllowTenantHeaders", false);
+        var headerTenantSlug = allowTenantHeaders ? context.Request.Headers["X-Tenant-Slug"].FirstOrDefault() : null;
+        var headerTenantId = allowTenantHeaders ? context.Request.Headers["X-Tenant-Id"].FirstOrDefault() : null;
         Domain.Tenant? tenant = TenantRequestContext.GetResolvedTenant(context);
         var requestedTenantWasExplicit = tenant is not null;
 
