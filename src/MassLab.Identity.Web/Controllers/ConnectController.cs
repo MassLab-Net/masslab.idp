@@ -90,6 +90,7 @@ public sealed class ConnectController : Controller
             email = result.Email,
             tenant_id = result.TenantId,
             tenant_name = result.TenantName,
+            is_system_default_tenant = result.IsSystemDefaultTenant,
             system_admin = result.IsSystemAdmin,
             tenant_admin = result.IsTenantAdmin,
             remember_me = result.RememberMe,

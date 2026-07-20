@@ -9,6 +9,7 @@ public interface ICurrentTenantAccessor
     Guid? Id { get; }
     string? Slug { get; }
     TenantStatus? Status { get; }
+    bool IsSystemDefault { get; }
     bool IsAvailable { get; }
 }
 
@@ -98,6 +99,7 @@ public sealed record SystemTenantDto(
     string Slug,
     string Status,
     bool IsActive,
+    bool IsSystemDefault,
     string? PrimaryHostName);
 
 public sealed record TenantAdminDashboardDto(
@@ -190,6 +192,7 @@ public sealed record OpenIdUserInfoDto(
     string? Email,
     string? TenantId,
     string? TenantName,
+    bool IsSystemDefaultTenant,
     bool IsSystemAdmin,
     bool IsTenantAdmin,
     bool RememberMe,

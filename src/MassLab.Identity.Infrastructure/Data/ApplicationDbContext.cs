@@ -39,6 +39,9 @@ public sealed class ApplicationDbContext : IdentityDbContext<ApplicationUser, Mi
         builder.Entity<Tenant>(entity =>
         {
             entity.HasIndex(x => x.Slug).IsUnique();
+            entity.HasIndex(x => x.IsSystemDefault)
+                .HasFilter("\"IsSystemDefault\" = TRUE")
+                .IsUnique();
             entity.Property(x => x.Name).HasMaxLength(200);
             entity.Property(x => x.Slug).HasMaxLength(100);
             entity.HasOne(x => x.DefaultPolicy).WithOne(x => x.Tenant).HasForeignKey<TenantDefaultPolicy>(x => x.TenantId);

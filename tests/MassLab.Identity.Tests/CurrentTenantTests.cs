@@ -11,12 +11,13 @@ public sealed class CurrentTenantTests
         var tenantId = Guid.NewGuid();
         var currentTenant = new CurrentTenant();
 
-        currentTenant.Set(tenantId, "demo", TenantStatus.Active);
+        currentTenant.Set(tenantId, "demo", TenantStatus.Active, isSystemDefault: true);
 
         Assert.True(currentTenant.IsAvailable);
         Assert.Equal(tenantId, currentTenant.Id);
         Assert.Equal("demo", currentTenant.Slug);
         Assert.Equal(TenantStatus.Active, currentTenant.Status);
+        Assert.True(currentTenant.IsSystemDefault);
     }
 }
 

@@ -14,7 +14,7 @@ public sealed class ApplicationDbContextTests
         var tenantA = Guid.NewGuid();
         var tenantB = Guid.NewGuid();
         var currentTenant = new CurrentTenant();
-        currentTenant.Set(tenantA, "tenant-a", TenantStatus.Active);
+        currentTenant.Set(tenantA, "tenant-a", TenantStatus.Active, isSystemDefault: false);
         await using var db = CreateDb(currentTenant);
 
         db.TenantRoles.Add(new TenantRole { TenantId = tenantA, Name = "Admin" });
@@ -35,7 +35,7 @@ public sealed class ApplicationDbContextTests
         var roleId = Guid.NewGuid();
         var permissionId = Guid.NewGuid();
         var currentTenant = new CurrentTenant();
-        currentTenant.Set(tenantId, "demo", TenantStatus.Active);
+        currentTenant.Set(tenantId, "demo", TenantStatus.Active, isSystemDefault: true);
         await using var db = CreateDb(currentTenant);
 
         db.TenantRoles.Add(new TenantRole { Id = roleId, TenantId = tenantId, Name = "Admin" });

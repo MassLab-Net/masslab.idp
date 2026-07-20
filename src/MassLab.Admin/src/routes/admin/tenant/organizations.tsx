@@ -34,6 +34,7 @@ function Organizations() {
   const { t } = useI18n();
   const { session, user } = useAuth();
   const [orgs, setOrgs] = useState<SystemTenantDto[]>([]);
+  const [accessDenied, setAccessDenied] = useState(false);
   const [q, setQ] = useState("");
   const [open, setOpen] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<SystemTenantDto | null>(null);
@@ -51,7 +52,7 @@ function Organizations() {
 
   useEffect(() => {
     if (!session) return;
-    void loadOrganizations(session, setOrgs);
+    void loadOrganizations(session, setOrgs, setAccessDenied);
   }, [session]);
 
   const filtered = useMemo(
@@ -68,11 +69,27 @@ function Organizations() {
       <div className="space-y-6">
         <PageHeader
           title={t("org.title")}
+          subtitle="Only system administrators can access organization management."
+        />
+        <Card className="border-border shadow-card">
+          <CardContent className="p-6 text-sm text-muted-foreground">
+            Organization management requires a system administrator account.
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
+  if (accessDenied || !user.isSystemDefaultTenant) {
+    return (
+      <div className="space-y-6">
+        <PageHeader
+          title={t("org.title")}
           subtitle="Only the default system tenant can manage tenant organizations."
         />
         <Card className="border-border shadow-card">
           <CardContent className="p-6 text-sm text-muted-foreground">
-            Tenant management is only available for the system tenant.
+            Switch to the default system tenant before managing organizations.
           </CardContent>
         </Card>
       </div>
@@ -127,7 +144,7 @@ function Organizations() {
                       setRootDisplayName("");
                       setRootPassword("");
                       toast.success(t("org.created"));
-                      await loadOrganizations(session, setOrgs);
+                      await loadOrganizations(session, setOrgs, setAccessDenied);
                     } catch (reason: unknown) {
                       toast.error(reason instanceof Error ? reason.message : "Unable to create the organization.");
                     } finally {
@@ -279,12 +296,16 @@ function Organizations() {
                     <DropdownMenuContent align="end">
                       <DropdownMenuItem
                         onClick={async () => {
+                          if (org.isSystemDefault) {
+                            return;
+                          }
+
                           setBusyTenantId(org.id);
                           setBusyAction("toggle");
                           try {
                             await identityFetch<CommandResult>(session, `/api/admin/system/tenants/${org.id}/toggle`, { method: "POST" });
                             toast.success("Organization status updated.");
-                            await loadOrganizations(session, setOrgs);
+                            await loadOrganizations(session, setOrgs, setAccessDenied);
                           } catch (reason: unknown) {
                             toast.error(reason instanceof Error ? reason.message : "Unable to update the organization.");
                           } finally {
@@ -292,11 +313,21 @@ function Organizations() {
                             setBusyAction(null);
                           }
                         }}
-                        disabled={isCreating || !!busyTenantId}
+                        disabled={org.isSystemDefault || isCreating || !!busyTenantId}
                       >
-                        {busyTenantId === org.id && busyAction === "toggle" ? "Updating status..." : "Toggle status"}
+                        {org.isSystemDefault
+                          ? "Default tenant"
+                          : busyTenantId === org.id && busyAction === "toggle"
+                            ? "Updating status..."
+                            : "Toggle status"}
                       </DropdownMenuItem>
-                      <DropdownMenuItem className="text-destructive" disabled={isCreating || !!busyTenantId} onClick={() => setDeleteTarget(org)}>{t("common.delete")}</DropdownMenuItem>
+                      <DropdownMenuItem
+                        className="text-destructive"
+                        disabled={org.isSystemDefault || isCreating || !!busyTenantId}
+                        onClick={() => setDeleteTarget(org)}
+                      >
+                        {org.isSystemDefault ? "Default tenant" : t("common.delete")}
+                      </DropdownMenuItem>
                     </DropdownMenuContent>
                   </DropdownMenu>
                 </TableCell>
@@ -334,7 +365,7 @@ function Organizations() {
                   await identityFetch<CommandResult>(session, `/api/admin/system/tenants/${deleteTarget.id}`, { method: "DELETE" });
                   toast.success("Organization archived.");
                   setDeleteTarget(null);
-                  await loadOrganizations(session, setOrgs);
+                  await loadOrganizations(session, setOrgs, setAccessDenied);
                 } catch (reason: unknown) {
                   toast.error(reason instanceof Error ? reason.message : "Unable to archive the organization.");
                 } finally {
@@ -352,9 +383,25 @@ function Organizations() {
   );
 }
 
-async function loadOrganizations(session: Parameters<typeof identityFetch<SystemTenantDto[]>>[0], setOrgs: (orgs: SystemTenantDto[]) => void) {
-  const organizations = await identityFetch<SystemTenantDto[]>(session, "/api/admin/system/tenants");
-  setOrgs(organizations);
+async function loadOrganizations(
+  session: Parameters<typeof identityFetch<SystemTenantDto[]>>[0],
+  setOrgs: (orgs: SystemTenantDto[]) => void,
+  setAccessDenied: (value: boolean) => void,
+) {
+  try {
+    const organizations = await identityFetch<SystemTenantDto[]>(session, "/api/admin/system/tenants");
+    setOrgs(organizations);
+    setAccessDenied(false);
+  } catch (reason: unknown) {
+    const message = reason instanceof Error ? reason.message : "";
+    if (message === "Your admin session is no longer authorized.") {
+      setAccessDenied(true);
+      setOrgs([]);
+      return;
+    }
+
+    throw reason;
+  }
 }
 
 export function PageHeader({ title, subtitle, action }: { title: string; subtitle?: string; action?: React.ReactNode }) {

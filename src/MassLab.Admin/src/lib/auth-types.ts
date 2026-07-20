@@ -5,6 +5,7 @@ export type AuthUser = {
   username: string;
   organization: string;
   tenantId?: string;
+  isSystemDefaultTenant: boolean;
   isSystemAdmin: boolean;
   isTenantAdmin: boolean;
   permissions: string[];

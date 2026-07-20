@@ -38,10 +38,16 @@ public static class DatabaseSeeder
         var tenant = await db.Tenants.IgnoreQueryFilters().FirstOrDefaultAsync(x => x.Slug == "demo", cancellationToken);
         if (tenant is null)
         {
-            tenant = new Tenant { Name = "Demo Tenant", Slug = "demo", Status = TenantStatus.Active };
+            tenant = new Tenant { Name = "Demo Tenant", Slug = "demo", IsSystemDefault = true, Status = TenantStatus.Active };
             db.Tenants.Add(tenant);
             db.TenantDomains.Add(new TenantDomain { TenantId = tenant.Id, HostName = "demo.localhost", IsPrimary = true });
             db.TenantDefaultPolicies.Add(new TenantDefaultPolicy { TenantId = tenant.Id, RefreshTokensEnabled = true });
+            await db.SaveChangesAsync(cancellationToken);
+        }
+        else if (!tenant.IsSystemDefault)
+        {
+            tenant.IsSystemDefault = true;
+            tenant.UpdatedAt = DateTimeOffset.UtcNow;
             await db.SaveChangesAsync(cancellationToken);
         }
 

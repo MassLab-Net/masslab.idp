@@ -25,6 +25,7 @@ type UserInfoResponse = {
   email?: string;
   tenant_id?: string;
   tenant_name?: string;
+  is_system_default_tenant?: boolean;
   system_admin?: boolean;
   tenant_admin?: boolean;
   remember_me?: boolean;
@@ -236,6 +237,7 @@ function mapUser(userInfo: UserInfoResponse, organizationSlug?: string): AuthUse
     username: email ? email.split("@")[0] : name.toLowerCase().replace(/\s+/g, "."),
     organization,
     tenantId: userInfo.tenant_id,
+    isSystemDefaultTenant: !!userInfo.is_system_default_tenant,
     isSystemAdmin: !!userInfo.system_admin,
     isTenantAdmin: !!userInfo.tenant_admin,
     permissions: userInfo.permissions ?? [],

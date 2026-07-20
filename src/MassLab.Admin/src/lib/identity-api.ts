@@ -76,6 +76,7 @@ export type SystemTenantDto = {
   slug: string;
   status: string;
   isActive: boolean;
+  isSystemDefault: boolean;
   primaryHostName?: string;
 };
 

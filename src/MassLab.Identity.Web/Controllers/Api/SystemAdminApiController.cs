@@ -1,4 +1,5 @@
 using MassLab.Identity.Application.Common;
+using MassLab.Identity.Application.Abstractions;
 using MassLab.Identity.Application.Features;
 using MassLab.Identity.Web.ViewModels.SystemAdmin;
 using MediatR;
@@ -14,19 +15,33 @@ namespace MassLab.Identity.Web.Controllers.Api;
 public sealed class SystemAdminApiController : ControllerBase
 {
     private readonly ISender _sender;
+    private readonly ICurrentTenantAccessor _currentTenant;
 
-    public SystemAdminApiController(ISender sender)
+    public SystemAdminApiController(ISender sender, ICurrentTenantAccessor currentTenant)
     {
         _sender = sender;
+        _currentTenant = currentTenant;
     }
 
     [HttpGet("tenants")]
     public async Task<IActionResult> GetTenants()
-        => Ok(await _sender.Send(new GetSystemTenantsQuery()));
+    {
+        if (!CanManageOrganizations())
+        {
+            return Forbid();
+        }
+
+        return Ok(await _sender.Send(new GetSystemTenantsQuery()));
+    }
 
     [HttpPost("tenants")]
     public async Task<IActionResult> CreateTenant(CreateTenantInput input)
     {
+        if (!CanManageOrganizations())
+        {
+            return Forbid();
+        }
+
         return ToActionResult(await _sender.Send(new CreateTenantCommand(
             input.Name,
             input.Slug,
@@ -38,11 +53,25 @@ public sealed class SystemAdminApiController : ControllerBase
 
     [HttpPost("tenants/{id:guid}/toggle")]
     public async Task<IActionResult> ToggleTenant(Guid id)
-        => ToActionResult(await _sender.Send(new ToggleTenantCommand(id)));
+    {
+        if (!CanManageOrganizations())
+        {
+            return Forbid();
+        }
+
+        return ToActionResult(await _sender.Send(new ToggleTenantCommand(id)));
+    }
 
     [HttpDelete("tenants/{id:guid}")]
     public async Task<IActionResult> DeleteTenant(Guid id)
-        => ToActionResult(await _sender.Send(new DeleteTenantCommand(id)));
+    {
+        if (!CanManageOrganizations())
+        {
+            return Forbid();
+        }
+
+        return ToActionResult(await _sender.Send(new DeleteTenantCommand(id)));
+    }
 
     private ActionResult ToActionResult(CommandResult result)
     {
@@ -68,4 +97,7 @@ public sealed class SystemAdminApiController : ControllerBase
 
         return Ok(result);
     }
+
+    private bool CanManageOrganizations()
+        => _currentTenant.IsAvailable && _currentTenant.IsSystemDefault;
 }

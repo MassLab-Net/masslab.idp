@@ -27,11 +27,15 @@ internal sealed class OpenIdApplicationService : IOpenIdQueries
         var permissions = Guid.TryParse(userId, out var parsedUserId)
             ? await _rbacService.GetEffectivePermissionsAsync(parsedUserId, cancellationToken)
             : Array.Empty<string>();
-        var tenantName = Guid.TryParse(tenantId, out var parsedTenantId)
+        var tenantInfo = Guid.TryParse(tenantId, out var parsedTenantId)
             ? await _db.Tenants
                 .IgnoreQueryFilters()
                 .Where(x => x.Id == parsedTenantId)
-                .Select(x => x.Name)
+                .Select(x => new
+                {
+                    x.Name,
+                    x.IsSystemDefault
+                })
                 .FirstOrDefaultAsync(cancellationToken)
             : null;
 
@@ -40,7 +44,8 @@ internal sealed class OpenIdApplicationService : IOpenIdQueries
             principal.FindFirstValue("display_name") ?? principal.Identity?.Name,
             principal.FindFirstValue(ClaimTypes.Email),
             tenantId,
-            tenantName,
+            tenantInfo?.Name,
+            tenantInfo?.IsSystemDefault ?? false,
             string.Equals(principal.FindFirstValue("system_admin"), "true", StringComparison.OrdinalIgnoreCase),
             string.Equals(principal.FindFirstValue("tenant_admin"), "true", StringComparison.OrdinalIgnoreCase),
             string.Equals(principal.FindFirstValue("remember_me"), "true", StringComparison.OrdinalIgnoreCase),

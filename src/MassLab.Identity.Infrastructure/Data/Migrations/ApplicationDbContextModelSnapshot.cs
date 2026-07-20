@@ -341,6 +341,9 @@ namespace MassLab.Identity.Infrastructure.Data.Migrations
                     b.Property<DateTimeOffset>("CreatedAt")
                         .HasColumnType("timestamp with time zone");
 
+                    b.Property<bool>("IsSystemDefault")
+                        .HasColumnType("boolean");
+
                     b.Property<string>("Name")
                         .IsRequired()
                         .HasMaxLength(200)
@@ -361,6 +364,10 @@ namespace MassLab.Identity.Infrastructure.Data.Migrations
 
                     b.HasIndex("Slug")
                         .IsUnique();
+
+                    b.HasIndex("IsSystemDefault")
+                        .IsUnique()
+                        .HasFilter("\"IsSystemDefault\" = TRUE");
 
                     b.ToTable("Tenants");
                 });

@@ -18,5 +18,7 @@ internal sealed class CurrentTenantAccessor : ICurrentTenantAccessor
 
     public MassLab.Identity.Domain.TenantStatus? Status => _currentTenant.Status;
 
+    public bool IsSystemDefault => _currentTenant.IsSystemDefault;
+
     public bool IsAvailable => _currentTenant.IsAvailable;
 }

@@ -69,7 +69,7 @@ public sealed class TenantResolutionMiddleware
                     if (TryResetAuthenticationForTenantLogin(context))
                     {
                         context.User = new ClaimsPrincipal(new ClaimsIdentity());
-                        currentTenant.Set(tenant.Id, tenant.Slug, tenant.Status);
+                        currentTenant.Set(tenant.Id, tenant.Slug, tenant.Status, tenant.IsSystemDefault);
                         await _next(context);
                         return;
                     }
@@ -104,7 +104,7 @@ public sealed class TenantResolutionMiddleware
 
         if (tenant is not null)
         {
-            currentTenant.Set(tenant.Id, tenant.Slug, tenant.Status);
+            currentTenant.Set(tenant.Id, tenant.Slug, tenant.Status, tenant.IsSystemDefault);
             CleanupLegacyTenantScopedCookie(context, tenant.Slug);
         }
 

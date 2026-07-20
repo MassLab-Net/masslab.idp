@@ -53,6 +53,7 @@ internal sealed class SystemAdminApplicationService : ISystemAdminQueries, ISyst
                 x.Slug,
                 x.Status.ToString(),
                 x.Status == TenantStatus.Active,
+                x.IsSystemDefault,
                 x.Domains
                     .Where(domain => domain.IsPrimary)
                     .Select(domain => domain.HostName)
@@ -115,7 +116,7 @@ internal sealed class SystemAdminApplicationService : ISystemAdminQueries, ISyst
         rootPassword = passwordGenerated ? GeneratePassword() : rootPassword;
         var effectiveRootPassword = rootPassword!;
 
-        var tenant = new Tenant { Name = name, Slug = slug, Status = TenantStatus.Active };
+        var tenant = new Tenant { Name = name, Slug = slug, IsSystemDefault = false, Status = TenantStatus.Active };
         _db.Tenants.Add(tenant);
         _db.TenantDomains.Add(new TenantDomain { TenantId = tenant.Id, HostName = hostName, IsPrimary = true });
         _db.TenantDefaultPolicies.Add(new TenantDefaultPolicy { TenantId = tenant.Id });
@@ -175,6 +176,11 @@ internal sealed class SystemAdminApplicationService : ISystemAdminQueries, ISyst
             return CommandResult.Failure("Deleted tenants cannot be reactivated. Restore flow is not implemented.");
         }
 
+        if (tenant.IsSystemDefault)
+        {
+            return CommandResult.Failure("The default system tenant cannot be disabled.");
+        }
+
         tenant.Status = tenant.Status == TenantStatus.Active ? TenantStatus.Disabled : TenantStatus.Active;
         tenant.UpdatedAt = DateTimeOffset.UtcNow;
         await _db.SaveChangesAsync(cancellationToken);
@@ -192,6 +198,11 @@ internal sealed class SystemAdminApplicationService : ISystemAdminQueries, ISyst
         if (tenant.Status == TenantStatus.Deleted)
         {
             return CommandResult.Failure("Tenant is already deleted.");
+        }
+
+        if (tenant.IsSystemDefault)
+        {
+            return CommandResult.Failure("The default system tenant cannot be deleted.");
         }
 
         var activeSessionCount = await _db.UserSessions.IgnoreQueryFilters()
