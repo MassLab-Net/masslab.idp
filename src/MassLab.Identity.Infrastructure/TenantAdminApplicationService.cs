@@ -11,6 +11,20 @@ namespace MassLab.Identity.Infrastructure;
 
 internal sealed class TenantAdminApplicationService : ITenantAdminQueries, ITenantAdminCommands
 {
+    private const string TenantAdminRoleName = "TenantAdmin";
+    private static readonly HashSet<string> BootstrapPermissionNames =
+    [
+        "tenants.manage",
+        "users.manage",
+        "roles.manage",
+        "permissions.manage",
+        "clients.manage",
+        "providers.manage",
+        "smtp.manage",
+        "sessions.manage",
+        "audit.read"
+    ];
+
     private readonly ApplicationDbContext _db;
     private readonly UserManager<ApplicationUser> _userManager;
     private readonly ICurrentTenant _tenant;
@@ -147,7 +161,8 @@ internal sealed class TenantAdminApplicationService : ITenantAdminQueries, ITena
                     x.DisplayName,
                     x.IsEnabled,
                     x.IsSystemAdmin,
-                    x.IsTenantAdmin))
+                    x.IsTenantAdmin,
+                    x.IsBootstrapUser))
                 .ToListAsync(cancellationToken),
             await _db.TenantRoles
                 .OrderBy(x => x.Name)
@@ -306,6 +321,12 @@ internal sealed class TenantAdminApplicationService : ITenantAdminQueries, ITena
             return CommandResult.Missing();
         }
 
+        var protectionResult = await ValidateUserCanLoseAdminAccessAsync(user, cancellationToken);
+        if (protectionResult is not null)
+        {
+            return protectionResult;
+        }
+
         user.IsEnabled = false;
         foreach (var session in await _db.UserSessions.Where(x => x.UserId == id && x.RevokedAt == null).ToListAsync(cancellationToken))
         {
@@ -323,6 +344,20 @@ internal sealed class TenantAdminApplicationService : ITenantAdminQueries, ITena
         if (user is null)
         {
             return CommandResult.Missing();
+        }
+
+        if (user.IsBootstrapUser || user.IsSystemAdmin)
+        {
+            return CommandResult.Failure("Bootstrap and system administrator users cannot be edited from tenant administration.");
+        }
+
+        if (!isEnabled || !isTenantAdmin)
+        {
+            var protectionResult = await ValidateUserCanLoseAdminAccessAsync(user, cancellationToken);
+            if (protectionResult is not null)
+            {
+                return protectionResult;
+            }
         }
 
         user.Email = email;
@@ -345,6 +380,12 @@ internal sealed class TenantAdminApplicationService : ITenantAdminQueries, ITena
             return CommandResult.Missing();
         }
 
+        var protectionResult = await ValidateUserCanLoseAdminAccessAsync(user, cancellationToken);
+        if (protectionResult is not null)
+        {
+            return protectionResult;
+        }
+
         _db.UserRoleAssignments.RemoveRange(_db.UserRoleAssignments.Where(x => x.UserId == id));
         _db.UserPermissionAssignments.RemoveRange(_db.UserPermissionAssignments.Where(x => x.UserId == id));
         _db.UserSessions.RemoveRange(_db.UserSessions.Where(x => x.UserId == id));
@@ -358,6 +399,12 @@ internal sealed class TenantAdminApplicationService : ITenantAdminQueries, ITena
         if (!_tenant.Id.HasValue)
         {
             return CommandResult.Failure("Tenant is required.");
+        }
+
+        var roleAssignmentResult = await ValidateBootstrapUserRoleAssignmentAsync(userId, roleIds, cancellationToken);
+        if (roleAssignmentResult is not null)
+        {
+            return roleAssignmentResult;
         }
 
         var existing = await _db.UserRoleAssignments.Where(x => x.UserId == userId).ToListAsync(cancellationToken);
@@ -393,6 +440,12 @@ internal sealed class TenantAdminApplicationService : ITenantAdminQueries, ITena
         if (!userExists)
         {
             return CommandResult.Missing();
+        }
+
+        var roleAssignmentResult = await ValidateBootstrapUserRoleAssignmentAsync(userId, roleIds, cancellationToken);
+        if (roleAssignmentResult is not null)
+        {
+            return roleAssignmentResult;
         }
 
         var existingRoles = await _db.UserRoleAssignments.Where(x => x.UserId == userId).ToListAsync(cancellationToken);
@@ -454,6 +507,11 @@ internal sealed class TenantAdminApplicationService : ITenantAdminQueries, ITena
             return CommandResult.Missing();
         }
 
+        if (IsBootstrapRole(role))
+        {
+            return CommandResult.Failure("The TenantAdmin bootstrap role cannot be edited.");
+        }
+
         role.Name = name;
         role.Description = description;
         role.UpdatedAt = DateTimeOffset.UtcNow;
@@ -468,6 +526,11 @@ internal sealed class TenantAdminApplicationService : ITenantAdminQueries, ITena
         if (role is null)
         {
             return CommandResult.Missing();
+        }
+
+        if (IsBootstrapRole(role))
+        {
+            return CommandResult.Failure("The TenantAdmin bootstrap role cannot be deleted.");
         }
 
         _db.UserRoleAssignments.RemoveRange(_db.UserRoleAssignments.Where(x => x.RoleId == id));
@@ -549,6 +612,24 @@ internal sealed class TenantAdminApplicationService : ITenantAdminQueries, ITena
             return CommandResult.Failure("Tenant is required.");
         }
 
+        var role = await _db.TenantRoles.FirstOrDefaultAsync(x => x.Id == roleId, cancellationToken);
+        if (role is null)
+        {
+            return CommandResult.Missing();
+        }
+
+        if (IsBootstrapRole(role))
+        {
+            var requiredPermissionIds = await _db.TenantPermissions
+                .Where(x => BootstrapPermissionNames.Contains(x.Name))
+                .Select(x => x.Id)
+                .ToListAsync(cancellationToken);
+            if (requiredPermissionIds.Except(permissionIds).Any())
+            {
+                return CommandResult.Failure("The TenantAdmin bootstrap role must keep all platform management permissions.");
+            }
+        }
+
         var existing = await _db.RolePermissionAssignments.Where(x => x.RoleId == roleId).ToListAsync(cancellationToken);
         _db.RolePermissionAssignments.RemoveRange(existing);
         foreach (var permissionId in permissionIds.Distinct())
@@ -567,6 +648,11 @@ internal sealed class TenantAdminApplicationService : ITenantAdminQueries, ITena
         if (permission is null)
         {
             return CommandResult.Missing();
+        }
+
+        if (IsBootstrapPermission(permission))
+        {
+            return CommandResult.Failure("Bootstrap platform permissions cannot be edited.");
         }
 
         name = NormalizePermissionName(name);
@@ -596,6 +682,11 @@ internal sealed class TenantAdminApplicationService : ITenantAdminQueries, ITena
             return CommandResult.Missing();
         }
 
+        if (IsBootstrapPermission(permission))
+        {
+            return CommandResult.Failure("Bootstrap platform permissions cannot be deleted.");
+        }
+
         _db.RolePermissionAssignments.RemoveRange(_db.RolePermissionAssignments.Where(x => x.PermissionId == id));
         _db.UserPermissionAssignments.RemoveRange(_db.UserPermissionAssignments.Where(x => x.PermissionId == id));
         _db.TenantPermissions.Remove(permission);
@@ -603,6 +694,62 @@ internal sealed class TenantAdminApplicationService : ITenantAdminQueries, ITena
         await _audit.WriteAsync("permission.deleted", AuditResult.Success, "permission", id.ToString(), cancellationToken: cancellationToken);
         return CommandResult.Success();
     }
+
+    private async Task<CommandResult?> ValidateUserCanLoseAdminAccessAsync(ApplicationUser user, CancellationToken cancellationToken)
+    {
+        if (user.IsBootstrapUser || user.IsSystemAdmin)
+        {
+            return CommandResult.Failure("Bootstrap and system administrator users cannot be disabled or deleted from tenant administration.");
+        }
+
+        if (!user.IsTenantAdmin)
+        {
+            return null;
+        }
+
+        var hasAnotherEnabledTenantAdmin = await _db.Users.AnyAsync(
+            x => x.Id != user.Id && x.IsEnabled && x.IsTenantAdmin,
+            cancellationToken);
+        return hasAnotherEnabledTenantAdmin
+            ? null
+            : CommandResult.Failure("A tenant must retain at least one enabled tenant administrator.");
+    }
+
+    private async Task<CommandResult?> ValidateBootstrapUserRoleAssignmentAsync(
+        Guid userId,
+        IReadOnlyCollection<Guid> roleIds,
+        CancellationToken cancellationToken)
+    {
+        var user = await _db.Users.FirstOrDefaultAsync(x => x.Id == userId, cancellationToken);
+        if (user is null)
+        {
+            return CommandResult.Missing();
+        }
+
+        if (!user.IsBootstrapUser)
+        {
+            return null;
+        }
+
+        var tenantAdminRoleId = await _db.TenantRoles
+            .Where(x => x.Name == TenantAdminRoleName)
+            .Select(x => (Guid?)x.Id)
+            .FirstOrDefaultAsync(cancellationToken);
+        if (!tenantAdminRoleId.HasValue)
+        {
+            return CommandResult.Failure("The TenantAdmin bootstrap role is missing.");
+        }
+
+        return roleIds.Contains(tenantAdminRoleId.Value)
+            ? null
+            : CommandResult.Failure("Bootstrap users must keep the TenantAdmin role.");
+    }
+
+    private static bool IsBootstrapRole(TenantRole role)
+        => string.Equals(role.Name, TenantAdminRoleName, StringComparison.Ordinal);
+
+    private static bool IsBootstrapPermission(TenantPermission permission)
+        => BootstrapPermissionNames.Contains(permission.Name);
 
     public async Task<CreateClientResult> CreateClientAsync(string name, string clientId, ClientType type, string[] redirectUris, string[] postLogoutRedirectUris, string scopes, string flows, CancellationToken cancellationToken = default)
     {

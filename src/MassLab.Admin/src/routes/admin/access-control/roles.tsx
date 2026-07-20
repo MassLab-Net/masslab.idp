@@ -172,17 +172,19 @@ function RolesPage() {
                     </Button>
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align="end">
-                    <DropdownMenuItem
-                      onClick={() =>
-                        setEditing({
-                          id: role.id,
-                          name: role.name,
-                          description: role.description,
-                        })
-                      }
-                    >
-                      {t("common.edit")}
-                    </DropdownMenuItem>
+                    {role.name !== "TenantAdmin" ? (
+                      <DropdownMenuItem
+                        onClick={() =>
+                          setEditing({
+                            id: role.id,
+                            name: role.name,
+                            description: role.description,
+                          })
+                        }
+                      >
+                        {t("common.edit")}
+                      </DropdownMenuItem>
+                    ) : null}
                     <DropdownMenuItem
                       onClick={() => {
                         setAssigningRoleId(role.id);
@@ -193,6 +195,7 @@ function RolesPage() {
                     >
                       {t("roles.permissions")}
                     </DropdownMenuItem>
+                    {role.name !== "TenantAdmin" ? (
                     <DropdownMenuItem
                       className="text-destructive"
                       onClick={async () => {
@@ -218,6 +221,7 @@ function RolesPage() {
                     >
                       {t("common.delete")}
                     </DropdownMenuItem>
+                    ) : null}
                   </DropdownMenuContent>
                 </DropdownMenu>
               </div>

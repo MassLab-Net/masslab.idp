@@ -256,6 +256,9 @@ function UsersPage() {
                         : "User"}
                   </TableCell>
                   <TableCell className="text-right">
+                    {user.isBootstrapUser || user.isSystemAdmin ? (
+                      <span className="text-xs text-muted-foreground">Protected</span>
+                    ) : (
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>
                         <Button variant="ghost" size="icon" disabled={busyUserId === user.id}>
@@ -364,6 +367,7 @@ function UsersPage() {
                         </DropdownMenuItem>
                       </DropdownMenuContent>
                     </DropdownMenu>
+                    )}
                   </TableCell>
                 </TableRow>
               );

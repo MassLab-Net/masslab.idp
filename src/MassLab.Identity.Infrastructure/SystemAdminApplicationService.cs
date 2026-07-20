@@ -134,6 +134,7 @@ internal sealed class SystemAdminApplicationService : ISystemAdminQueries, ISyst
             DisplayName = rootDisplayName,
             IsSystemAdmin = false,
             IsTenantAdmin = true,
+            IsBootstrapUser = true,
             IsEnabled = true
         };
 

@@ -50,6 +50,18 @@ type PermissionEditor = {
   description: string;
 };
 
+const bootstrapPermissionNames = new Set([
+  "tenants.manage",
+  "users.manage",
+  "roles.manage",
+  "permissions.manage",
+  "clients.manage",
+  "providers.manage",
+  "smtp.manage",
+  "sessions.manage",
+  "audit.read",
+]);
+
 function PermissionsPage() {
   const { t } = useI18n();
   const { session } = useAuth();
@@ -227,6 +239,10 @@ function PermissionsPage() {
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild><Button variant="ghost" size="icon"><MoreHorizontal className="h-4 w-4" /></Button></DropdownMenuTrigger>
                       <DropdownMenuContent align="end">
+                        {bootstrapPermissionNames.has(permission.name) ? (
+                          <DropdownMenuItem disabled>Protected bootstrap permission</DropdownMenuItem>
+                        ) : (
+                          <>
                         <DropdownMenuItem
                           onClick={() => {
                             setSaveAttempted(false);
@@ -241,6 +257,8 @@ function PermissionsPage() {
                           {t("common.edit")}
                         </DropdownMenuItem>
                         <DropdownMenuItem className="text-destructive" onClick={() => setDeleteTarget(permission)}>{t("common.delete")}</DropdownMenuItem>
+                          </>
+                        )}
                       </DropdownMenuContent>
                     </DropdownMenu>
                   </TableCell>

@@ -49,7 +49,8 @@ public sealed record TenantUserDto(
     string DisplayName,
     bool IsEnabled,
     bool IsSystemAdmin,
-    bool IsTenantAdmin);
+    bool IsTenantAdmin,
+    bool IsBootstrapUser);
 
 public sealed record TenantRoleDto(
     Guid Id,

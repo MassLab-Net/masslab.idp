@@ -51,8 +51,8 @@ public static class DatabaseSeeder
             await db.SaveChangesAsync(cancellationToken);
         }
 
-        await EnsureUserAsync(userManager, tenant.Id, "system@masslab.local", "System Admin", isSystemAdmin: true, isTenantAdmin: false);
-        var tenantAdmin = await EnsureUserAsync(userManager, tenant.Id, "admin@demo.local", "Demo Tenant Admin", isSystemAdmin: false, isTenantAdmin: true);
+        await EnsureUserAsync(userManager, tenant.Id, "system@masslab.local", "System Admin", isSystemAdmin: true, isTenantAdmin: false, isBootstrapUser: true);
+        var tenantAdmin = await EnsureUserAsync(userManager, tenant.Id, "admin@demo.local", "Demo Tenant Admin", isSystemAdmin: false, isTenantAdmin: true, isBootstrapUser: true);
 
         foreach (var definition in SeedPermissions)
         {
@@ -156,11 +156,24 @@ public static class DatabaseSeeder
         await db.SaveChangesAsync(cancellationToken);
     }
 
-    private static async Task<ApplicationUser> EnsureUserAsync(UserManager<ApplicationUser> userManager, Guid tenantId, string email, string displayName, bool isSystemAdmin, bool isTenantAdmin)
+    private static async Task<ApplicationUser> EnsureUserAsync(
+        UserManager<ApplicationUser> userManager,
+        Guid tenantId,
+        string email,
+        string displayName,
+        bool isSystemAdmin,
+        bool isTenantAdmin,
+        bool isBootstrapUser)
     {
         var user = await userManager.Users.IgnoreQueryFilters().FirstOrDefaultAsync(x => x.Email == email);
         if (user is not null)
         {
+            if (!user.IsBootstrapUser)
+            {
+                user.IsBootstrapUser = true;
+                await userManager.UpdateAsync(user);
+            }
+
             return user;
         }
 
@@ -172,7 +185,8 @@ public static class DatabaseSeeder
             EmailConfirmed = true,
             DisplayName = displayName,
             IsSystemAdmin = isSystemAdmin,
-            IsTenantAdmin = isTenantAdmin
+            IsTenantAdmin = isTenantAdmin,
+            IsBootstrapUser = isBootstrapUser
         };
 
         var result = await userManager.CreateAsync(user, "MassLab@12345");

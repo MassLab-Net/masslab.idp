@@ -21,6 +21,7 @@ export type TenantUserDto = {
   isEnabled: boolean;
   isSystemAdmin: boolean;
   isTenantAdmin: boolean;
+  isBootstrapUser: boolean;
 };
 
 export type TenantRoleDto = {

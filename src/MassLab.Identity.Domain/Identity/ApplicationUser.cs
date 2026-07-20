@@ -9,6 +9,8 @@ public sealed class ApplicationUser : IdentityUser<Guid>
     public bool IsEnabled { get; set; } = true;
     public bool IsSystemAdmin { get; set; }
     public bool IsTenantAdmin { get; set; }
+    // The initial administrator is the recovery path for a tenant and cannot be removed through tenant administration.
+    public bool IsBootstrapUser { get; set; }
     public bool MfaEnabledByPolicy { get; set; }
     public string? TotpSecret { get; set; }
     public DateTimeOffset CreatedAt { get; set; } = DateTimeOffset.UtcNow;
