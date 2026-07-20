@@ -29,27 +29,49 @@ dotnet ef database update --project src/MassLab.Identity.Web/MassLab.Identity.We
 dotnet run --project src/MassLab.Identity.Web/MassLab.Identity.Web.csproj
 ```
 
-To seed demo data, set:
+To seed the default system tenant and local demo accounts, run the app once with startup seeding enabled:
 
-```json
-"Database": {
-  "SeedOnStartup": true
-}
+```bash
+# PowerShell
+$env:Database__SeedOnStartup="true"
+dotnet run --project src/MassLab.Identity.Web/MassLab.Identity.Web.csproj
 ```
 
-Seed credentials:
+The seed creates or updates the default system tenant:
+
+- Tenant name: `Demo Tenant`
+- Tenant slug: `demo`
+- Host: `demo.localhost`
+- `IsSystemDefault = true`
+
+Rules for the default system tenant:
+
+- It cannot be deleted.
+- It cannot be disabled.
+- Only requests scoped to this tenant can manage Organizations.
+
+Seed accounts in the default tenant:
 
 - System admin: `system@masslab.local` / `MassLab@12345`
 - Tenant admin: `admin@demo.local` / `MassLab@12345`
 
+After the first seeded startup, disable seeding again:
+
+```bash
+Remove-Item Env:Database__SeedOnStartup
+```
+
 ## Tenant Resolution
 
-Tenants are resolved by subdomain/domain. The demo seed creates:
+Tenants are resolved by subdomain/domain. The default seed creates:
 
 - Tenant slug: `demo`
 - Host: `demo.localhost`
 
-For localhost testing without DNS setup, pass `?tenant=demo`.
+For localhost testing without DNS setup, use tenant path or query-based resolution:
+
+- Login/authorize path style: `/demo/connect/authorize`, `/demo/account/login`
+- API/query fallback: `?tenant=demo`
 
 ## OIDC Client Example
 
