@@ -14,10 +14,13 @@ public interface ICurrentTenantAccessor
 }
 
 public sealed record MfaEnrollmentDto(string Secret, string AuthenticatorUri);
+public sealed record MfaStatusDto(bool Enabled, int RecoveryCodesRemaining, string? RecoveryEmail);
+public sealed record MfaRecoveryCodesDto(IReadOnlyCollection<string> Codes);
 
 public interface IAccountQueries
 {
     Task<MfaEnrollmentDto?> GetMfaEnrollmentAsync(ClaimsPrincipal principal, CancellationToken cancellationToken = default);
+    Task<MfaStatusDto?> GetMfaStatusAsync(ClaimsPrincipal principal, CancellationToken cancellationToken = default);
 }
 
 public interface IAccountCommands
@@ -27,6 +30,8 @@ public interface IAccountCommands
     Task RequestPasswordResetAsync(string email, CancellationToken cancellationToken = default);
     Task<CommandResult> ResetPasswordAsync(string email, string token, string password, CancellationToken cancellationToken = default);
     Task<CommandResult> VerifyMfaChallengeAsync(ClaimsPrincipal principal, string code, CancellationToken cancellationToken = default);
+    Task<CommandResult> DisableMfaAsync(ClaimsPrincipal principal, string code, CancellationToken cancellationToken = default);
+    Task<MfaRecoveryCodesDto?> RegenerateMfaRecoveryCodesAsync(ClaimsPrincipal principal, CancellationToken cancellationToken = default);
     Task<VerifyEmailResult> VerifyEmailAsync(string email, string token, CancellationToken cancellationToken = default);
 }
 

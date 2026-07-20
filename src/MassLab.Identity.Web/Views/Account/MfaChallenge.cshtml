@@ -14,6 +14,7 @@
             <p>Enter the verification code from your authenticator app.</p>
         </div>
         <form asp-action="MfaChallenge" method="post" class="masslab-auth-card__form">
+            <input asp-for="ReturnUrl" type="hidden" />
             <div asp-validation-summary="All" class="masslab-login__validation @(ViewData.ModelState.IsValid ? "validation-summary-valid" : "validation-summary-errors")"></div>
             <div class="form-group masslab-login__field">
                 <label asp-for="Code">Verification code</label>

@@ -6,6 +6,7 @@ using MassLab.Identity.Application;
 using MassLab.Identity.Infrastructure;
 using MassLab.Identity.Infrastructure.Data;
 using MassLab.Identity.Infrastructure.Multitenancy;
+using MassLab.Identity.Infrastructure.Services;
 using MassLab.Identity.Web.Options;
 using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.AspNetCore.HttpOverrides;
@@ -183,7 +184,14 @@ builder.Services.AddOpenIddict()
         options.UseAspNetCore();
     });
 
-builder.Services.AddAuthentication();
+builder.Services.AddAuthentication()
+    .AddCookie(MfaAuthenticationDefaults.PendingScheme, options =>
+    {
+        options.Cookie.Name = "masslab.identity.mfa-pending";
+        options.Cookie.HttpOnly = true;
+        options.Cookie.SameSite = SameSiteMode.Lax;
+        options.ExpireTimeSpan = TimeSpan.FromMinutes(5);
+    });
 builder.Services.AddMassLabAuthorization();
 builder.Services.AddAuthorization(options =>
 {

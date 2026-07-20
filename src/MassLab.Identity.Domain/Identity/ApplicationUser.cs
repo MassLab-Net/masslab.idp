@@ -14,6 +14,8 @@ public sealed class ApplicationUser : IdentityUser<Guid>
     public int AuthorizationVersion { get; set; }
     public bool MfaEnabledByPolicy { get; set; }
     public string? TotpSecret { get; set; }
+    public string? RecoveryEmail { get; set; }
+    public string? RecoveryCodeHashesJson { get; set; }
     public DateTimeOffset CreatedAt { get; set; } = DateTimeOffset.UtcNow;
     public ICollection<UserRoleAssignment> RoleAssignments { get; set; } = new List<UserRoleAssignment>();
     public ICollection<UserPermissionAssignment> PermissionAssignments { get; set; } = new List<UserPermissionAssignment>();

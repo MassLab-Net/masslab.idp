@@ -67,6 +67,12 @@ public sealed class HandlerTests
         public Task<CommandResult> VerifyMfaChallengeAsync(ClaimsPrincipal principal, string code, CancellationToken cancellationToken = default)
             => Task.FromResult(CommandResult.Success());
 
+        public Task<CommandResult> DisableMfaAsync(ClaimsPrincipal principal, string code, CancellationToken cancellationToken = default)
+            => Task.FromResult(CommandResult.Success());
+
+        public Task<MfaRecoveryCodesDto?> RegenerateMfaRecoveryCodesAsync(ClaimsPrincipal principal, CancellationToken cancellationToken = default)
+            => Task.FromResult<MfaRecoveryCodesDto?>(new MfaRecoveryCodesDto(Array.Empty<string>()));
+
         public Task<VerifyEmailResult> VerifyEmailAsync(string email, string token, CancellationToken cancellationToken = default)
             => Task.FromResult(new VerifyEmailResult(true, true));
     }

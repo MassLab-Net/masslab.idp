@@ -27,6 +27,12 @@ public sealed class TotpService : ITotpService
             return false;
         }
 
+        code = new string(code.Where(char.IsDigit).ToArray());
+        if (code.Length != 6)
+        {
+            return false;
+        }
+
         var current = GenerateCode(secret, DateTimeOffset.UtcNow);
         var previous = GenerateCode(secret, DateTimeOffset.UtcNow.AddSeconds(-30));
         var next = GenerateCode(secret, DateTimeOffset.UtcNow.AddSeconds(30));
@@ -103,4 +109,3 @@ public sealed class TotpService : ITotpService
         return bytes.ToArray();
     }
 }
-

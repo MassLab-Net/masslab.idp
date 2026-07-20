@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { Camera, KeyRound, Mail, ShieldCheck, Eye, EyeOff, Copy, RefreshCw } from "lucide-react";
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -22,6 +22,8 @@ import { useI18n } from "@/lib/i18n";
 import { ROLES } from "@/lib/mock-data";
 import { initials } from "@/components/app-sidebar";
 import { toast } from "sonner";
+import { identityFetch, type CommandResult, type MfaEnrollmentDto, type MfaRecoveryCodesDto, type MfaStatusDto } from "@/lib/identity-api";
+import type { AuthSession } from "@/lib/auth-types";
 
 export const Route = createFileRoute("/admin/profile")({
   head: () => ({ meta: [{ title: "My Profile — MassLab IAM" }] }),
@@ -141,14 +143,53 @@ function PwField({ label, value, onChange, show, onToggle }: { label: string; va
 }
 
 // ── 2FA Dialog ───────────────────────────────────────────────────────────────
-const MOCK_BACKUP_CODES = ["A1B2-C3D4", "E5F6-G7H8", "I9J0-K1L2", "M3N4-O5P6", "Q7R8-S9T0", "U1V2-W3X4"];
-const MOCK_QR = "https://api.qrserver.com/v1/create-qr-code/?size=160x160&data=otpauth://totp/MassLab:admin@masslab.io?secret=JBSWY3DPEHPK3PXP&issuer=MassLab";
-
-function TwoFADialog({ open, onClose, enabled, onToggle }: { open: boolean; onClose: () => void; enabled: boolean; onToggle: (v: boolean) => void }) {
+function TwoFADialog({ open, onClose, enabled, onToggle, session }: { open: boolean; onClose: () => void; enabled: boolean; onToggle: (v: boolean) => void; session: AuthSession | null }) {
   const { t } = useI18n();
   const [step, setStep] = useState<"overview" | "setup" | "disable" | "codes">("overview");
   const [otp, setOtp] = useState("");
   const [otpError, setOtpError] = useState("");
+  const [enrollment, setEnrollment] = useState<MfaEnrollmentDto | null>(null);
+  const [codes, setCodes] = useState<string[]>([]);
+  const [busy, setBusy] = useState(false);
+
+  useEffect(() => {
+    if (!open || !session) return;
+    void identityFetch<MfaStatusDto>(session, "/api/account/mfa")
+      .then((status) => onToggle(status.enabled))
+      .catch(() => toast.error("Unable to load two-factor authentication."));
+  }, [open, session]);
+
+  const startEnrollment = async () => {
+    if (!session) return;
+    setBusy(true);
+    try {
+      setEnrollment(await identityFetch<MfaEnrollmentDto>(session, "/api/account/mfa/enrollment", { method: "POST" }));
+      setStep("setup");
+    } catch (reason) {
+      toast.error(reason instanceof Error ? reason.message : "Unable to start MFA enrollment.");
+    } finally { setBusy(false); }
+  };
+
+  const verifyEnrollment = async () => {
+    if (!session) return;
+    if (otp.replace(/\s/g, "").length < 6) { setOtpError(t("profile.tfaOtpError")); return; }
+    setBusy(true);
+    try {
+      await identityFetch<CommandResult>(session, "/api/account/mfa/verify", { method: "POST", body: JSON.stringify({ code: otp }) });
+      onToggle(true); toast.success(t("profile.tfaEnabled")); setStep("overview"); setOtp("");
+    } catch (reason) { setOtpError(reason instanceof Error ? reason.message : "Invalid verification code."); }
+    finally { setBusy(false); }
+  };
+
+  const regenerateCodes = async () => {
+    if (!session) return;
+    setBusy(true);
+    try {
+      const result = await identityFetch<MfaRecoveryCodesDto>(session, "/api/account/mfa/recovery-codes", { method: "POST" });
+      setCodes(result.codes); setStep("codes");
+    } catch (reason) { toast.error(reason instanceof Error ? reason.message : "Unable to generate recovery codes."); }
+    finally { setBusy(false); }
+  };
 
   function handleClose() { setStep("overview"); setOtp(""); setOtpError(""); onClose(); }
 
@@ -161,9 +202,9 @@ function TwoFADialog({ open, onClose, enabled, onToggle }: { open: boolean; onCl
             <div className="space-y-4 py-2">
               <div className="flex items-center justify-between rounded-lg border border-border p-3">
                 <div><div className="text-sm font-medium">{t("profile.tfaApp")}</div><div className="text-xs text-muted-foreground">{t("profile.tfaAppSub")}</div></div>
-                <Switch checked={enabled} onCheckedChange={(v) => { if (v) setStep("setup"); else setStep("disable"); }} />
+                <Switch checked={enabled} disabled={busy} onCheckedChange={(v) => { if (v) void startEnrollment(); else setStep("disable"); }} />
               </div>
-              {enabled && <Button variant="outline" className="w-full" size="sm" onClick={() => setStep("codes")}>{t("profile.tfaViewCodes")}</Button>}
+              {enabled && <Button variant="outline" className="w-full" size="sm" onClick={() => void regenerateCodes()}>{t("profile.tfaViewCodes")}</Button>}
             </div>
             <DialogFooter><Button variant="outline" onClick={handleClose}>{t("common.close")}</Button></DialogFooter>
           </>
@@ -172,7 +213,7 @@ function TwoFADialog({ open, onClose, enabled, onToggle }: { open: boolean; onCl
           <>
             <DialogHeader><DialogTitle>{t("profile.tfaSetupTitle")}</DialogTitle><DialogDescription>{t("profile.tfaSetupDesc")}</DialogDescription></DialogHeader>
             <div className="flex flex-col items-center gap-4 py-2">
-              <img src={MOCK_QR} alt="QR code" className="rounded-lg border border-border" width={160} height={160} />
+              {enrollment && <div className="w-full rounded-lg border border-border bg-muted p-3 text-center"><p className="text-xs text-muted-foreground">Enter this setup key in your authenticator app</p><code className="mt-2 block break-all text-sm font-semibold tracking-wider">{enrollment.secret}</code></div>}
               <div className="w-full space-y-1.5">
                 <Label>{t("profile.tfaOtpLabel")}</Label>
                 <Input placeholder="000 000" value={otp} onChange={(e) => setOtp(e.target.value)} maxLength={7} className="text-center tracking-widest text-lg" />
@@ -181,7 +222,7 @@ function TwoFADialog({ open, onClose, enabled, onToggle }: { open: boolean; onCl
             </div>
             <DialogFooter>
               <Button variant="outline" onClick={() => setStep("overview")}>{t("common.cancel")}</Button>
-              <Button className="bg-gradient-brand text-primary-foreground hover:opacity-90" onClick={() => { if (otp.replace(/\s/g, "").length < 6) { setOtpError(t("profile.tfaOtpError")); return; } onToggle(true); toast.success(t("profile.tfaEnabled")); setStep("overview"); setOtp(""); setOtpError(""); }}>{t("profile.tfaVerify")}</Button>
+              <Button disabled={busy} className="bg-gradient-brand text-primary-foreground hover:opacity-90" onClick={() => void verifyEnrollment()}>{t("profile.tfaVerify")}</Button>
             </DialogFooter>
           </>
         )}
@@ -190,7 +231,7 @@ function TwoFADialog({ open, onClose, enabled, onToggle }: { open: boolean; onCl
             <DialogHeader><DialogTitle>{t("profile.tfaDisableTitle")}</DialogTitle><DialogDescription>{t("profile.tfaDisableDesc")}</DialogDescription></DialogHeader>
             <DialogFooter>
               <Button variant="outline" onClick={() => setStep("overview")}>{t("common.cancel")}</Button>
-              <Button variant="destructive" onClick={() => { onToggle(false); toast.success(t("profile.tfaDisabled")); setStep("overview"); }}>{t("profile.tfaDisableBtn")}</Button>
+              <Button variant="destructive" disabled={busy} onClick={async () => { if (!session) return; const code = window.prompt("Enter your current authenticator code"); if (!code) return; setBusy(true); try { await identityFetch<CommandResult>(session, "/api/account/mfa/disable", { method: "POST", body: JSON.stringify({ code }) }); onToggle(false); toast.success(t("profile.tfaDisabled")); setStep("overview"); } catch (reason) { toast.error(reason instanceof Error ? reason.message : "Unable to disable MFA."); } finally { setBusy(false); } }}>{t("profile.tfaDisableBtn")}</Button>
             </DialogFooter>
           </>
         )}
@@ -198,7 +239,7 @@ function TwoFADialog({ open, onClose, enabled, onToggle }: { open: boolean; onCl
           <>
             <DialogHeader><DialogTitle>{t("profile.tfaCodesTitle")}</DialogTitle><DialogDescription>{t("profile.tfaCodesDesc")}</DialogDescription></DialogHeader>
             <div className="grid grid-cols-2 gap-2 py-2">
-              {MOCK_BACKUP_CODES.map((code) => (
+              {codes.map((code) => (
                 <button key={code} onClick={() => { navigator.clipboard.writeText(code); toast.success(t("profile.tfaCopied")); }}
                   className="flex items-center justify-between rounded border border-border px-3 py-1.5 font-mono text-sm hover:bg-accent">
                   {code} <Copy className="ml-1 h-3 w-3 text-muted-foreground" />
@@ -206,7 +247,7 @@ function TwoFADialog({ open, onClose, enabled, onToggle }: { open: boolean; onCl
               ))}
             </div>
             <DialogFooter>
-              <Button variant="outline" size="sm" onClick={() => { navigator.clipboard.writeText(MOCK_BACKUP_CODES.join("\n")); toast.success(t("profile.tfaCopied")); }}>
+              <Button variant="outline" size="sm" disabled={busy} onClick={() => void regenerateCodes()}>
                 <RefreshCw className="mr-1.5 h-3.5 w-3.5" />{t("profile.tfaRegenerate")}
               </Button>
               <Button variant="outline" onClick={() => setStep("overview")}>{t("common.close")}</Button>
@@ -362,7 +403,7 @@ function Profile() {
         }}
       />
       <ChangePasswordDialog open={passwordOpen} onClose={() => setPasswordOpen(false)} />
-      <TwoFADialog open={tfaOpen} onClose={() => setTfaOpen(false)} enabled={tfaEnabled} onToggle={setTfaEnabled} />
+      <TwoFADialog open={tfaOpen} onClose={() => setTfaOpen(false)} enabled={tfaEnabled} onToggle={setTfaEnabled} session={session} />
       <RecoveryEmailDialog open={recoveryOpen} onClose={() => setRecoveryOpen(false)} current={recoveryEmail} onSave={setRecoveryEmail} />
     </div>
   );

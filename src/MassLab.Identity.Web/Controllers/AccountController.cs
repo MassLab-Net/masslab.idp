@@ -6,6 +6,7 @@ using MassLab.Identity.Application.Features;
 using MassLab.Identity.Application.Abstractions;
 using MassLab.Identity.Domain;
 using MassLab.Identity.Infrastructure;
+using MassLab.Identity.Infrastructure.Services;
 using MassLab.Identity.Web.ViewModels.Account;
 using MediatR;
 using Microsoft.AspNetCore;
@@ -86,6 +87,10 @@ public sealed class AccountController : Controller
         var result = await _sender.Send(new LoginCommand(input.Email, input.Password, input.RememberMe));
         if (!result.Succeeded)
         {
+            if (result.RequiresMfa)
+            {
+                return RedirectToAction(nameof(MfaChallenge), new { returnUrl = input.ReturnUrl });
+            }
             ModelState.AddModelError(string.Empty, result.ErrorMessage ?? "Invalid login attempt.");
             return View(input);
         }
@@ -145,6 +150,11 @@ public sealed class AccountController : Controller
     }
 
     [Authorize]
+    [Authorize(AuthenticationSchemes = MfaAuthenticationDefaults.PendingScheme)]
+    [HttpGet("mfa/challenge")]
+    public IActionResult MfaChallenge(string? returnUrl = null) => View(new MfaChallengeInput { ReturnUrl = NormalizeReturnUrl(returnUrl) });
+
+    [Authorize(AuthenticationSchemes = MfaAuthenticationDefaults.PendingScheme)]
     [HttpPost("mfa/challenge")]
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> MfaChallenge(MfaChallengeInput input)
@@ -156,7 +166,7 @@ public sealed class AccountController : Controller
             return View("MfaChallenge", input);
         }
 
-        return RedirectToAction("Index", "Home");
+        return LocalRedirect(NormalizeReturnUrl(input.ReturnUrl) ?? "/");
     }
 
     [HttpGet("verify-email")]

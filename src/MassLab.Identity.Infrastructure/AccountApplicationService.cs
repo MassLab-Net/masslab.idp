@@ -9,6 +9,7 @@ using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Routing;
+using System.Text.Json;
 
 namespace MassLab.Identity.Infrastructure;
 
@@ -21,6 +22,7 @@ internal sealed class AccountApplicationService : IAccountQueries, IAccountComma
     private readonly IAuditService _audit;
     private readonly IEmailService _email;
     private readonly ITotpService _totp;
+    private readonly ISecretService _secrets;
     private readonly IHttpContextAccessor _httpContextAccessor;
     private readonly LinkGenerator _linkGenerator;
 
@@ -32,6 +34,7 @@ internal sealed class AccountApplicationService : IAccountQueries, IAccountComma
         IAuditService audit,
         IEmailService email,
         ITotpService totp,
+        ISecretService secrets,
         IHttpContextAccessor httpContextAccessor,
         LinkGenerator linkGenerator)
     {
@@ -42,6 +45,7 @@ internal sealed class AccountApplicationService : IAccountQueries, IAccountComma
         _audit = audit;
         _email = email;
         _totp = totp;
+        _secrets = secrets;
         _httpContextAccessor = httpContextAccessor;
         _linkGenerator = linkGenerator;
     }
@@ -69,13 +73,40 @@ internal sealed class AccountApplicationService : IAccountQueries, IAccountComma
             return LoginResult.Failure("Invalid login attempt.");
         }
 
-        var result = await _signInManager.PasswordSignInAsync(user, password, rememberMe, lockoutOnFailure: true);
+        var result = await _signInManager.CheckPasswordSignInAsync(user, password, lockoutOnFailure: true);
         if (!result.Succeeded)
         {
             await _audit.WriteAsync("login.failed", AuditResult.Failure, "user", user.Id.ToString(), cancellationToken: cancellationToken);
             return LoginResult.Failure("Invalid login attempt.");
         }
 
+        if (user.TwoFactorEnabled && !string.IsNullOrWhiteSpace(user.TotpSecret))
+        {
+            var context = _httpContextAccessor.HttpContext;
+            if (context is null)
+            {
+                return LoginResult.Failure("MFA challenge could not be started.");
+            }
+
+            var pendingIdentity = new ClaimsIdentity(MfaAuthenticationDefaults.PendingScheme);
+            pendingIdentity.AddClaim(new Claim(ClaimTypes.NameIdentifier, user.Id.ToString()));
+            pendingIdentity.AddClaim(new Claim("remember_me", rememberMe ? "true" : "false"));
+            await context.SignInAsync(MfaAuthenticationDefaults.PendingScheme, new ClaimsPrincipal(pendingIdentity), new AuthenticationProperties
+            {
+                IsPersistent = false,
+                ExpiresUtc = DateTimeOffset.UtcNow.AddMinutes(5)
+            });
+            await _audit.WriteAsync("mfa.challenge.required", AuditResult.Success, "user", user.Id.ToString(), cancellationToken: cancellationToken);
+            return LoginResult.RequiresMfaChallenge();
+        }
+
+        await CompleteSignInAsync(user, rememberMe, cancellationToken);
+        await _audit.WriteAsync("login.succeeded", AuditResult.Success, "user", user.Id.ToString(), cancellationToken: cancellationToken);
+        return LoginResult.Success();
+    }
+
+    private async Task CompleteSignInAsync(ApplicationUser user, bool rememberMe, CancellationToken cancellationToken)
+    {
         var sessionId = Guid.NewGuid();
         await _signInManager.SignInWithClaimsAsync(
             user,
@@ -97,8 +128,6 @@ internal sealed class AccountApplicationService : IAccountQueries, IAccountComma
             LastSeenAt = DateTimeOffset.UtcNow
         });
         await _db.SaveChangesAsync(cancellationToken);
-        await _audit.WriteAsync("login.succeeded", AuditResult.Success, "user", user.Id.ToString(), cancellationToken: cancellationToken);
-        return LoginResult.Success();
     }
 
     public async Task LogoutAsync(CancellationToken cancellationToken = default)
@@ -157,19 +186,106 @@ internal sealed class AccountApplicationService : IAccountQueries, IAccountComma
         return new MfaEnrollmentDto(user.TotpSecret, uri);
     }
 
+    public async Task<MfaStatusDto?> GetMfaStatusAsync(ClaimsPrincipal principal, CancellationToken cancellationToken = default)
+    {
+        var user = await _userManager.GetUserAsync(principal);
+        if (user is null)
+        {
+            return null;
+        }
+
+        return new MfaStatusDto(user.TwoFactorEnabled, GetRecoveryCodeHashes(user).Count, user.RecoveryEmail);
+    }
+
     public async Task<CommandResult> VerifyMfaChallengeAsync(ClaimsPrincipal principal, string code, CancellationToken cancellationToken = default)
     {
         var user = await _userManager.GetUserAsync(principal);
-        if (user?.TotpSecret is null || !_totp.VerifyCode(user.TotpSecret, code))
+        if (user?.TotpSecret is null)
         {
             await _audit.WriteAsync("mfa.challenge", AuditResult.Failure, cancellationToken: cancellationToken);
             return CommandResult.Failure("Invalid MFA code.");
         }
 
+        var verifiedWithTotp = _totp.VerifyCode(user.TotpSecret, code);
+        if (!verifiedWithTotp && !TryUseRecoveryCode(user, code))
+        {
+            await _audit.WriteAsync("mfa.challenge", AuditResult.Failure, cancellationToken: cancellationToken);
+            return CommandResult.Failure("Invalid MFA or recovery code.");
+        }
+
         user.MfaEnabledByPolicy = true;
+        user.TwoFactorEnabled = true;
+        if (GetRecoveryCodeHashes(user).Count == 0)
+        {
+            SetRecoveryCodes(user, GenerateRecoveryCodes());
+        }
         await _userManager.UpdateAsync(user);
+        if (string.Equals(principal.Identity?.AuthenticationType, MfaAuthenticationDefaults.PendingScheme, StringComparison.Ordinal))
+        {
+            var rememberMe = string.Equals(principal.FindFirstValue("remember_me"), "true", StringComparison.OrdinalIgnoreCase);
+            await CompleteSignInAsync(user, rememberMe, cancellationToken);
+            await _httpContextAccessor.HttpContext!.SignOutAsync(MfaAuthenticationDefaults.PendingScheme);
+            await _audit.WriteAsync("login.succeeded", AuditResult.Success, "user", user.Id.ToString(), cancellationToken: cancellationToken);
+        }
         await _audit.WriteAsync("mfa.challenge", AuditResult.Success, "user", user.Id.ToString(), cancellationToken: cancellationToken);
         return CommandResult.Success();
+    }
+
+    public async Task<CommandResult> DisableMfaAsync(ClaimsPrincipal principal, string code, CancellationToken cancellationToken = default)
+    {
+        var user = await _userManager.GetUserAsync(principal);
+        if (user?.TotpSecret is null || !_totp.VerifyCode(user.TotpSecret, code))
+        {
+            return CommandResult.Failure("Invalid MFA code.");
+        }
+
+        user.TwoFactorEnabled = false;
+        user.MfaEnabledByPolicy = false;
+        user.TotpSecret = null;
+        user.RecoveryCodeHashesJson = null;
+        await _userManager.UpdateAsync(user);
+        await _audit.WriteAsync("mfa.disabled", AuditResult.Success, "user", user.Id.ToString(), cancellationToken: cancellationToken);
+        return CommandResult.Success();
+    }
+
+    public async Task<MfaRecoveryCodesDto?> RegenerateMfaRecoveryCodesAsync(ClaimsPrincipal principal, CancellationToken cancellationToken = default)
+    {
+        var user = await _userManager.GetUserAsync(principal);
+        if (user is null || !user.TwoFactorEnabled)
+        {
+            return null;
+        }
+
+        var codes = GenerateRecoveryCodes();
+        SetRecoveryCodes(user, codes);
+        await _userManager.UpdateAsync(user);
+        await _audit.WriteAsync("mfa.recovery_codes.regenerated", AuditResult.Success, "user", user.Id.ToString(), cancellationToken: cancellationToken);
+        return new MfaRecoveryCodesDto(codes);
+    }
+
+    private IReadOnlyCollection<string> GenerateRecoveryCodes()
+        => Enumerable.Range(0, 10).Select(_ => _secrets.GenerateSecret(8).ToUpperInvariant()).ToArray();
+
+    private void SetRecoveryCodes(ApplicationUser user, IReadOnlyCollection<string> codes)
+        => user.RecoveryCodeHashesJson = JsonSerializer.Serialize(codes.Select(_secrets.HashSecret));
+
+    private static IReadOnlyCollection<string> GetRecoveryCodeHashes(ApplicationUser user)
+        => string.IsNullOrWhiteSpace(user.RecoveryCodeHashesJson)
+            ? []
+            : JsonSerializer.Deserialize<string[]>(user.RecoveryCodeHashesJson) ?? [];
+
+    private bool TryUseRecoveryCode(ApplicationUser user, string code)
+    {
+        var hashes = GetRecoveryCodeHashes(user).ToList();
+        var index = hashes.FindIndex(hash => _secrets.VerifySecret(hash, code.Trim()));
+        if (index < 0)
+        {
+            return false;
+        }
+
+        hashes.RemoveAt(index);
+        user.RecoveryCodeHashesJson = JsonSerializer.Serialize(hashes);
+        return true;
     }
 
     public async Task<VerifyEmailResult> VerifyEmailAsync(string email, string token, CancellationToken cancellationToken = default)
