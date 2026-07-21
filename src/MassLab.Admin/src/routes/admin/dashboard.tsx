@@ -18,7 +18,8 @@ import { useAuth } from "@/lib/auth";
 import { useI18n } from "@/lib/i18n";
 import { initials } from "@/components/app-sidebar";
 import { statusVariant, StatusPill } from "@/components/status-pill";
-import { identityFetch, type SystemTenantDto, type TenantAdminDashboardDto, type TenantUsersDto } from "@/lib/identity-api";
+import { IdentityApiError, identityFetch, type SystemTenantDto, type TenantAdminDashboardDto, type TenantUsersDto } from "@/lib/identity-api";
+import { AccessDenied } from "@/components/access-denied";
 
 export const Route = createFileRoute("/admin/dashboard")({
   head: () => ({ meta: [{ title: "Dashboard — MassLab IAM" }] }),
@@ -32,6 +33,7 @@ function Dashboard() {
   const [recentUsers, setRecentUsers] = useState<TenantUsersDto["users"]>([]);
   const [organizationCount, setOrganizationCount] = useState(0);
   const [error, setError] = useState<string | null>(null);
+  const [accessDenied, setAccessDenied] = useState(false);
 
   useEffect(() => {
     if (!session) return;
@@ -42,7 +44,17 @@ function Dashboard() {
       try {
         const [dashboardData, usersData] = await Promise.all([
           identityFetch<TenantAdminDashboardDto>(session, "/api/admin/tenant/dashboard"),
-          identityFetch<TenantUsersDto>(session, "/api/admin/tenant/users?q=&sort=email&dir=asc"),
+          user?.permissions.includes("users.manage")
+            ? identityFetch<TenantUsersDto>(session, "/api/admin/tenant/users?q=&sort=email&dir=asc")
+            : Promise.resolve({
+                users: [],
+                roles: [],
+                permissions: [],
+                assignedRoleIds: {},
+                rolePermissionIds: {},
+                grantedPermissionIds: {},
+                deniedPermissionIds: {},
+              } satisfies TenantUsersDto),
         ]);
 
         let organizations: SystemTenantDto[] = [];
@@ -61,14 +73,25 @@ function Dashboard() {
         if (cancelled) return;
 
         setError(reason instanceof Error ? reason.message : "Unable to load the admin dashboard.");
-        signOut();
+        if (reason instanceof IdentityApiError && reason.status === 401) {
+          signOut();
+          return;
+        }
+
+        if (reason instanceof IdentityApiError && reason.status === 403) {
+          setAccessDenied(true);
+        }
       }
     })();
 
     return () => {
       cancelled = true;
     };
-  }, [session, signOut]);
+  }, [session, signOut, user]);
+
+  if (accessDenied) {
+    return <AccessDenied />;
+  }
 
   const stats = [
     { label: t("dash.users"), value: dashboard?.users ?? 0, change: recentUsers.length ? `${recentUsers.length} ${t("dash.viewAll")}` : "-", icon: Users, to: "/admin/access-control/users" },

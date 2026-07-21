@@ -1,4 +1,4 @@
-import { createFileRoute, Outlet } from "@tanstack/react-router";
+import { createFileRoute, Outlet, useRouterState } from "@tanstack/react-router";
 import { useEffect, useRef, useState } from "react";
 
 import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar";
@@ -8,13 +8,16 @@ import { useAuth } from "@/lib/auth";
 import { isLogoutInProgress } from "@/lib/auth-storage";
 import { DEFAULT_TENANT_SLUG } from "@/lib/default-tenant";
 import { beginLogin } from "@/lib/oidc";
+import { canAccessAdminPath } from "@/lib/admin-navigation";
+import { AccessDenied } from "@/components/access-denied";
 
 export const Route = createFileRoute("/admin")({
   component: AdminLayout,
 });
 
 function AdminLayout() {
-  const { ready, session } = useAuth();
+  const { ready, session, user } = useAuth();
+  const path = useRouterState({ select: (router) => router.location.pathname });
   const startedRef = useRef(false);
   const [loginError, setLoginError] = useState<string | null>(null);
 
@@ -51,6 +54,10 @@ function AdminLayout() {
         </div>
       </div>
     );
+  }
+
+  if (!canAccessAdminPath(user, path)) {
+    return <AccessDenied />;
   }
 
   return (

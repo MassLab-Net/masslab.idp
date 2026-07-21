@@ -1,6 +1,7 @@
+@model string
 @{
     Layout = "_AuthLayout";
-    ViewData["Title"] = "Access Denied";
+    ViewData["Title"] = "Không có quyền truy cập";
 }
 
 <div class="masslab-auth-card-page">
@@ -9,9 +10,13 @@
             <i class="fa fa-ban"></i>
         </div>
         <div class="masslab-auth-card__header">
-            <h1>Access denied</h1>
-            <p>You do not have permission to access this page with the current account.</p>
+            <h1>Bạn không có quyền truy cập</h1>
+            <p>Tài khoản hiện tại không có quyền sử dụng tính năng này.</p>
+            <p>Vui lòng liên hệ quản trị viên để được cấp quyền, hoặc đăng nhập bằng một tài khoản khác.</p>
         </div>
-        <a asp-action="Login" class="btn masslab-login__submit">Back to sign in</a>
+        <form asp-action="SwitchAccount" method="post">
+            <input type="hidden" name="returnUrl" value="@Model" />
+            <button type="submit" class="btn masslab-login__submit">Đăng nhập bằng tài khoản khác</button>
+        </form>
     </div>
 </div>

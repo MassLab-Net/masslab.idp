@@ -189,6 +189,30 @@ public sealed class TenantResolutionMiddlewareTests
     }
 
     [Fact]
+    public async Task InvokeAsync_falls_back_to_system_admin_tenant_when_request_does_not_specify_one()
+    {
+        var currentTenant = new CurrentTenant();
+        await using var db = CreateDbContext(currentTenant);
+        var tenant = new Tenant { Name = "System", Slug = "system", IsSystemDefault = true, Status = TenantStatus.Active };
+        db.Tenants.Add(tenant);
+        await db.SaveChangesAsync();
+
+        var middleware = new TenantResolutionMiddleware(_ => Task.CompletedTask);
+        var context = CreateHttpContext();
+        context.User = new ClaimsPrincipal(new ClaimsIdentity(
+        [
+            new Claim("tenant_id", tenant.Id.ToString()),
+            new Claim("system_admin", "true")
+        ], "test"));
+
+        await middleware.InvokeAsync(context, db, currentTenant);
+
+        Assert.Equal(tenant.Id, currentTenant.Id);
+        Assert.Equal("system", currentTenant.Slug);
+        Assert.True(currentTenant.IsSystemDefault);
+    }
+
+    [Fact]
     public async Task InvokeAsync_ignores_tenant_headers_by_default()
     {
         var currentTenant = new CurrentTenant();

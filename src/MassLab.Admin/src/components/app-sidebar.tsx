@@ -27,6 +27,7 @@ import {
 import { Logo } from "@/components/logo";
 import { useAuth } from "@/lib/auth";
 import { useI18n } from "@/lib/i18n";
+import { canAccessAdminMenu } from "@/lib/admin-navigation";
 
 export function AppSidebar() {
   const { state } = useSidebar();
@@ -90,11 +91,11 @@ export function AppSidebar() {
 
       <SidebarContent className="px-1.5">
         <Section label={t("nav.account")} items={account} />
-        {user?.isSystemAdmin ? (
-          <Section label={t("nav.tenant")} items={tenant} />
+        {tenant.filter((item) => canAccessAdminMenu(user, item.url)).length > 0 ? (
+          <Section label={t("nav.tenant")} items={tenant.filter((item) => canAccessAdminMenu(user, item.url))} />
         ) : null}
         <Section label={t("nav.catalog")} items={catalog} />
-        <Section label={t("nav.access")} items={access} />
+        <Section label={t("nav.access")} items={access.filter((item) => canAccessAdminMenu(user, item.url))} />
       </SidebarContent>
 
       <SidebarFooter className="border-t border-sidebar-border p-3">

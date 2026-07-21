@@ -185,7 +185,16 @@ public sealed class AccountController : Controller
     public IActionResult ExternalCallback() => View("ExternalCallback");
 
     [HttpGet("access-denied")]
-    public IActionResult AccessDenied() => View();
+    public IActionResult AccessDenied(string? returnUrl = null) => View(NormalizeReturnUrl(returnUrl));
+
+    [Authorize]
+    [HttpPost("switch-account")]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> SwitchAccount(string? returnUrl = null)
+    {
+        await _sender.Send(new LogoutCommand());
+        return RedirectToAction(nameof(Login), new { returnUrl = NormalizeReturnUrl(returnUrl) });
+    }
 
     [AllowAnonymous]
     [HttpGet("oidc-error")]

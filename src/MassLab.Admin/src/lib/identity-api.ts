@@ -1,5 +1,15 @@
 import type { AuthSession } from "@/lib/auth-types";
 
+export class IdentityApiError extends Error {
+  constructor(
+    message: string,
+    public readonly status: number,
+  ) {
+    super(message);
+    this.name = "IdentityApiError";
+  }
+}
+
 export type AdminAuditLogDto = {
   id: string;
   createdAt: string;
@@ -159,8 +169,12 @@ export async function identityFetch<T>(
     headers,
   });
 
-  if (response.status === 401 || response.status === 403) {
-    throw new Error("Your admin session is no longer authorized.");
+  if (response.status === 401) {
+    throw new IdentityApiError("Your admin session is no longer authorized.", response.status);
+  }
+
+  if (response.status === 403) {
+    throw new IdentityApiError("You do not have permission to access this feature.", response.status);
   }
 
   if (!response.ok) {

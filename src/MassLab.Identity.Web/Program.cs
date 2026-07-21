@@ -255,8 +255,8 @@ app.UseCors("AdminSpa");
 app.UseRateLimiter();
 app.UseMassLabPrometheus();
 app.UseAuthentication();
-app.UseMiddleware<MassLab.Identity.Infrastructure.Multitenancy.TenantResolutionMiddleware>();
 app.UseAuthorization();
+app.UseMiddleware<MassLab.Identity.Infrastructure.Multitenancy.TenantResolutionMiddleware>();
 
 app.MapHealthChecks("/health");
 
@@ -265,7 +265,13 @@ app.MapControllerRoute(
     pattern: "{controller=Home}/{action=Index}/{id?}")
     .WithStaticAssets();
 
-if (app.Configuration.GetValue("Database:SeedOnStartup", false))
+if (app.Configuration.GetValue("Database:ResetAndSeedOnStartup", false))
+{
+    await DatabaseSeeder.ResetAndSeedAsync(app.Services);
+    await OpenIddictAdminSpaClientSeeder.EnsureConfiguredAsync(app.Services);
+    return;
+}
+else if (app.Configuration.GetValue("Database:SeedOnStartup", false))
 {
     await DatabaseSeeder.SeedAsync(app.Services);
 }

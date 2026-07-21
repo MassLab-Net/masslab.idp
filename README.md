@@ -28,7 +28,9 @@ dotnet restore MassLab.Identity.sln
 dotnet ef database update --project src/MassLab.Identity.Web/MassLab.Identity.Web.csproj --startup-project src/MassLab.Identity.Web/MassLab.Identity.Web.csproj
 dotnet run --project src/MassLab.Identity.Web/MassLab.Identity.Web.csproj
 ```
-
+```
+$env:ConnectionStrings__DefaultConnection='Host=ep-orange-hat-azo6phox-pooler.c-3.ap-southeast-1.aws.neon.tech;Database=neondb;Username=neondb_owner;Password=npg_eZqGmkhQI35L;Ssl Mode=Require;Channel Binding=Require'; dotnet run --project src\MassLab.Identity.Web\MassLab.Identity.Web.csproj
+```
 To seed the default system tenant and local demo accounts, run the app once with startup seeding enabled:
 
 ```bash
