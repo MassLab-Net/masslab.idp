@@ -16,6 +16,7 @@ using Microsoft.AspNetCore.DataProtection;
 using Microsoft.EntityFrameworkCore;
 using OpenIddict.Abstractions;
 using OpenIddict.Server;
+using OpenIddict.Validation.AspNetCore;
 using System.Security.Claims;
 using System.Security.Cryptography.X509Certificates;
 
@@ -104,7 +105,12 @@ builder.Services.ConfigureApplicationCookie(options =>
         var db = context.HttpContext.RequestServices.GetRequiredService<ApplicationDbContext>();
         var isActive = await db.UserSessions.IgnoreQueryFilters()
             .AnyAsync(x => x.Id == parsedSessionId && x.RevokedAt == null, context.HttpContext.RequestAborted);
-        if (!isActive)
+        var userId = context.Principal?.FindFirstValue(ClaimTypes.NameIdentifier);
+        var claimVersion = context.Principal?.FindFirstValue("authorization_version");
+        var authorizationIsCurrent = Guid.TryParse(userId, out var parsedUserId) &&
+            int.TryParse(claimVersion, out var parsedVersion) &&
+            await db.Users.IgnoreQueryFilters().AnyAsync(x => x.Id == parsedUserId && x.AuthorizationVersion == parsedVersion, context.HttpContext.RequestAborted);
+        if (!isActive || !authorizationIsCurrent)
         {
             context.RejectPrincipal();
             await context.HttpContext.SignOutAsync(IdentityConstants.ApplicationScheme);
@@ -263,6 +269,31 @@ app.UseRateLimiter();
 app.UseMassLabPrometheus();
 app.UseAuthentication();
 app.UseAuthorization();
+app.Use(async (context, next) =>
+{
+    var subject = context.User.FindFirstValue(OpenIddictConstants.Claims.Subject)
+        ?? context.User.FindFirstValue(ClaimTypes.NameIdentifier);
+    var version = context.User.FindFirstValue("authorization_version");
+    if (Guid.TryParse(subject, out var userId))
+    {
+        if (!int.TryParse(version, out var authorizationVersion))
+        {
+            context.Response.StatusCode = StatusCodes.Status401Unauthorized;
+            return;
+        }
+
+        var db = context.RequestServices.GetRequiredService<ApplicationDbContext>();
+        var isCurrent = await db.Users.IgnoreQueryFilters()
+            .AnyAsync(user => user.Id == userId && user.AuthorizationVersion == authorizationVersion, context.RequestAborted);
+        if (!isCurrent)
+        {
+            context.Response.StatusCode = StatusCodes.Status401Unauthorized;
+            return;
+        }
+    }
+
+    await next();
+});
 app.UseMiddleware<MassLab.Identity.Infrastructure.Multitenancy.TenantResolutionMiddleware>();
 
 app.MapHealthChecks("/health");

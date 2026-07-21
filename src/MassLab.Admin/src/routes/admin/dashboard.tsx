@@ -57,12 +57,9 @@ function Dashboard() {
               } satisfies TenantUsersDto),
         ]);
 
-        let organizations: SystemTenantDto[] = [];
-        try {
-          organizations = await identityFetch<SystemTenantDto[]>(session, "/api/admin/system/tenants");
-        } catch {
-          organizations = [];
-        }
+        const organizations = user?.isSystemAdmin
+          ? await identityFetch<SystemTenantDto[]>(session, "/api/admin/system/tenants")
+          : [];
 
         if (cancelled) return;
 
