@@ -23,7 +23,7 @@ import { useI18n } from "@/lib/i18n";
 import { ROLES } from "@/lib/mock-data";
 import { initials } from "@/components/app-sidebar";
 import { toast } from "sonner";
-import { identityFetch, type CommandResult, type MfaEnrollmentDto, type MfaRecoveryCodesDto, type MfaStatusDto } from "@/lib/identity-api";
+import { identityFetch, type AccountProfileDto, type CommandResult, type MfaEnrollmentDto, type MfaRecoveryCodesDto, type MfaStatusDto } from "@/lib/identity-api";
 import type { AuthSession } from "@/lib/auth-types";
 
 export const Route = createFileRoute("/admin/profile")({
@@ -85,7 +85,7 @@ function AvatarDialog({
 }
 
 // ── Change Password Dialog ────────────────────────────────────────────────────
-function ChangePasswordDialog({ open, onClose }: { open: boolean; onClose: () => void }) {
+function ChangePasswordDialog({ open, onClose, session }: { open: boolean; onClose: () => void; session: AuthSession | null }) {
   const { t } = useI18n();
   const [showCurrent, setShowCurrent] = useState(false);
   const [showNew, setShowNew] = useState(false);
@@ -95,13 +95,17 @@ function ChangePasswordDialog({ open, onClose }: { open: boolean; onClose: () =>
   const [confirm, setConfirm] = useState("");
   const [error, setError] = useState("");
 
-  function handleSave() {
+  async function handleSave() {
     setError("");
     if (!current) { setError(t("profile.pwErrCurrent")); return; }
     if (next.length < 8) { setError(t("profile.pwErrLength")); return; }
     if (next !== confirm) { setError(t("profile.pwErrMatch")); return; }
-    toast.success(t("profile.pwChanged"));
-    setCurrent(""); setNext(""); setConfirm(""); onClose();
+    if (!session) return;
+    try {
+      await identityFetch<CommandResult>(session, "/api/account/profile/password", { method: "POST", body: JSON.stringify({ currentPassword: current, newPassword: next }) });
+      toast.success(t("profile.pwChanged"));
+      setCurrent(""); setNext(""); setConfirm(""); onClose();
+    } catch (reason) { setError(reason instanceof Error ? reason.message : "Unable to change password."); }
   }
 
   function handleClose() { setCurrent(""); setNext(""); setConfirm(""); setError(""); onClose(); }
@@ -122,7 +126,7 @@ function ChangePasswordDialog({ open, onClose }: { open: boolean; onClose: () =>
         </div>
         <DialogFooter>
           <Button variant="outline" onClick={handleClose}>{t("common.cancel")}</Button>
-          <Button className="bg-gradient-brand text-primary-foreground hover:opacity-90" onClick={handleSave}>{t("profile.pwSave")}</Button>
+          <Button className="bg-gradient-brand text-primary-foreground hover:opacity-90" onClick={() => void handleSave()}>{t("profile.pwSave")}</Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>
@@ -357,15 +361,19 @@ function formatSetupKey(secret: string) {
 }
 
 // ── Recovery Email Dialog ─────────────────────────────────────────────────────
-function RecoveryEmailDialog({ open, onClose, current, onSave }: { open: boolean; onClose: () => void; current: string; onSave: (email: string) => void }) {
+function RecoveryEmailDialog({ open, onClose, current, onSave, session }: { open: boolean; onClose: () => void; current: string; onSave: (email: string) => void; session: AuthSession | null }) {
   const { t } = useI18n();
   const [value, setValue] = useState(current);
   const [error, setError] = useState("");
 
-  function handleSave() {
+  async function handleSave() {
     setError("");
     if (!value || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value)) { setError(t("profile.recoveryError")); return; }
-    onSave(value); toast.success(t("profile.recoverySaved")); onClose();
+    if (!session) return;
+    try {
+      const profile = await identityFetch<AccountProfileDto>(session, "/api/account/profile/recovery-email", { method: "PUT", body: JSON.stringify({ email: value }) });
+      onSave(profile.recoveryEmail ?? value); toast.success(t("profile.recoverySaved")); onClose();
+    } catch (reason) { setError(reason instanceof Error ? reason.message : "Unable to update recovery email."); }
   }
 
   return (
@@ -382,7 +390,7 @@ function RecoveryEmailDialog({ open, onClose, current, onSave }: { open: boolean
         </div>
         <DialogFooter>
           <Button variant="outline" onClick={() => { setValue(current); setError(""); onClose(); }}>{t("common.cancel")}</Button>
-          <Button className="bg-gradient-brand text-primary-foreground hover:opacity-90" onClick={handleSave}>{t("common.save")}</Button>
+          <Button className="bg-gradient-brand text-primary-foreground hover:opacity-90" onClick={() => void handleSave()}>{t("common.save")}</Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>
@@ -401,6 +409,29 @@ function Profile() {
   const [avatarSrc, setAvatarSrc] = useState<string | null>(user?.avatar ?? null);
   const [tfaEnabled, setTfaEnabled] = useState<boolean | null>(null);
   const [recoveryEmail, setRecoveryEmail] = useState("recover@masslab.io");
+  const [profile, setProfile] = useState({ displayName: "", userName: "", email: "" });
+  const [profileSaving, setProfileSaving] = useState(false);
+
+  useEffect(() => {
+    if (!session) return;
+    void identityFetch<AccountProfileDto>(session, "/api/account/profile")
+      .then((result) => {
+        setProfile({ displayName: result.displayName, userName: result.userName, email: result.email });
+        if (result.recoveryEmail) setRecoveryEmail(result.recoveryEmail);
+      })
+      .catch(() => toast.error("Unable to load profile."));
+  }, [session]);
+
+  const saveProfile = async () => {
+    if (!session) return;
+    setProfileSaving(true);
+    try {
+      const result = await identityFetch<AccountProfileDto>(session, "/api/account/profile", { method: "PUT", body: JSON.stringify({ displayName: profile.displayName }) });
+      setProfile({ displayName: result.displayName, userName: result.userName, email: result.email });
+      toast.success(t("profile.saved"));
+    } catch (reason) { toast.error(reason instanceof Error ? reason.message : "Unable to save profile."); }
+    finally { setProfileSaving(false); }
+  };
 
   useEffect(() => {
     if (!session) return;
@@ -447,7 +478,7 @@ function Profile() {
               </button>
             </div>
             <div>
-              <div className="text-xl font-semibold">{user.name}</div>
+              <div className="text-xl font-semibold">{profile.displayName || user.name}</div>
               <div className="text-sm text-muted-foreground">{user.title} · {user.organization}</div>
               <div className="mt-2 flex flex-wrap gap-2">
                 <Badge variant="secondary" className="font-normal">Super Administrator</Badge>
@@ -455,7 +486,7 @@ function Profile() {
               </div>
             </div>
           </div>
-          <Button onClick={() => toast.success(t("profile.saved"))} className="bg-gradient-brand text-primary-foreground shadow-elegant hover:opacity-95">
+          <Button disabled={profileSaving} onClick={() => void saveProfile()} className="bg-gradient-brand text-primary-foreground shadow-elegant hover:opacity-95">
             {t("profile.save")}
           </Button>
         </CardContent>
@@ -465,12 +496,12 @@ function Profile() {
         <Card className="border-border shadow-card lg:col-span-2">
           <CardHeader><CardTitle className="text-base">{t("profile.account")}</CardTitle></CardHeader>
           <CardContent className="grid gap-4 md:grid-cols-2">
-            <Field label={t("profile.fullName")} defaultValue={user.name} />
-            <Field label={t("profile.username")} defaultValue={user.username} />
-            <Field label={t("profile.email")} defaultValue={user.email} type="email" />
+            <Field label={t("profile.fullName")} value={profile.displayName} onChange={(event) => setProfile((current) => ({ ...current, displayName: event.target.value }))} />
+            <Field label={t("profile.username")} value={profile.userName} disabled />
+            <Field label={t("profile.email")} value={profile.email} type="email" disabled />
             <Field label={t("profile.org")} defaultValue={user.organization} disabled />
-            <Field label={t("profile.job")} defaultValue={user.title} />
-            <Field label={t("profile.tz")} defaultValue="Asia/Ho_Chi_Minh (GMT+7)" />
+            <Field label={t("profile.job")} value={user.title} disabled />
+            <Field label={t("profile.tz")} value="Asia/Ho_Chi_Minh (GMT+7)" disabled />
           </CardContent>
         </Card>
 
@@ -524,9 +555,9 @@ function Profile() {
           }
         }}
       />
-      <ChangePasswordDialog open={passwordOpen} onClose={() => setPasswordOpen(false)} />
+      <ChangePasswordDialog open={passwordOpen} onClose={() => setPasswordOpen(false)} session={session} />
       <TwoFADialog open={tfaOpen} onClose={() => setTfaOpen(false)} enabled={tfaEnabled ?? false} onToggle={setTfaEnabled} session={session} />
-      <RecoveryEmailDialog open={recoveryOpen} onClose={() => setRecoveryOpen(false)} current={recoveryEmail} onSave={setRecoveryEmail} />
+      <RecoveryEmailDialog open={recoveryOpen} onClose={() => setRecoveryOpen(false)} current={recoveryEmail} onSave={setRecoveryEmail} session={session} />
     </div>
   );
 }

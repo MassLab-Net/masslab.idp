@@ -138,6 +138,13 @@ export type MfaRecoveryCodesDto = {
   codes: string[];
 };
 
+export type AccountProfileDto = {
+  displayName: string;
+  userName: string;
+  email: string;
+  recoveryEmail?: string;
+};
+
 export type CreateClientResult = CommandResult & {
   clientId?: string;
   clientSecret?: string;
