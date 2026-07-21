@@ -10,6 +10,7 @@ using MassLab.Identity.Infrastructure.Services;
 using MassLab.Identity.Web.ViewModels.Account;
 using MediatR;
 using Microsoft.AspNetCore;
+using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Diagnostics;
 using Microsoft.AspNetCore.WebUtilities;
 using OpenIddict.Abstractions;
@@ -149,9 +150,17 @@ public sealed class AccountController : Controller
         return View(new MfaEnrollViewModel(enrollment.Secret, enrollment.AuthenticatorUri));
     }
 
-    [Authorize(AuthenticationSchemes = MfaAuthenticationDefaults.PendingScheme)]
     [HttpGet("mfa/challenge")]
-    public IActionResult MfaChallenge(string? returnUrl = null) => View(new MfaChallengeInput { ReturnUrl = NormalizeReturnUrl(returnUrl) });
+    public async Task<IActionResult> MfaChallenge(string? returnUrl = null)
+    {
+        var pending = await HttpContext.AuthenticateAsync(MfaAuthenticationDefaults.PendingScheme);
+        if (!pending.Succeeded)
+        {
+            return RedirectToAction(nameof(Login));
+        }
+
+        return View(new MfaChallengeInput { ReturnUrl = NormalizeReturnUrl(returnUrl) });
+    }
 
     [Authorize(AuthenticationSchemes = MfaAuthenticationDefaults.PendingScheme)]
     [HttpPost("mfa/challenge")]
