@@ -232,6 +232,26 @@ public sealed class TenantResolutionMiddlewareTests
         Assert.Equal(firstTenant.Id, currentTenant.Id);
     }
 
+    [Fact]
+    public async Task Tenant_path_base_middleware_does_not_treat_api_account_routes_as_tenant_routes()
+    {
+        var currentTenant = new CurrentTenant();
+        await using var db = CreateDbContext(currentTenant);
+        var nextCalled = false;
+        var middleware = new TenantPathBaseMiddleware(_ =>
+        {
+            nextCalled = true;
+            return Task.CompletedTask;
+        });
+        var context = CreateHttpContext();
+        context.Request.Path = "/api/account/mfa";
+
+        await middleware.InvokeAsync(context, db);
+
+        Assert.True(nextCalled);
+        Assert.Equal("/api/account/mfa", context.Request.Path.Value);
+    }
+
     private static DefaultHttpContext CreateHttpContext(bool allowTenantHeaders = false)
     {
         var context = new DefaultHttpContext();

@@ -34,11 +34,16 @@ builder.Services.AddMassLabIdentityApplication();
 builder.Services.AddMassLabIdentityInfrastructure(builder.Configuration);
 builder.Services.Configure<OpenIddictAdminSpaClientOptions>(builder.Configuration.GetSection("OpenIddict:AdminSpaClient"));
 var tokenOptions = builder.Configuration.GetSection("OpenIddict:Tokens").Get<OpenIddictTokenOptions>() ?? new OpenIddictTokenOptions();
+var adminSpaCorsOrigins = builder.Configuration.GetSection("OpenIddict:AdminSpaClient:AllowedCorsOrigins").Get<string[]>() ?? Array.Empty<string>();
 builder.Services.AddCors(options =>
 {
     options.AddPolicy("AdminSpa", policy =>
     {
-        var origins = builder.Configuration.GetSection("Cors:AllowedOrigins").Get<string[]>() ?? Array.Empty<string>();
+        var origins = (builder.Configuration.GetSection("Cors:AllowedOrigins").Get<string[]>() ?? Array.Empty<string>())
+            .Concat(adminSpaCorsOrigins)
+            .Where(origin => Uri.TryCreate(origin, UriKind.Absolute, out _))
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .ToArray();
         if (origins.Length == 0)
         {
             return;
@@ -249,7 +254,9 @@ if (!app.Environment.IsDevelopment())
 app.UseMiddleware<MassLab.Identity.Infrastructure.Multitenancy.TenantPathBaseMiddleware>();
 app.UseStaticFiles();
 app.UseMiddleware<MassLab.Identity.Infrastructure.OpenIddictTenantClientIdMappingMiddleware>();
-app.UseStatusCodePagesWithReExecute("/account/oidc-error");
+app.UseWhen(
+    context => !context.Request.Path.StartsWithSegments("/api", StringComparison.OrdinalIgnoreCase),
+    branch => branch.UseStatusCodePagesWithReExecute("/account/oidc-error"));
 app.UseRouting();
 app.UseCors("AdminSpa");
 app.UseRateLimiter();
@@ -259,6 +266,8 @@ app.UseAuthorization();
 app.UseMiddleware<MassLab.Identity.Infrastructure.Multitenancy.TenantResolutionMiddleware>();
 
 app.MapHealthChecks("/health");
+
+app.MapControllers();
 
 app.MapControllerRoute(
     name: "default",

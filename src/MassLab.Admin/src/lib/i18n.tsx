@@ -645,6 +645,8 @@ const en = {
   "profile.twofaSub": "Authenticator app",
   "profile.manage": "Manage",
   "profile.on": "On",
+  "profile.tfaTurnOn": "Turn on",
+  "profile.tfaTurnOff": "Turn off",
   "profile.recovery": "Recovery email",
   "profile.update": "Update",
   "profile.effective": "Effective roles",
@@ -679,6 +681,8 @@ const en = {
   "profile.tfaSetupTitle": "Set up authenticator app",
   "profile.tfaSetupDesc":
     "Scan the QR code with your authenticator app, then enter the 6-digit code.",
+  "profile.tfaSetupKey": "Or enter this setup key manually",
+  "profile.tfaCopyKey": "Copy key",
   "profile.tfaOtpLabel": "Verification code",
   "profile.tfaOtpError": "Please enter the 6-digit code",
   "profile.tfaVerify": "Verify & enable",
@@ -689,11 +693,15 @@ const en = {
     "Your account will be less secure without a second factor. Are you sure?",
   "profile.tfaDisableBtn": "Yes, disable 2FA",
   "profile.tfaViewCodes": "View backup codes",
+  "profile.tfaRegenerateCodes": "Regenerate backup codes",
   "profile.tfaCodesTitle": "Backup codes",
   "profile.tfaCodesDesc":
     "Store these codes somewhere safe. Each can only be used once.",
   "profile.tfaCopied": "Copied to clipboard",
   "profile.tfaRegenerate": "Regenerate codes",
+  "profile.tfaRegenerateConfirmTitle": "Regenerate backup codes?",
+  "profile.tfaRegenerateConfirmDesc": "This permanently invalidates every existing backup code and creates a new set.",
+  "profile.tfaDownloadCodes": "Download codes",
 
   // Profile – Recovery email
   "profile.recoveryTitle": "Update recovery email",
@@ -1336,6 +1344,8 @@ const vi: Partial<Record<keyof typeof en, string>> = {
   "profile.twofaSub": "Ứng dụng xác thực",
   "profile.manage": "Quản lý",
   "profile.on": "Bật",
+  "profile.tfaTurnOn": "Bật",
+  "profile.tfaTurnOff": "Tắt",
   "profile.recovery": "Email khôi phục",
   "profile.update": "Cập nhật",
   "profile.effective": "Vai trò hiệu lực",
@@ -1370,6 +1380,8 @@ const vi: Partial<Record<keyof typeof en, string>> = {
   "profile.tfaSetupTitle": "Cài đặt ứng dụng xác thực",
   "profile.tfaSetupDesc":
     "Quét mã QR bằng ứng dụng xác thực, sau đó nhập mã 6 chữ số.",
+  "profile.tfaSetupKey": "Hoặc nhập thủ công mã thiết lập này",
+  "profile.tfaCopyKey": "Sao chép mã",
   "profile.tfaOtpLabel": "Mã xác minh",
   "profile.tfaOtpError": "Vui lòng nhập mã 6 chữ số",
   "profile.tfaVerify": "Xác minh & bật",
@@ -1380,11 +1392,15 @@ const vi: Partial<Record<keyof typeof en, string>> = {
     "Tài khoản sẽ kém an toàn hơn nếu không có bước xác minh thứ hai. Bạn có chắc không?",
   "profile.tfaDisableBtn": "Có, tắt 2FA",
   "profile.tfaViewCodes": "Xem mã dự phòng",
+  "profile.tfaRegenerateCodes": "Tạo lại mã dự phòng",
   "profile.tfaCodesTitle": "Mã dự phòng",
   "profile.tfaCodesDesc":
     "Lưu các mã này ở nơi an toàn. Mỗi mã chỉ dùng được một lần.",
   "profile.tfaCopied": "Đã sao chép vào clipboard",
   "profile.tfaRegenerate": "Tạo lại mã",
+  "profile.tfaRegenerateConfirmTitle": "Tạo lại mã dự phòng?",
+  "profile.tfaRegenerateConfirmDesc": "Thao tác này vô hiệu hóa vĩnh viễn mọi mã dự phòng hiện có và tạo bộ mã mới.",
+  "profile.tfaDownloadCodes": "Tải mã xuống",
 
   // Profile – Recovery email
   "profile.recoveryTitle": "Cập nhật email khôi phục",

@@ -11,16 +11,16 @@
         </a>
         <div class="masslab-auth-card__header">
             <h1>MFA challenge</h1>
-            <p>Enter the verification code from your authenticator app.</p>
+            <p>Enter the 6-digit code from your authenticator app, or one of your backup codes.</p>
         </div>
         <form asp-action="MfaChallenge" method="post" class="masslab-auth-card__form">
             <input asp-for="ReturnUrl" type="hidden" />
             <div asp-validation-summary="All" class="masslab-login__validation @(ViewData.ModelState.IsValid ? "validation-summary-valid" : "validation-summary-errors")"></div>
             <div class="form-group masslab-login__field">
-                <label asp-for="Code">Verification code</label>
+                <label asp-for="Code">Authenticator or backup code</label>
                 <div class="masslab-login__input-wrap">
                     <span class="fa fa-shield masslab-login__input-icon" aria-hidden="true"></span>
-                    <input asp-for="Code" class="form-control masslab-login__input" placeholder="6-digit code" autocomplete="one-time-code" />
+                    <input asp-for="Code" class="form-control masslab-login__input" placeholder="6-digit code or backup code" autocomplete="one-time-code" autocapitalize="characters" spellcheck="false" />
                 </div>
             </div>
             <button type="submit" class="btn masslab-login__submit">Verify</button>

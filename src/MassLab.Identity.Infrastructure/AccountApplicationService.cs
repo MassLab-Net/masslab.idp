@@ -1,4 +1,5 @@
 using System.Security.Claims;
+using System.Security.Cryptography;
 using MassLab.Identity.Application.Abstractions;
 using MassLab.Identity.Application.Common;
 using MassLab.Identity.Infrastructure.Data;
@@ -15,6 +16,7 @@ namespace MassLab.Identity.Infrastructure;
 
 internal sealed class AccountApplicationService : IAccountQueries, IAccountCommands
 {
+    private const string RecoveryCodeAlphabet = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
     private readonly UserManager<ApplicationUser> _userManager;
     private readonly SignInManager<ApplicationUser> _signInManager;
     private readonly ApplicationDbContext _db;
@@ -264,7 +266,18 @@ internal sealed class AccountApplicationService : IAccountQueries, IAccountComma
     }
 
     private IReadOnlyCollection<string> GenerateRecoveryCodes()
-        => Enumerable.Range(0, 10).Select(_ => _secrets.GenerateSecret(8).ToUpperInvariant()).ToArray();
+        => Enumerable.Range(0, 10).Select(_ => GenerateRecoveryCode()).ToArray();
+
+    private static string GenerateRecoveryCode()
+    {
+        var characters = new char[12];
+        for (var index = 0; index < characters.Length; index++)
+        {
+            characters[index] = RecoveryCodeAlphabet[RandomNumberGenerator.GetInt32(RecoveryCodeAlphabet.Length)];
+        }
+
+        return new string(characters);
+    }
 
     private void SetRecoveryCodes(ApplicationUser user, IReadOnlyCollection<string> codes)
         => user.RecoveryCodeHashesJson = JsonSerializer.Serialize(codes.Select(_secrets.HashSecret));
@@ -277,7 +290,8 @@ internal sealed class AccountApplicationService : IAccountQueries, IAccountComma
     private bool TryUseRecoveryCode(ApplicationUser user, string code)
     {
         var hashes = GetRecoveryCodeHashes(user).ToList();
-        var index = hashes.FindIndex(hash => _secrets.VerifySecret(hash, code.Trim()));
+        var normalizedCode = code.Trim().ToUpperInvariant();
+        var index = hashes.FindIndex(hash => _secrets.VerifySecret(hash, normalizedCode));
         if (index < 0)
         {
             return false;

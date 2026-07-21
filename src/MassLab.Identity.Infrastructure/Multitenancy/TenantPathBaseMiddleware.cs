@@ -12,6 +12,11 @@ public sealed class TenantPathBaseMiddleware
         "connect"
     };
 
+    private static readonly HashSet<string> ReservedRootSegments = new(StringComparer.OrdinalIgnoreCase)
+    {
+        "api"
+    };
+
     private readonly RequestDelegate _next;
 
     public TenantPathBaseMiddleware(RequestDelegate next)
@@ -66,7 +71,9 @@ public sealed class TenantPathBaseMiddleware
         }
 
         var segments = value.Split('/', StringSplitOptions.RemoveEmptyEntries);
-        if (segments.Length < 2 || !TenantAwareRoots.Contains(segments[1]))
+        if (segments.Length < 2 ||
+            ReservedRootSegments.Contains(segments[0]) ||
+            !TenantAwareRoots.Contains(segments[1]))
         {
             return false;
         }

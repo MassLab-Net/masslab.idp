@@ -149,7 +149,6 @@ public sealed class AccountController : Controller
         return View(new MfaEnrollViewModel(enrollment.Secret, enrollment.AuthenticatorUri));
     }
 
-    [Authorize]
     [Authorize(AuthenticationSchemes = MfaAuthenticationDefaults.PendingScheme)]
     [HttpGet("mfa/challenge")]
     public IActionResult MfaChallenge(string? returnUrl = null) => View(new MfaChallengeInput { ReturnUrl = NormalizeReturnUrl(returnUrl) });

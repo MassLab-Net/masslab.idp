@@ -1,4 +1,4 @@
-import { n as __toESM } from "../_runtime.mjs";
+import { r as __toESM } from "../_runtime.mjs";
 import { u as require_react } from "../_libs/@floating-ui/react-dom+[...].mjs";
 import { t as ORDERS } from "./mock-data-C6f75jgQ.mjs";
 //#region node_modules/.nitro/vite/services/ssr/assets/order-store-JUgtU0IN.js

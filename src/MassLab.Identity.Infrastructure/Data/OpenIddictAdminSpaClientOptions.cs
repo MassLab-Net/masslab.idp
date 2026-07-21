@@ -6,6 +6,7 @@ public sealed class OpenIddictAdminSpaClientOptions
     public bool Enabled { get; set; } = true;
     public string ClientId { get; set; } = "masslab-admin-spa";
     public string DisplayName { get; set; } = "MassLab Admin";
+    public string[] AllowedCorsOrigins { get; set; } = Array.Empty<string>();
     public string[] RedirectUris { get; set; } = Array.Empty<string>();
     public string[] PostLogoutRedirectUris { get; set; } = Array.Empty<string>();
 }
