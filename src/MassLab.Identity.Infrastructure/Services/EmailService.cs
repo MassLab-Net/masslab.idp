@@ -1,6 +1,6 @@
-using System.Net;
-using System.Net.Mail;
 using System.Text.Json;
+using MassLab.Common.Email.Abstractions;
+using MassLab.Common.Email.Models;
 using MassLab.Identity.Domain;
 using MassLab.Identity.Infrastructure.Data;
 using MassLab.Identity.Infrastructure.Multitenancy;
@@ -85,6 +85,7 @@ public sealed class OutboxEmailWorker : BackgroundService
         await using var scope = _scopeFactory.CreateAsyncScope();
         var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
         var secrets = scope.ServiceProvider.GetRequiredService<ISecretService>();
+        var senderFactory = scope.ServiceProvider.GetRequiredService<IEmailSenderFactory>();
         var now = DateTimeOffset.UtcNow;
         var messages = await db.OutboxMessages.IgnoreQueryFilters()
             .Where(x => x.ProcessedAt == null && x.AttemptCount < MaxAttempts && (x.NextAttemptAt == null || x.NextAttemptAt <= now))
@@ -98,21 +99,22 @@ public sealed class OutboxEmailWorker : BackgroundService
             {
                 var payload = JsonSerializer.Deserialize<EmailOutboxPayload>(message.Payload)
                     ?? throw new InvalidOperationException("Outbox payload is invalid.");
-                var smtp = await db.TenantSmtpSettings.IgnoreQueryFilters()
+                var settings = await db.TenantSmtpSettings.IgnoreQueryFilters()
                     .FirstOrDefaultAsync(x => x.TenantId == message.TenantId, cancellationToken)
-                    ?? throw new InvalidOperationException("Tenant SMTP settings are not configured.");
-
-                using var client = new SmtpClient(smtp.Host, smtp.Port)
+                    ?? throw new InvalidOperationException("Tenant email settings are not configured.");
+                var tenantName = await db.Tenants.IgnoreQueryFilters().Where(x => x.Id == message.TenantId).Select(x => x.Name).SingleOrDefaultAsync(cancellationToken) ?? "MassLab";
+                var configuration = ToProviderConfiguration(settings, secrets);
+                EmailContent content = settings.Provider == TenantEmailProvider.Smtp
+                    ? new LocalTemplateEmailContent(message.Type == "email.password-reset" ? settings.PasswordResetTemplate : settings.EmailVerificationTemplate, new { RESET_URL = payload.Body, VERIFICATION_URL = payload.Body, TENANT_NAME = tenantName })
+                    : new ProviderTemplateEmailContent(message.Type == "email.password-reset" ? settings.PasswordResetTemplate : settings.EmailVerificationTemplate, new Dictionary<string, object?> { [message.Type == "email.password-reset" ? "RESET_URL" : "VERIFICATION_URL"] = payload.Body, ["TENANT_NAME"] = tenantName });
+                await using var sender = senderFactory.Create(configuration);
+                var result = await sender.SendAsync(new EmailSendRequest
                 {
-                    EnableSsl = smtp.UseTls
-                };
-                if (!string.IsNullOrWhiteSpace(smtp.Username) && !string.IsNullOrWhiteSpace(smtp.PasswordProtected))
-                {
-                    client.Credentials = new NetworkCredential(smtp.Username, secrets.Unprotect(smtp.PasswordProtected));
-                }
-
-                using var email = new MailMessage(smtp.FromEmail, payload.To, payload.Subject, payload.Body);
-                await client.SendMailAsync(email, cancellationToken);
+                    To = [new EmailAddress(payload.To)], Content = content,
+                    From = new EmailAddress(settings.FromEmail, settings.FromDisplayName),
+                    CorrelationId = message.Id.ToString(), IdempotencyKey = $"identity-email/{message.Id}"
+                }, cancellationToken);
+                if (result.Status != EmailSubmissionStatus.Accepted) throw new InvalidOperationException(result.ErrorMessage ?? result.ErrorCode ?? "Email provider rejected the message.");
                 message.ProcessedAt = DateTimeOffset.UtcNow;
                 message.LastError = null;
             }
@@ -130,6 +132,14 @@ public sealed class OutboxEmailWorker : BackgroundService
             await db.SaveChangesAsync(cancellationToken);
         }
     }
+
+    private static EmailProviderConfiguration ToProviderConfiguration(TenantSmtpSettings settings, ISecretService secrets) => settings.Provider switch
+    {
+        TenantEmailProvider.Smtp => new SmtpEmailProviderConfiguration($"{settings.FromDisplayName} <{settings.FromEmail}>", settings.Host, settings.Port, settings.UseTls, settings.Username, string.IsNullOrWhiteSpace(settings.PasswordProtected) ? null : secrets.Unprotect(settings.PasswordProtected)),
+        TenantEmailProvider.Resend => new ResendEmailProviderConfiguration($"{settings.FromDisplayName} <{settings.FromEmail}>", string.IsNullOrWhiteSpace(settings.ResendApiKeyProtected) ? throw new InvalidOperationException("Resend API key is not configured.") : secrets.Unprotect(settings.ResendApiKeyProtected)),
+        TenantEmailProvider.Ses => new SesEmailProviderConfiguration($"{settings.FromDisplayName} <{settings.FromEmail}>", settings.SesRegion ?? throw new InvalidOperationException("SES region is not configured."), string.IsNullOrWhiteSpace(settings.SesAccessKeyProtected) ? null : secrets.Unprotect(settings.SesAccessKeyProtected), string.IsNullOrWhiteSpace(settings.SesSecretKeyProtected) ? null : secrets.Unprotect(settings.SesSecretKeyProtected), settings.SesConfigurationSetName),
+        _ => throw new InvalidOperationException("Unsupported email provider.")
+    };
 }
 
 public sealed record EmailOutboxPayload(string To, string Subject, string Body);

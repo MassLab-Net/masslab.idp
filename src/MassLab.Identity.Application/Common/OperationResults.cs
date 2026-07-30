@@ -11,13 +11,14 @@ public sealed record CommandResult(bool Succeeded, bool NotFound = false, IReadO
     public static CommandResult Failure(IEnumerable<string> errors) => new(false, Errors: errors.ToArray());
 }
 
-public sealed record LoginResult(bool Succeeded, bool RequiresMfa = false, string? ErrorMessage = null)
+public sealed record LoginResult(bool Succeeded, bool RequiresMfa = false, bool RequiresEmailVerification = false, string? ErrorMessage = null)
 {
     public static LoginResult Success() => new(true);
 
     public static LoginResult RequiresMfaChallenge() => new(false, true);
+    public static LoginResult EmailVerificationRequired() => new(false, false, true);
 
-    public static LoginResult Failure(string message) => new(false, false, message);
+    public static LoginResult Failure(string message) => new(false, false, false, message);
 }
 
 public sealed record VerifyEmailResult(bool Found, bool Succeeded);

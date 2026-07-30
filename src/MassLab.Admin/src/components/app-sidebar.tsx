@@ -9,6 +9,7 @@ import {
   UserRound,
   Users,
   AppWindow,
+  Mail,
 } from "lucide-react";
 
 import {
@@ -53,6 +54,9 @@ export function AppSidebar() {
     { title: t("nav.perms"), url: "/admin/access-control/permissions", icon: KeyRound },
     { title: t("nav.clients"), url: "/admin/access-control/clients", icon: AppWindow },
   ];
+  const settings = [
+    { title: "Email delivery", url: "/admin/settings/email", icon: Mail },
+  ];
 
   const isActive = (url: string) => path === url || path.startsWith(url + "/");
 
@@ -96,6 +100,9 @@ export function AppSidebar() {
         ) : null}
         <Section label={t("nav.catalog")} items={catalog} />
         <Section label={t("nav.access")} items={access.filter((item) => canAccessAdminMenu(user, item.url))} />
+        {settings.filter((item) => canAccessAdminMenu(user, item.url)).length > 0 ? (
+          <Section label="Settings" items={settings.filter((item) => canAccessAdminMenu(user, item.url))} />
+        ) : null}
       </SidebarContent>
 
       <SidebarFooter className="border-t border-sidebar-border p-3">

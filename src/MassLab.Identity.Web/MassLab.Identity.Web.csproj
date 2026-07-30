@@ -17,6 +17,9 @@
     </PackageReference>
     <PackageReference Include="OpenIddict.AspNetCore" Version="7.5.0" />
   </ItemGroup>
+  <ItemGroup>
+    <Content Include="Templates\**\*" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
 
   <ItemGroup>
     <ProjectReference Include="..\MassLab.Identity.Application\MassLab.Identity.Application.csproj" />

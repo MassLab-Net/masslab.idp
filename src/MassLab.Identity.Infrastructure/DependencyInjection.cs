@@ -7,6 +7,11 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using MassLab.Common.Email.Extensions;
+using MassLab.Common.Email.Resend.Extensions;
+using MassLab.Common.Email.Ses.Extensions;
+using MassLab.Common.Email.Smtp.Extensions;
+using MassLab.Common.Email.Templates.FileSystem.Extensions;
 
 namespace MassLab.Identity.Infrastructure;
 
@@ -15,6 +20,11 @@ public static class DependencyInjection
     public static IServiceCollection AddMassLabIdentityInfrastructure(this IServiceCollection services, IConfiguration configuration)
     {
         services.AddHttpContextAccessor();
+        services.AddMassLabEmailCore();
+        services.AddSmtpEmailProviderFactory();
+        services.AddResendEmailProviderFactory();
+        services.AddSesEmailProviderFactory();
+        services.AddFileSystemEmailTemplates(options => options.RootPath = Path.Combine(AppContext.BaseDirectory, "Templates"));
         services.AddScoped<ICurrentTenant, CurrentTenant>();
         services.AddScoped<ICurrentTenantAccessor, CurrentTenantAccessor>();
         services.AddScoped<ISecretService, SecretService>();

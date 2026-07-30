@@ -1,0 +1,11 @@
+@model MassLab.Identity.Web.ViewModels.TenantAdmin.UpsertTenantSmtpInput
+@{
+    ViewData["Title"] = "Email settings";
+}
+<div class="card card-primary"><div class="card-header"><h3 class="card-title">Tenant email delivery</h3></div>
+<form asp-action="UpsertSmtp" method="post"><div class="card-body">
+<div class="form-row"><div class="form-group col-md-3"><label>Provider</label><select asp-for="Provider" class="form-control"><option value="Smtp">SMTP</option><option value="Resend">Resend</option><option value="Ses">Amazon SES</option></select></div><div class="form-group col-md-5"><label>From email</label><input asp-for="FromEmail" class="form-control" /></div><div class="form-group col-md-4"><label>From name</label><input asp-for="FromDisplayName" class="form-control" /></div></div>
+<h5>SMTP</h5><div class="form-row"><div class="form-group col-md-5"><label>Host</label><input asp-for="Host" class="form-control" /></div><div class="form-group col-md-2"><label>Port</label><input asp-for="Port" class="form-control" /></div><div class="form-group col-md-3"><label>Username</label><input asp-for="Username" class="form-control" /></div><div class="form-group col-md-2"><label>Password</label><input asp-for="Password" type="password" class="form-control" /></div></div>
+<h5>Resend / SES</h5><div class="form-row"><div class="form-group col-md-4"><label>Resend API key</label><input asp-for="ResendApiKey" type="password" class="form-control" /></div><div class="form-group col-md-3"><label>SES region</label><input asp-for="SesRegion" class="form-control" /></div><div class="form-group col-md-3"><label>SES access key</label><input asp-for="SesAccessKey" type="password" class="form-control" /></div><div class="form-group col-md-2"><label>SES secret</label><input asp-for="SesSecretKey" type="password" class="form-control" /></div></div>
+<div class="form-row"><div class="form-group col-md-6"><label>Password reset template</label><input asp-for="PasswordResetTemplate" class="form-control" /></div><div class="form-group col-md-6"><label>Email verification template</label><input asp-for="EmailVerificationTemplate" class="form-control" /></div></div>
+</div><div class="card-footer"><button class="btn btn-primary">Save email settings</button></div></form></div>

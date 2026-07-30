@@ -26,6 +26,11 @@
     <PackageReference Include="Npgsql.EntityFrameworkCore.PostgreSQL" Version="10.0.0" />
     <PackageReference Include="OpenIddict.EntityFrameworkCore" Version="7.5.0" />
     <PackageReference Include="OpenIddict.Server" Version="7.5.0" />
+    <ProjectReference Include="..\..\masslab.common\MassLab.Common.Email\MassLab.Common.Email.csproj" />
+    <ProjectReference Include="..\..\masslab.common\MassLab.Common.Email.Smtp\MassLab.Common.Email.Smtp.csproj" />
+    <ProjectReference Include="..\..\masslab.common\MassLab.Common.Email.Resend\MassLab.Common.Email.Resend.csproj" />
+    <ProjectReference Include="..\..\masslab.common\MassLab.Common.Email.Ses\MassLab.Common.Email.Ses.csproj" />
+    <ProjectReference Include="..\..\masslab.common\MassLab.Common.Email.Templates.FileSystem\MassLab.Common.Email.Templates.FileSystem.csproj" />
   </ItemGroup>
 
 </Project>

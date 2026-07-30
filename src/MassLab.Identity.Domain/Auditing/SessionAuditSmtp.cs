@@ -28,6 +28,7 @@ public sealed class AuditLog : TenantEntity
 
 public sealed class TenantSmtpSettings : TenantEntity
 {
+    public TenantEmailProvider Provider { get; set; } = TenantEmailProvider.Smtp;
     public string Host { get; set; } = string.Empty;
     public int Port { get; set; } = 587;
     public string? Username { get; set; }
@@ -35,7 +36,16 @@ public sealed class TenantSmtpSettings : TenantEntity
     public bool UseTls { get; set; } = true;
     public string FromEmail { get; set; } = string.Empty;
     public string FromDisplayName { get; set; } = string.Empty;
+    public string? ResendApiKeyProtected { get; set; }
+    public string? SesRegion { get; set; }
+    public string? SesAccessKeyProtected { get; set; }
+    public string? SesSecretKeyProtected { get; set; }
+    public string? SesConfigurationSetName { get; set; }
+    public string PasswordResetTemplate { get; set; } = "identity-password-reset";
+    public string EmailVerificationTemplate { get; set; } = "identity-email-verification";
 }
+
+public enum TenantEmailProvider { Smtp, Resend, Ses }
 
 public sealed class OutboxMessage : TenantEntity
 {

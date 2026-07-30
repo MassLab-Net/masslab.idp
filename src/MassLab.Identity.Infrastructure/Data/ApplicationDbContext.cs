@@ -71,6 +71,12 @@ public sealed class ApplicationDbContext : IdentityDbContext<ApplicationUser, Mi
         builder.Entity<UserSession>().HasQueryFilter(x => !_currentTenant.Id.HasValue || x.TenantId == _currentTenant.Id);
         builder.Entity<AuditLog>().HasQueryFilter(x => !_currentTenant.Id.HasValue || x.TenantId == _currentTenant.Id);
         builder.Entity<TenantSmtpSettings>().HasQueryFilter(x => !_currentTenant.Id.HasValue || x.TenantId == _currentTenant.Id);
+        builder.Entity<TenantSmtpSettings>(entity =>
+        {
+            entity.Property(x => x.Provider).HasConversion<string>().HasMaxLength(20);
+            entity.Property(x => x.PasswordResetTemplate).HasMaxLength(200);
+            entity.Property(x => x.EmailVerificationTemplate).HasMaxLength(200);
+        });
         builder.Entity<OutboxMessage>().HasQueryFilter(x => !_currentTenant.Id.HasValue || x.TenantId == _currentTenant.Id);
 
         builder.Entity<TenantRole>(entity =>

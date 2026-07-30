@@ -78,6 +78,11 @@ internal sealed class AccountApplicationService : IAccountQueries, IAccountComma
         var result = await _signInManager.CheckPasswordSignInAsync(user, password, lockoutOnFailure: true);
         if (!result.Succeeded)
         {
+            if (result.IsNotAllowed && !user.EmailConfirmed)
+            {
+                await _audit.WriteAsync("login.email_unconfirmed", AuditResult.Failure, "user", user.Id.ToString(), cancellationToken: cancellationToken);
+                return LoginResult.EmailVerificationRequired();
+            }
             await _audit.WriteAsync("login.failed", AuditResult.Failure, "user", user.Id.ToString(), cancellationToken: cancellationToken);
             return LoginResult.Failure("Invalid login attempt.");
         }
@@ -277,6 +282,16 @@ internal sealed class AccountApplicationService : IAccountQueries, IAccountComma
         }
 
         return new string(characters);
+    }
+
+    public async Task RequestEmailVerificationAsync(string email, CancellationToken cancellationToken = default)
+    {
+        var user = await _userManager.FindByEmailAsync(email);
+        if (user is null || user.TenantId != _tenant.Id || user.EmailConfirmed) return;
+        var token = await _userManager.GenerateEmailConfirmationTokenAsync(user);
+        var url = _linkGenerator.GetUriByAction(_httpContextAccessor.HttpContext!, "VerifyEmail", "Account", new { email, token });
+        await _email.QueueVerificationEmailAsync(email, url ?? string.Empty, cancellationToken);
+        await _audit.WriteAsync("email_verification.requested", AuditResult.Success, "user", user.Id.ToString(), cancellationToken: cancellationToken);
     }
 
     private void SetRecoveryCodes(ApplicationUser user, IReadOnlyCollection<string> codes)

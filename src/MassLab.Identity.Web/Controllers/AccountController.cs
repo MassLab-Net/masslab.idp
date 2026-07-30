@@ -92,12 +92,22 @@ public sealed class AccountController : Controller
             {
                 return RedirectToAction(nameof(MfaChallenge), new { returnUrl = input.ReturnUrl });
             }
+            if (result.RequiresEmailVerification) return RedirectToAction(nameof(UnconfirmedEmail), new { email = input.Email });
             ModelState.AddModelError(string.Empty, result.ErrorMessage ?? "Invalid login attempt.");
             return View(input);
         }
 
         return LocalRedirect(NormalizeReturnUrl(input.ReturnUrl) ?? "/");
     }
+
+    [HttpGet("email-unconfirmed")]
+    public IActionResult UnconfirmedEmail(string email) => View(new ForgotPasswordInput { Email = email });
+
+    [HttpPost("email-unconfirmed")]
+    [ValidateAntiForgeryToken]
+    [EnableRateLimiting("login")]
+    public async Task<IActionResult> UnconfirmedEmail(ForgotPasswordInput input)
+    { await _sender.Send(new RequestEmailVerificationCommand(input.Email)); return View("EmailVerificationSent"); }
 
     [Authorize]
     [HttpPost("logout")]

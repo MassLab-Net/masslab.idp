@@ -28,6 +28,7 @@ public interface IAccountCommands
     Task<LoginResult> LoginAsync(string email, string password, bool rememberMe, CancellationToken cancellationToken = default);
     Task LogoutAsync(CancellationToken cancellationToken = default);
     Task RequestPasswordResetAsync(string email, CancellationToken cancellationToken = default);
+    Task RequestEmailVerificationAsync(string email, CancellationToken cancellationToken = default);
     Task<CommandResult> ResetPasswordAsync(string email, string token, string password, CancellationToken cancellationToken = default);
     Task<CommandResult> VerifyMfaChallengeAsync(ClaimsPrincipal principal, string code, CancellationToken cancellationToken = default);
     Task<CommandResult> DisableMfaAsync(ClaimsPrincipal principal, string code, CancellationToken cancellationToken = default);
@@ -169,7 +170,7 @@ public interface ITenantAdminCommands
     Task<CommandResult> EditClientAsync(Guid id, string name, ClientType type, string[] redirectUris, string[] postLogoutRedirectUris, string scopes, string flows, bool enabled, CancellationToken cancellationToken = default);
     Task<CommandResult> DeleteClientAsync(Guid id, CancellationToken cancellationToken = default);
     Task<CommandResult> CreateProviderAsync(string displayName, string authority, string clientId, string clientSecret, string scopes, bool autoProvisionUsers, CancellationToken cancellationToken = default);
-    Task<CommandResult> UpsertSmtpAsync(string host, int port, string? username, string? password, bool useTls, string fromEmail, string fromDisplayName, CancellationToken cancellationToken = default);
+    Task<CommandResult> UpsertSmtpAsync(TenantEmailProvider provider, string host, int port, string? username, string? password, bool useTls, string fromEmail, string fromDisplayName, string? resendApiKey, string? sesRegion, string? sesAccessKey, string? sesSecretKey, string? sesConfigurationSetName, string passwordResetTemplate, string emailVerificationTemplate, CancellationToken cancellationToken = default);
     Task<CommandResult> RevokeSessionAsync(Guid id, CancellationToken cancellationToken = default);
 }
 

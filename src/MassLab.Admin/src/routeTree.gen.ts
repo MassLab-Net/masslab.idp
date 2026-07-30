@@ -23,6 +23,7 @@ import { Route as AdminDashboardRouteImport } from './routes/admin/dashboard'
 import { Route as AdminProductsIndexRouteImport } from './routes/admin/products/index'
 import { Route as AdminOrdersIndexRouteImport } from './routes/admin/orders/index'
 import { Route as AdminTenantOrganizationsRouteImport } from './routes/admin/tenant/organizations'
+import { Route as AdminSettingsEmailRouteImport } from './routes/admin/settings/email'
 import { Route as AdminProductsNewRouteImport } from './routes/admin/products/new'
 import { Route as AdminOrdersIdRouteImport } from './routes/admin/orders/$id'
 import { Route as AdminAccessControlUsersRouteImport } from './routes/admin/access-control/users'
@@ -102,6 +103,11 @@ const AdminTenantOrganizationsRoute =
     path: '/tenant/organizations',
     getParentRoute: () => AdminRouteRoute,
   } as any)
+const AdminSettingsEmailRoute = AdminSettingsEmailRouteImport.update({
+  id: '/settings/email',
+  path: '/settings/email',
+  getParentRoute: () => AdminRouteRoute,
+} as any)
 const AdminProductsNewRoute = AdminProductsNewRouteImport.update({
   id: '/products/new',
   path: '/products/new',
@@ -158,6 +164,7 @@ export interface FileRoutesByFullPath {
   '/admin/access-control/users': typeof AdminAccessControlUsersRoute
   '/admin/orders/$id': typeof AdminOrdersIdRoute
   '/admin/products/new': typeof AdminProductsNewRoute
+  '/admin/settings/email': typeof AdminSettingsEmailRoute
   '/admin/tenant/organizations': typeof AdminTenantOrganizationsRoute
   '/admin/orders/': typeof AdminOrdersIndexRoute
   '/admin/products/': typeof AdminProductsIndexRoute
@@ -181,6 +188,7 @@ export interface FileRoutesByTo {
   '/admin/access-control/users': typeof AdminAccessControlUsersRoute
   '/admin/orders/$id': typeof AdminOrdersIdRoute
   '/admin/products/new': typeof AdminProductsNewRoute
+  '/admin/settings/email': typeof AdminSettingsEmailRoute
   '/admin/tenant/organizations': typeof AdminTenantOrganizationsRoute
   '/admin/orders': typeof AdminOrdersIndexRoute
   '/admin/products': typeof AdminProductsIndexRoute
@@ -205,6 +213,7 @@ export interface FileRoutesById {
   '/admin/access-control/users': typeof AdminAccessControlUsersRoute
   '/admin/orders/$id': typeof AdminOrdersIdRoute
   '/admin/products/new': typeof AdminProductsNewRoute
+  '/admin/settings/email': typeof AdminSettingsEmailRoute
   '/admin/tenant/organizations': typeof AdminTenantOrganizationsRoute
   '/admin/orders/': typeof AdminOrdersIndexRoute
   '/admin/products/': typeof AdminProductsIndexRoute
@@ -230,6 +239,7 @@ export interface FileRouteTypes {
     | '/admin/access-control/users'
     | '/admin/orders/$id'
     | '/admin/products/new'
+    | '/admin/settings/email'
     | '/admin/tenant/organizations'
     | '/admin/orders/'
     | '/admin/products/'
@@ -253,6 +263,7 @@ export interface FileRouteTypes {
     | '/admin/access-control/users'
     | '/admin/orders/$id'
     | '/admin/products/new'
+    | '/admin/settings/email'
     | '/admin/tenant/organizations'
     | '/admin/orders'
     | '/admin/products'
@@ -276,6 +287,7 @@ export interface FileRouteTypes {
     | '/admin/access-control/users'
     | '/admin/orders/$id'
     | '/admin/products/new'
+    | '/admin/settings/email'
     | '/admin/tenant/organizations'
     | '/admin/orders/'
     | '/admin/products/'
@@ -394,6 +406,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminTenantOrganizationsRouteImport
       parentRoute: typeof AdminRouteRoute
     }
+    '/admin/settings/email': {
+      id: '/admin/settings/email'
+      path: '/settings/email'
+      fullPath: '/admin/settings/email'
+      preLoaderRoute: typeof AdminSettingsEmailRouteImport
+      parentRoute: typeof AdminRouteRoute
+    }
     '/admin/products/new': {
       id: '/admin/products/new'
       path: '/products/new'
@@ -455,6 +474,7 @@ interface AdminRouteRouteChildren {
   AdminAccessControlUsersRoute: typeof AdminAccessControlUsersRoute
   AdminOrdersIdRoute: typeof AdminOrdersIdRoute
   AdminProductsNewRoute: typeof AdminProductsNewRoute
+  AdminSettingsEmailRoute: typeof AdminSettingsEmailRoute
   AdminTenantOrganizationsRoute: typeof AdminTenantOrganizationsRoute
   AdminOrdersIndexRoute: typeof AdminOrdersIndexRoute
   AdminProductsIndexRoute: typeof AdminProductsIndexRoute
@@ -470,6 +490,7 @@ const AdminRouteRouteChildren: AdminRouteRouteChildren = {
   AdminAccessControlUsersRoute: AdminAccessControlUsersRoute,
   AdminOrdersIdRoute: AdminOrdersIdRoute,
   AdminProductsNewRoute: AdminProductsNewRoute,
+  AdminSettingsEmailRoute: AdminSettingsEmailRoute,
   AdminTenantOrganizationsRoute: AdminTenantOrganizationsRoute,
   AdminOrdersIndexRoute: AdminOrdersIndexRoute,
   AdminProductsIndexRoute: AdminProductsIndexRoute,

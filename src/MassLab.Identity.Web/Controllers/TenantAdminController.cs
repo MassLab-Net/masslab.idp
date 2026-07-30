@@ -6,6 +6,8 @@ using MassLab.Identity.Domain;
 using MassLab.Identity.Web.Routing;
 using MassLab.Identity.Web.ViewModels.TenantAdmin;
 using MediatR;
+using MassLab.Identity.Infrastructure.Data;
+using Microsoft.EntityFrameworkCore;
 
 namespace MassLab.Identity.Web.Controllers;
 
@@ -14,10 +16,12 @@ namespace MassLab.Identity.Web.Controllers;
 public sealed class TenantAdminController : Controller
 {
     private readonly ISender _sender;
+    private readonly ApplicationDbContext _db;
 
-    public TenantAdminController(ISender sender)
+    public TenantAdminController(ISender sender, ApplicationDbContext db)
     {
         _sender = sender;
+        _db = db;
     }
 
     [HttpGet("")]
@@ -272,15 +276,25 @@ public sealed class TenantAdminController : Controller
             return BadRequest(result.Errors);
         }
 
-        return RedirectToAction(nameof(Providers));
+        return RedirectToAction(nameof(Email));
+    }
+
+    [HttpGet("email")]
+    [HttpGet("/admin/security/email")]
+    [Authorize(Policy = "permission:smtp.manage")]
+    public async Task<IActionResult> Email()
+    {
+        var x = await _db.TenantSmtpSettings.FirstOrDefaultAsync();
+        return View(new UpsertTenantSmtpInput { Provider = x?.Provider ?? TenantEmailProvider.Smtp, Host = x?.Host ?? string.Empty, Port = x?.Port ?? 587, UseTls = x?.UseTls ?? true, Username = x?.Username, FromEmail = x?.FromEmail ?? string.Empty, FromDisplayName = x?.FromDisplayName ?? string.Empty, SesRegion = x?.SesRegion, SesConfigurationSetName = x?.SesConfigurationSetName, PasswordResetTemplate = x?.PasswordResetTemplate ?? "identity-password-reset", EmailVerificationTemplate = x?.EmailVerificationTemplate ?? "identity-email-verification" });
     }
 
     [HttpPost("smtp")]
     [HttpPost("/admin/security/smtp")]
     [ValidateAntiForgeryToken]
+    [Authorize(Policy = "permission:smtp.manage")]
     public async Task<IActionResult> UpsertSmtp(UpsertTenantSmtpInput input)
     {
-        var result = await _sender.Send(new UpsertTenantSmtpCommand(input.Host, input.Port, input.Username, input.Password, input.UseTls, input.FromEmail, input.FromDisplayName));
+        var result = await _sender.Send(new UpsertTenantSmtpCommand(input.Provider, input.Host, input.Port, input.Username, input.Password, input.UseTls, input.FromEmail, input.FromDisplayName, input.ResendApiKey, input.SesRegion, input.SesAccessKey, input.SesSecretKey, input.SesConfigurationSetName, input.PasswordResetTemplate, input.EmailVerificationTemplate));
         if (!result.Succeeded)
         {
             return BadRequest(result.Errors);

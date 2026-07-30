@@ -887,7 +887,7 @@ internal sealed class TenantAdminApplicationService : ITenantAdminQueries, ITena
         return CommandResult.Success();
     }
 
-    public async Task<CommandResult> UpsertSmtpAsync(string host, int port, string? username, string? password, bool useTls, string fromEmail, string fromDisplayName, CancellationToken cancellationToken = default)
+    public async Task<CommandResult> UpsertSmtpAsync(TenantEmailProvider provider, string host, int port, string? username, string? password, bool useTls, string fromEmail, string fromDisplayName, string? resendApiKey, string? sesRegion, string? sesAccessKey, string? sesSecretKey, string? sesConfigurationSetName, string passwordResetTemplate, string emailVerificationTemplate, CancellationToken cancellationToken = default)
     {
         if (!_tenant.Id.HasValue)
         {
@@ -901,6 +901,11 @@ internal sealed class TenantAdminApplicationService : ITenantAdminQueries, ITena
             _db.TenantSmtpSettings.Add(settings);
         }
 
+        if (string.IsNullOrWhiteSpace(fromEmail) || string.IsNullOrWhiteSpace(passwordResetTemplate) || string.IsNullOrWhiteSpace(emailVerificationTemplate)) return CommandResult.Failure("Sender address and both email templates are required.");
+        if (provider == TenantEmailProvider.Smtp && (string.IsNullOrWhiteSpace(host) || port is < 1 or > 65535)) return CommandResult.Failure("SMTP host and port are required.");
+        if (provider == TenantEmailProvider.Resend && string.IsNullOrWhiteSpace(resendApiKey) && string.IsNullOrWhiteSpace(settings.ResendApiKeyProtected)) return CommandResult.Failure("Resend API key is required.");
+        if (provider == TenantEmailProvider.Ses && string.IsNullOrWhiteSpace(sesRegion)) return CommandResult.Failure("SES region is required.");
+        settings.Provider = provider;
         settings.Host = host;
         settings.Port = port;
         settings.Username = username;
@@ -908,6 +913,13 @@ internal sealed class TenantAdminApplicationService : ITenantAdminQueries, ITena
         settings.UseTls = useTls;
         settings.FromEmail = fromEmail;
         settings.FromDisplayName = fromDisplayName;
+        settings.PasswordResetTemplate = passwordResetTemplate;
+        settings.EmailVerificationTemplate = emailVerificationTemplate;
+        settings.ResendApiKeyProtected = string.IsNullOrWhiteSpace(resendApiKey) ? settings.ResendApiKeyProtected : _secrets.Protect(resendApiKey);
+        settings.SesRegion = sesRegion;
+        settings.SesAccessKeyProtected = string.IsNullOrWhiteSpace(sesAccessKey) ? settings.SesAccessKeyProtected : _secrets.Protect(sesAccessKey);
+        settings.SesSecretKeyProtected = string.IsNullOrWhiteSpace(sesSecretKey) ? settings.SesSecretKeyProtected : _secrets.Protect(sesSecretKey);
+        settings.SesConfigurationSetName = NormalizeOptional(sesConfigurationSetName);
         await _db.SaveChangesAsync(cancellationToken);
         await _audit.WriteAsync("smtp.updated", AuditResult.Success, "smtp", settings.Id.ToString(), cancellationToken: cancellationToken);
         return CommandResult.Success();

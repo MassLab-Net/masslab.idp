@@ -156,7 +156,7 @@ public sealed class TenantAdminApiController : ControllerBase
     [HttpPost("smtp")]
     [Authorize(Policy = "permission:smtp.manage")]
     public async Task<IActionResult> UpsertSmtp(UpsertTenantSmtpInput input)
-        => ToActionResult(await _sender.Send(new UpsertTenantSmtpCommand(input.Host, input.Port, input.Username, input.Password, input.UseTls, input.FromEmail, input.FromDisplayName)));
+        => ToActionResult(await _sender.Send(new UpsertTenantSmtpCommand(input.Provider, input.Host, input.Port, input.Username, input.Password, input.UseTls, input.FromEmail, input.FromDisplayName, input.ResendApiKey, input.SesRegion, input.SesAccessKey, input.SesSecretKey, input.SesConfigurationSetName, input.PasswordResetTemplate, input.EmailVerificationTemplate)));
 
     [HttpGet("sessions")]
     [Authorize(Policy = "permission:sessions.manage")]

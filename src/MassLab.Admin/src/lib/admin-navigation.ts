@@ -17,6 +17,7 @@ export const adminRouteAccess: readonly AdminRouteAccess[] = [
     permission: "permissions.manage",
   },
   { path: "/admin/access-control/clients", permission: "clients.manage" },
+  { path: "/admin/settings/email", permission: "smtp.manage" },
 ] as const;
 
 export function canAccessAdminPath(
