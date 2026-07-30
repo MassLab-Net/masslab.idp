@@ -7,6 +7,9 @@ using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using OpenIddict.Validation.AspNetCore;
+using MassLab.Identity.Infrastructure.Data;
+using Microsoft.EntityFrameworkCore;
+using MassLab.Identity.Infrastructure.Services;
 
 namespace MassLab.Identity.Web.Controllers.Api;
 
@@ -16,10 +19,14 @@ namespace MassLab.Identity.Web.Controllers.Api;
 public sealed class TenantAdminApiController : ControllerBase
 {
     private readonly ISender _sender;
+    private readonly ApplicationDbContext _db;
+    private readonly ISecretService _secrets;
 
-    public TenantAdminApiController(ISender sender)
+    public TenantAdminApiController(ISender sender, ApplicationDbContext db, ISecretService secrets)
     {
         _sender = sender;
+        _db = db;
+        _secrets = secrets;
     }
 
     [HttpGet("dashboard")]
@@ -157,6 +164,21 @@ public sealed class TenantAdminApiController : ControllerBase
     [Authorize(Policy = "permission:smtp.manage")]
     public async Task<IActionResult> UpsertSmtp(UpsertTenantSmtpInput input)
         => ToActionResult(await _sender.Send(new UpsertTenantSmtpCommand(input.Provider, input.Host, input.Port, input.Username, input.Password, input.UseTls, input.FromEmail, input.FromDisplayName, input.ResendApiKey, input.SesRegion, input.SesAccessKey, input.SesSecretKey, input.SesConfigurationSetName, input.PasswordResetTemplate, input.EmailVerificationTemplate)));
+
+    [HttpGet("smtp")]
+    [Authorize(Policy = "permission:smtp.manage")]
+    public async Task<IActionResult> GetSmtp()
+    {
+        var x = await _db.TenantSmtpSettings.FirstOrDefaultAsync();
+        return Ok(x is null ? new { configured = false } : new { configured = true, x.Provider, x.FromEmail, x.FromDisplayName, x.PasswordResetTemplate, x.EmailVerificationTemplate, resendApiKeySuffix = MaskSuffix(x.ResendApiKeyProtected) });
+    }
+
+    private string? MaskSuffix(string? protectedValue)
+    {
+        if (string.IsNullOrWhiteSpace(protectedValue)) return null;
+        var value = _secrets.Unprotect(protectedValue);
+        return "••••" + value[^Math.Min(4, value.Length)..];
+    }
 
     [HttpGet("sessions")]
     [Authorize(Policy = "permission:sessions.manage")]
